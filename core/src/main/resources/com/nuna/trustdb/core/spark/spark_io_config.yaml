@@ -1,0 +1,4 @@
+write_format: "parquet"
+write_mode: "overwrite"
+#write_options:
+#  header: true

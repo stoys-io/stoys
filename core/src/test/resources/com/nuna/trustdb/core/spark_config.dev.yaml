@@ -1,0 +1,5 @@
+app_name: "SparkDagRunnerTest"
+master: "local[1]"
+spark_options:
+  spark.ui.enabled: false
+#  spark.serializer: "org.apache.spark.serializer.KryoSerializer"

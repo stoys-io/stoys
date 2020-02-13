@@ -1,0 +1,5 @@
+app_name: "SparkDagRunner"
+#master: "???"
+#spark_options:
+#  spark.serializer: "org.apache.spark.serializer.KryoSerializer"
+log_level: "WARN"

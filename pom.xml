@@ -1,0 +1,347 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.nuna.trustdb</groupId>
+    <artifactId>trustdb</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>nuna</name>
+    <description>NunaCore - mostly scala and spark stuff.</description>
+    <url>https://github.com/NunaHealth/nuna-core</url>
+    <inceptionYear>2019</inceptionYear>
+
+
+    <scm>
+        <url>https://github.com/NunaHealth/nuna-core.git</url>
+        <connection>scm:git:git@github.com:NunaHealth/nuna-core.git</connection>
+        <developerConnection>scm:git:git@github.com:NunaHealth/nuna-core.git</developerConnection>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/NunaHealth/nuna-core/issues/</url>
+    </issueManagement>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <prerequisites>
+        <maven>3.5</maven>
+    </prerequisites>
+
+    <modules>
+        <module>core</module>
+    </modules>
+
+    <properties>
+        <main.class>UNSPECIFIED</main.class>
+
+        <jdk.version>8</jdk.version>
+        <character.encoding>UTF-8</character.encoding>
+
+        <scala.version>2.11.12</scala.version>
+        <scala.compat.version>2.11</scala.compat.version>
+
+        <avro.version>1.9.0</avro.version>
+        <deequ.version>1.0.2</deequ.version>
+        <delta.version>0.5.0</delta.version>
+        <jackson.version>2.9.10</jackson.version>
+        <log4s.version>1.8.2</log4s.version>
+        <logback.version>1.2.3</logback.version>
+        <persistence-api.version>2.2</persistence-api.version>
+        <scalatest.version>3.1.0</scalatest.version>
+        <slf4j.version>1.7.30</slf4j.version>
+        <spark.version>2.4.4</spark.version>
+        <spark-fast-tests.version>0.20.0-s_${scala.compat.version}</spark-fast-tests.version>
+        <spark-testing-base.version>2.4.3_0.12.0</spark-testing-base.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- scala -->
+            <dependency>
+                <groupId>org.scala-lang</groupId>
+                <artifactId>scala-library</artifactId>
+                <version>${scala.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.scala-lang</groupId>
+                <artifactId>scala-reflect</artifactId>
+                <version>${scala.version}</version>
+            </dependency>
+
+            <!-- logging -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>log4j-over-slf4j</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jul-to-slf4j</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+
+            <!-- database -->
+            <dependency>
+                <groupId>javax.persistence</groupId>
+                <artifactId>javax.persistence-api</artifactId>
+                <version>${persistence-api.version}</version>
+            </dependency>
+
+            <!-- jackson -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <!-- spark -->
+            <dependency>
+                <groupId>org.apache.spark</groupId>
+                <artifactId>spark-core_${scala.compat.version}</artifactId>
+                <version>${spark.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-log4j12</artifactId>
+                    </exclusion>
+                </exclusions>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.spark</groupId>
+                <artifactId>spark-sql_${scala.compat.version}</artifactId>
+                <version>${spark.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.spark</groupId>
+                <artifactId>spark-mllib_${scala.compat.version}</artifactId>
+                <version>${spark.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.spark</groupId>
+                <artifactId>spark-avro_${scala.compat.version}</artifactId>
+                <version>${spark.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- delta lake -->
+            <dependency>
+                <groupId>io.delta</groupId>
+                <artifactId>delta-core_${scala.compat.version}</artifactId>
+                <version>${delta.version}</version>
+            </dependency>
+
+            <!-- scala libs -->
+            <dependency>
+                <groupId>org.log4s</groupId>
+                <artifactId>log4s_${scala.compat.version}</artifactId>
+                <version>${log4s.version}</version>
+            </dependency>
+
+            <!-- deequ -->
+            <dependency>
+                <groupId>com.amazon.deequ</groupId>
+                <artifactId>deequ</artifactId>
+                <version>${deequ.version}</version>
+            </dependency>
+
+            <!-- test -->
+            <dependency>
+                <groupId>org.scalatest</groupId>
+                <artifactId>scalatest_${scala.compat.version}</artifactId>
+                <version>${scalatest.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.holdenkarau</groupId>
+                <artifactId>spark-testing-base_${scala.compat.version}</artifactId>
+                <version>${spark-testing-base.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-log4j12</artifactId>
+                    </exclusion>
+                </exclusions>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>MrPowers</groupId>
+                <artifactId>spark-fast-tests</artifactId>
+                <version>${spark-fast-tests.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.1.0</version>
+                    <configuration>
+                        <encoding>${character.encoding}</encoding>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.8.1</version>
+                    <configuration>
+                        <compilerVersion>${jdk.version}</compilerVersion>
+                        <source>${jdk.version}</source>
+                        <target>${jdk.version}</target>
+                        <encoding>${character.encoding}</encoding>
+                        <showDeprecation>true</showDeprecation>
+                        <showWarnings>true</showWarnings>
+                        <!--                        <skip>true</skip>-->
+                        <!--                        <skipMain>true</skipMain>-->
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>net.alchim31.maven</groupId>
+                    <artifactId>scala-maven-plugin</artifactId>
+                    <version>4.3.0</version>
+                    <configuration>
+                        <charset>${character.encoding}</charset>
+                        <scalaVersion>${scala.version}</scalaVersion>
+                        <recompileMode>incremental</recompileMode>
+                        <!--                        <useZincServer>true</useZincServer>-->
+                        <args>
+                            <arg>-deprecation</arg>
+                            <arg>-explaintypes</arg>
+                            <arg>-feature</arg>
+                            <arg>-unchecked</arg>
+                        </args>
+                        <javacArgs>
+                            <javacArg>-Xlint:unchecked</javacArg>
+                            <javacArg>-Xlint:deprecation</javacArg>
+                        </javacArgs>
+                        <source>${jdk.version}</source>
+                        <target>${jdk.version}</target>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>add-source</goal>
+                                <goal>compile</goal>
+                                <goal>testCompile</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.22.2</version>
+                    <configuration>
+                        <skipTests>true</skipTests>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.scalatest</groupId>
+                    <artifactId>scalatest-maven-plugin</artifactId>
+                    <version>2.0.0</version>
+                    <configuration>
+                        <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                        <junitxml>.</junitxml>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>scalatest-test</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>test</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.1.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.2.1</version>
+                    <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>shade</goal>
+                            </goals>
+                            <configuration>
+                                <relocations>
+                                    <relocation>
+                                        <pattern>com.fasterxml.jackson</pattern>
+                                        <shadedPattern>com.nuna.trustdb.shaded.fasterxml.jackson</shadedPattern>
+                                    </relocation>
+                                </relocations>
+                                <transformers>
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                        <mainClass>${main.class}</mainClass>
+                                    </transformer>
+                                </transformers>
+                                <shadedArtifactAttached>true</shadedArtifactAttached>
+                                <shadedClassifierName>shaded</shadedClassifierName>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>scala-12</id>
+            <properties>
+                <!--                <jdk.version>11</jdk.version>-->
+                <scala.version>2.12.10</scala.version>
+                <scala.compat.version>2.12</scala.compat.version>
+            </properties>
+        </profile>
+    </profiles>
+
+    <repositories>
+        <repository>
+            <id>Central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
+        <repository>
+            <id>Spark Packages Repo</id>
+            <url>https://dl.bintray.com/spark-packages/maven</url>
+        </repository>
+    </repositories>
+</project>
