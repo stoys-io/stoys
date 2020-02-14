@@ -1,3 +1,5 @@
 string: foo
+seq:
+  - foo
 map:
   foo: foo

@@ -21,28 +21,34 @@ class ConfigurationTest extends AnyFunSuite {
 
   test("readConfig") {
     val noArgs = new Configuration(Array.empty)
-    assert(noArgs.readConfig[TestConfig] === TestConfig(42, null, Map.empty, null, null))
+    assert(noArgs.readConfig[TestConfig] === TestConfig(42, null, Seq.empty, Map.empty, null, null))
     val env = new Configuration(Array("--environments=foo"))
-    assert(env.readConfig[TestConfig] === TestConfig(42, "foo", Map("foo" -> "foo"), null, null))
+    assert(env.readConfig[TestConfig] === TestConfig(42, "foo", Seq("foo"), Map("foo" -> "foo"), null, null))
     val envArgs = new Configuration(Array("--environments=foo", "unused@@string=unused", "test_config@@string=prop",
       "test_config@@map@@some.key=value", "test_config@@date=20191104", "test_config@@password=1234"))
     assert(envArgs.readConfig[TestConfig]
-        === TestConfig(42, "prop", Map("some.key" -> "value"), LocalDate.of(2019, 11, 4), "1234"))
+        === TestConfig(42, "prop", Seq("foo"), Map("some.key" -> "value"), LocalDate.of(2019, 11, 4), "1234"))
     val masterEnv = new Configuration(Array("--environments=master"))
-    assert(masterEnv.readConfig[TestConfig] === TestConfig(42, "master", Map.empty, null, null))
+    assert(masterEnv.readConfig[TestConfig] === TestConfig(42, "master", Seq.empty, Map.empty, null, null))
   }
 
   test("allowInRootPackage") {
     val fooEnv = new Configuration(Array("--environments=foo"))
-    assert(fooEnv.readConfig[TestConfig] === TestConfig(42, "foo", Map("foo" -> "foo"), null, null))
+    assert(fooEnv.readConfig[TestConfig] === TestConfig(42, "foo", Seq("foo"), Map("foo" -> "foo"), null, null))
     val fooRootEnv = new Configuration(Array("--environments=foo,root"))
-    assert(fooRootEnv.readConfig[TestConfig] === TestConfig(42, "root", Map("foo" -> "foo"), null, null))
+    assert(fooRootEnv.readConfig[TestConfig] === TestConfig(42, "root", Seq("foo"), Map("foo" -> "foo"), null, null))
   }
 }
 
 object ConfigurationTest {
   @Params(allowInRootPackage = true)
-  case class TestConfig(int: Int, string: String, map: Map[String, String], date: LocalDate,
+  case class TestConfig(
+      int: Int,
+      string: String,
+      seq: Seq[String],
+      map: Map[String, String],
+      date: LocalDate,
       @JsonProperty(access = Access.WRITE_ONLY)
-      password: String)
+      password: String
+  )
 }
