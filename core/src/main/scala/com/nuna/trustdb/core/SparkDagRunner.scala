@@ -55,7 +55,7 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, sparkDagRunne
 
 object SparkDagRunner {
   def main(args: Array[String]): Unit = {
-    val configuration = new Configuration(args)
+    val configuration = Configuration(args)
     val sparkConfig = configuration.readConfig[SparkConfig]
     val sparkDagRunnerConfig = configuration.readConfig[SparkDagRunnerConfig]
     val sparkSession = SparkUtils.createSparkSession(sparkConfig)

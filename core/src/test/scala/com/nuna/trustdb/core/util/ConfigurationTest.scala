@@ -10,33 +10,32 @@ import org.scalatest.funsuite.AnyFunSuite
 class ConfigurationTest extends AnyFunSuite {
   import ConfigurationTest._
 
+  val emptyTestConfig = Arbitrary.empty[TestConfig]
+  val defaultTestConfig = emptyTestConfig.copy(int = 42)
+  val fooTestConfig = defaultTestConfig.copy(string = "foo", seq = Seq("foo"), map = Map("foo" -> "foo"))
+
   test("parseConfigurationConfig") {
     assert(Configuration.parseConfigurationConfig(Array("environments=foo"))
         === ConfigurationConfig(Seq("local"), Seq("environments=foo")))
     assert(Configuration.parseConfigurationConfig(Array("--environments=foo"))
         === ConfigurationConfig(Seq("foo", "local"), Seq.empty))
-    assert(Configuration.parseConfigurationConfig(Array("--environments=foo,bar", "some_flag"))
-        === ConfigurationConfig(Seq("foo", "bar", "local"), Seq("some_flag")))
+    assert(Configuration.parseConfigurationConfig(Array("--environments=foo,bar", "--key=value", "some_arg"))
+        === ConfigurationConfig(Seq("foo", "bar", "local"), Seq("--key=value", "some_arg")))
   }
 
   test("readConfig") {
-    val noArgs = new Configuration(Array.empty)
-    assert(noArgs.readConfig[TestConfig] === TestConfig(42, null, Seq.empty, Map.empty, null, null))
-    val env = new Configuration(Array("--environments=foo"))
-    assert(env.readConfig[TestConfig] === TestConfig(42, "foo", Seq("foo"), Map("foo" -> "foo"), null, null))
-    val envArgs = new Configuration(Array("--environments=foo", "unused@@string=unused", "test_config@@string=prop",
-      "test_config@@map@@some.key=value", "test_config@@date=20191104", "test_config@@password=1234"))
+    assert(Configuration().readConfig[TestConfig] === defaultTestConfig)
+    assert(Configuration("--environments=foo").readConfig[TestConfig] === fooTestConfig)
+    val envArgs = Configuration("--environments=foo", "unused@@string=unused", "test_config@@seq@@0=prop",
+      "test_config@@map@@some.key=value", "test_config@@date=20191104", "test_config@@password=secret")
     assert(envArgs.readConfig[TestConfig]
-        === TestConfig(42, "prop", Seq("foo"), Map("some.key" -> "value"), LocalDate.of(2019, 11, 4), "1234"))
-    val masterEnv = new Configuration(Array("--environments=master"))
-    assert(masterEnv.readConfig[TestConfig] === TestConfig(42, "master", Seq.empty, Map.empty, null, null))
+        === TestConfig(42, "foo", Seq("prop"), Map("some.key" -> "value"), LocalDate.of(2019, 11, 4), "secret"))
+    assert(Configuration("--environments=master").readConfig[TestConfig] === defaultTestConfig.copy(string = "master"))
   }
 
   test("allowInRootPackage") {
-    val fooEnv = new Configuration(Array("--environments=foo"))
-    assert(fooEnv.readConfig[TestConfig] === TestConfig(42, "foo", Seq("foo"), Map("foo" -> "foo"), null, null))
-    val fooRootEnv = new Configuration(Array("--environments=foo,root"))
-    assert(fooRootEnv.readConfig[TestConfig] === TestConfig(42, "root", Seq("foo"), Map("foo" -> "foo"), null, null))
+    assert(Configuration("--environments=foo").readConfig[TestConfig] === fooTestConfig)
+    assert(Configuration("--environments=foo,root").readConfig[TestConfig] === fooTestConfig.copy(string = "root"))
   }
 }
 

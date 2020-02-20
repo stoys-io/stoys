@@ -2,6 +2,7 @@ package com.nuna.trustdb.core.util
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectReader}
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsSchema
+import com.nuna.trustdb.core.util.Configuration.ConfigurationConfig
 import com.nuna.trustdb.core.util.Jackson.{objectMapper, propertiesObjectMapper, yamlObjectMapper}
 
 import scala.reflect.runtime.universe._
@@ -27,12 +28,10 @@ import scala.reflect.{ClassTag, classTag}
 // Note: repeated properties are not comma separated. Instead they use "field@@0=foo" "field@@1=bar" notation.
 // Note: This class is inspired by spring boot config. But that sadly does not work for scala case classes.
 // Note: We can trivially add support for *.properties and *.json.
-class Configuration(args: Array[String]) {
+case class Configuration(config: ConfigurationConfig) {
   private val logger = org.log4s.getLogger
 
   import Configuration._
-
-  val config = parseConfigurationConfig(args)
 
   def readConfig[T <: Product : ClassTag : TypeTag]: T = {
     val clazz = classTag[T].runtimeClass
@@ -44,11 +43,7 @@ class Configuration(args: Array[String]) {
 
     // files based overrides
     val candidateFileNames = Seq(s"$baseFileName.yaml") ++ config.environments.map(e => s"$baseFileName.$e.yaml")
-    val rootPackageCandidateFileNames = if (allowInRootPackage) {
-      candidateFileNames.map(cfn => "/" + cfn)
-    } else {
-      Seq.empty
-    }
+    val rootPackageCandidateFileNames = candidateFileNames.filter(_ => allowInRootPackage).map(cfn => "/" + cfn)
     val allCandidateFileNames = candidateFileNames ++ rootPackageCandidateFileNames
     allCandidateFileNames.foreach { fileName =>
       value = update[T](value, IO.safeReadResource(clazz, fileName), yamlReader, fileName, None)
@@ -99,16 +94,24 @@ object Configuration {
   private val DEFAULT_ENVIRONMENTS = Seq("local")
   private val PROPERTIES_PATH_SEPARATOR = "@@"
 
-  val objectReader = objectMapper.reader()
-  val javaPropsSchema = JavaPropsSchema.emptySchema().withPathSeparator(PROPERTIES_PATH_SEPARATOR)
-  val propertiesReader = propertiesObjectMapper.reader(javaPropsSchema)
-  val yamlReader = yamlObjectMapper.reader()
+  private val objectReader = objectMapper.reader()
+  private val javaPropsSchema = JavaPropsSchema.emptySchema().withPathSeparator(PROPERTIES_PATH_SEPARATOR)
+  private val propertiesReader = propertiesObjectMapper.reader(javaPropsSchema)
+  private val yamlReader = yamlObjectMapper.reader()
+
+  def apply(args: String*): Configuration = {
+    apply(args.toArray)
+  }
+
+  def apply(args: Array[String]): Configuration = {
+    Configuration(parseConfigurationConfig(args))
+  }
 
   case class ConfigurationConfig(environments: Seq[String], args: Seq[String])
 
   def parseConfigurationConfig(args: Array[String]): ConfigurationConfig = {
     val (environmentArgs, remainingArgs) = args.partition(_.startsWith(ENVIRONMENT_ARGS_PREFIX))
-    val environments = environmentArgs.flatMap(_.substring(ENVIRONMENT_ARGS_PREFIX.size).split(',')).toSeq
+    val environments = environmentArgs.flatMap(_.stripPrefix(ENVIRONMENT_ARGS_PREFIX).split(','))
     ConfigurationConfig(environments ++ DEFAULT_ENVIRONMENTS, remainingArgs)
   }
 }

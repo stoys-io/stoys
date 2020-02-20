@@ -19,7 +19,7 @@ class DbLoader(args: Array[String]) {
 
   private val logger = org.log4s.getLogger
 
-  val configuration = new Configuration(args)
+  val configuration = Configuration(args)
   val sparkConfig = configuration.readConfig[SparkConfig]
   val sparkIOConfig = configuration.readConfig[SparkIOConfig]
   val config = configuration.readConfig[DbLoaderConfig]
