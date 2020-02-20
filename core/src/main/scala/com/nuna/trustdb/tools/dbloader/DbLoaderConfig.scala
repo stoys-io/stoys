@@ -13,21 +13,16 @@ case class DbLoaderConfig(
     // Note: The classes have to be on classpath.
     caseClassNames: Seq[String],
     // Jdbc url of target database.
-    @JsonProperty(access = Access.WRITE_ONLY)
     jdbcUrl: String,
     // Jdbc user name.
-    // TODO: rename to jdbcUser
-    username: Option[String],
+    jdbcUser: Option[String],
     // Jdbc password.
-    // TODO: rename to jdbcPassword
     @JsonProperty(access = Access.WRITE_ONLY)
-    password: Option[String],
+    jdbcPassword: Option[String],
     // Timestamp. Current time - now() - will be used if missing.
     timestamp: String,
     // Name of the schema to be created. For example: "data_${timestamp}" (the timestamp variable will get replaced).
     schemaName: String,
-    // If not null, insert an record w/ $schemaName to update_history table
-    updateHistorySchemaName: Option[String],
     // File name of sql script to run before all the tables are imported.
     beforeLoadScript: String,
     // File name of sql script to run after all the tables are imported.

@@ -16,6 +16,8 @@ class DbLoaderTest extends SparkTestBase {
   import DbLoaderTest._
   import sparkSession.implicits._
 
+  JdbcDialects.registerDialect(SparkH2DialectWithJsonSupport)
+
   val items = Seq(
     Item(1, 11, "name1", 100, "note1", Some("optionalNote1"), "longNameField1", "customTypeField1",
       Date.valueOf("2001-01-01"), Seq("repeatedFiled11", "repeatedFiled12"), SubItem("nestedField1")),
@@ -133,11 +135,10 @@ object DbLoaderTest {
 
   // Spark JdbcUtils throw exception when H2 (correctly) returns java.sql.Types.OTHER as column type for json.
   // Spark allows to overwrite catalyst types per jdbc dialect and that is what we do at SparkH2DialectWithJsonSupport.
-  case object SparkH2DialectWithJsonSupport extends JdbcDialect {
+  object SparkH2DialectWithJsonSupport extends JdbcDialect {
     override def canHandle(url: String): Boolean = url.startsWith("jdbc:h2")
 
-    override def getCatalystType(sqlType: Int, typeName: String, size: Int,
-        md: MetadataBuilder): Option[DataType] = {
+    override def getCatalystType(sqlType: Int, typeName: String, size: Int, md: MetadataBuilder): Option[DataType] = {
       if (sqlType == Types.OTHER && typeName.equals("JSON")) {
         Option(StringType)
       } else {
@@ -145,7 +146,6 @@ object DbLoaderTest {
       }
     }
   }
-  JdbcDialects.registerDialect(SparkH2DialectWithJsonSupport)
 
   // Spark insert the json as string. H2 does assume that it is intended as json string and escape what we give it.
   // Hence we have to unescape it. Note: JSON behaviour is very quite different in different dbs!

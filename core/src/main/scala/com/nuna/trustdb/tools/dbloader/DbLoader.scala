@@ -16,7 +16,6 @@ import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success}
 
 class DbLoader(args: Array[String]) {
-
   private val logger = org.log4s.getLogger
 
   val configuration = Configuration(args)
@@ -24,21 +23,20 @@ class DbLoader(args: Array[String]) {
   val sparkIOConfig = configuration.readConfig[SparkIOConfig]
   val config = configuration.readConfig[DbLoaderConfig]
 
-  val explicitTimestamp = Strings.trim(config.timestamp).map(DbLoader.timestampFormatter.parse)
+  val explicitTimestamp = Strings.trim(config.timestamp).map(DbLoader.TIMESTAMP_FORMATTER.parse)
   val timestampInEpochS = explicitTimestamp.getOrElse(Instant.now())
-  val timestamp = DbLoader.timestampFormatter.format(timestampInEpochS)
+  val timestamp = DbLoader.TIMESTAMP_FORMATTER.format(timestampInEpochS)
   val timestampParam = Map("timestamp" -> timestamp)
   assert(Strings.trim(config.schemaName).isDefined, "Please specify schema_name!")
   val schemaName = Strings.replaceParams(config.schemaName, params = timestampParam)
-  val VERSION_DB = "version"
   val params = timestampParam ++ Map("schema_name" -> schemaName)
 
   val jdbcOptions = replaceParams(config.jdbcOptions, JDBCOptions.JDBC_SESSION_INIT_STATEMENT)
   val writeOptions = replaceParams(config.sparkWriteOptions, JDBCOptions.JDBC_SESSION_INIT_STATEMENT)
   val jdbcProperties = new java.util.Properties()
-  jdbcOptions.foreach(p => jdbcProperties.put(p._1, p._2))
-  config.username.map(v => jdbcProperties.put("user", v))
-  config.password.map(v => jdbcProperties.put("password", v))
+  jdbcOptions.foreach(kv => jdbcProperties.put(kv._1, kv._2))
+  config.jdbcUser.map(v => jdbcProperties.put("user", v))
+  config.jdbcPassword.map(v => jdbcProperties.put("password", v))
 
   def run(): Unit = {
     val sparkSession = SparkUtils.createSparkSession(sparkConfig)
@@ -92,7 +90,6 @@ class DbLoader(args: Array[String]) {
 
   def runDbSql(connection: Connection, sql: String, params: Map[String, Any] = Map.empty): Unit = {
     val statements = sql.split(";").map(l => Strings.unsafeRemoveLineComments(l, "--")).flatMap(Strings.trim)
-    statements.foreach(println)
     IO.using(connection.createStatement()) { statement =>
       // TODO: Do we want to use mysql specific allowMultiQueries instead of hacky split on semicolon?
       statements.map(s => Strings.replaceParams(s, params)).foreach(statement.execute)
@@ -126,7 +123,7 @@ class DbLoader(args: Array[String]) {
 }
 
 object DbLoader {
-  val timestampFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneId.of("UTC"))
+  val TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneId.of("UTC"))
 
   def main(args: Array[String]): Unit = {
     val dbLoader = new DbLoader(args)
