@@ -43,24 +43,22 @@
     <properties>
         <main.class>UNSPECIFIED</main.class>
 
-        <jdk.version>8</jdk.version>
+        <jdk.version>11</jdk.version>
         <character.encoding>UTF-8</character.encoding>
 
-        <scala.version>2.11.12</scala.version>
-        <scala.compat.version>2.11</scala.compat.version>
+        <scala.version>2.12.10</scala.version>
+        <scala.compat.version>2.12</scala.compat.version>
 
-        <avro.version>1.9.0</avro.version>
-        <deequ.version>1.0.2</deequ.version>
         <delta.version>0.5.0</delta.version>
+        <!--        <jackson.version>2.10.2</jackson.version>-->
         <jackson.version>2.9.10</jackson.version>
         <log4s.version>1.8.2</log4s.version>
         <logback.version>1.2.3</logback.version>
         <persistence-api.version>2.2</persistence-api.version>
         <scalatest.version>3.1.0</scalatest.version>
         <slf4j.version>1.7.30</slf4j.version>
-        <spark.version>2.4.4</spark.version>
+        <spark.version>2.4.5</spark.version>
         <spark-fast-tests.version>0.20.0-s_${scala.compat.version}</spark-fast-tests.version>
-        <spark-testing-base.version>2.4.3_0.12.0</spark-testing-base.version>
     </properties>
 
     <dependencyManagement>
@@ -166,30 +164,11 @@
                 <version>${log4s.version}</version>
             </dependency>
 
-            <!-- deequ -->
-            <dependency>
-                <groupId>com.amazon.deequ</groupId>
-                <artifactId>deequ</artifactId>
-                <version>${deequ.version}</version>
-            </dependency>
-
             <!-- test -->
             <dependency>
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest_${scala.compat.version}</artifactId>
                 <version>${scalatest.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.holdenkarau</groupId>
-                <artifactId>spark-testing-base_${scala.compat.version}</artifactId>
-                <version>${spark-testing-base.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-log4j12</artifactId>
-                    </exclusion>
-                </exclusions>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -202,6 +181,8 @@
     </dependencyManagement>
 
     <build>
+        <finalName>${project.artifactId}_${scala.compat.version}-${project.version}</finalName>
+
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -230,7 +211,7 @@
                 <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
-                    <version>4.3.0</version>
+                    <version>4.3.1</version>
                     <configuration>
                         <charset>${character.encoding}</charset>
                         <scalaVersion>${scala.version}</scalaVersion>
@@ -288,36 +269,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.1.2</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.2.1</version>
-                    <executions>
-                        <execution>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>shade</goal>
-                            </goals>
-                            <configuration>
-                                <relocations>
-                                    <relocation>
-                                        <pattern>com.fasterxml.jackson</pattern>
-                                        <shadedPattern>com.nuna.trustdb.shaded.fasterxml.jackson</shadedPattern>
-                                    </relocation>
-                                </relocations>
-                                <transformers>
-                                    <transformer
-                                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                        <mainClass>${main.class}</mainClass>
-                                    </transformer>
-                                </transformers>
-                                <shadedArtifactAttached>true</shadedArtifactAttached>
-                                <shadedClassifierName>shaded</shadedClassifierName>
-                            </configuration>
-                        </execution>
-                    </executions>
+                    <version>3.2.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -325,9 +277,21 @@
 
     <profiles>
         <profile>
+            <id>java-8</id>
+            <properties>
+                <jdk.version>8</jdk.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>scala-11</id>
+            <properties>
+                <scala.version>2.11.12</scala.version>
+                <scala.compat.version>2.11</scala.compat.version>
+            </properties>
+        </profile>
+        <profile>
             <id>scala-12</id>
             <properties>
-                <!--                <jdk.version>11</jdk.version>-->
                 <scala.version>2.12.10</scala.version>
                 <scala.compat.version>2.12</scala.compat.version>
             </properties>

@@ -11,7 +11,7 @@
     <properties>
         <h2.version>1.4.200</h2.version>
         <mysql.version>8.0.19</mysql.version>
-        <postgresql.version>42.2.9</postgresql.version>
+        <postgresql.version>42.2.10</postgresql.version>
     </properties>
 
     <dependencies>
@@ -98,10 +98,13 @@
         </dependency>
 
         <!-- TODO: move to tools? -->
+        <!-- database -->
         <dependency>
             <groupId>javax.persistence</groupId>
             <artifactId>javax.persistence-api</artifactId>
         </dependency>
+
+        <!-- jdbc drivers -->
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
