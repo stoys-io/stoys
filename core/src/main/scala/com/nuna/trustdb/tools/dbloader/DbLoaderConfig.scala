@@ -31,6 +31,8 @@ case class DbLoaderConfig(
     jdbcOptions: Map[String, String],
     // Spark write options.
     sparkWriteOptions: Map[String, String],
+    // Limit number of rows to load per table. Note: Zero or less will completely skip spark and table loading.
+    limit: Option[Int],
     // Disable table creation.
     disableSchemaCreation: Boolean,
     // Disable table creation by our JdbcReflection class. Spark may still create the table.

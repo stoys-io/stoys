@@ -67,9 +67,12 @@ class DbLoader(args: Array[String]) {
       runDbSql(connection, JdbcReflection.getCreateTableStatement[T](tableName, schemaName))
     }
 
-    logger.info(s"Writing $qualifiedTableName:")
-    val table = normalizeTable[T](sparkIO.df(tableName))(tableName.typeTag)
-    table.write.mode(SaveMode.Append).options(writeOptions).jdbc(config.jdbcUrl, qualifiedTableName, jdbcProperties)
+    if (config.limit.isEmpty || config.limit.getOrElse(0) > 0) {
+      logger.info(s"Writing $qualifiedTableName:")
+      val table = normalizeTable[T](sparkIO.df(tableName))(tableName.typeTag)
+      val limited = config.limit.map(table.limit).getOrElse(table)
+      limited.write.mode(SaveMode.Append).options(writeOptions).jdbc(config.jdbcUrl, qualifiedTableName, jdbcProperties)
+    }
 
     if (!config.disableConstrainCreation) {
       logger.info(s"Creating constrains for table $qualifiedTableName.")
