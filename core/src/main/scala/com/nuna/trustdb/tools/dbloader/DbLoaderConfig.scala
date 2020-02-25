@@ -31,8 +31,10 @@ case class DbLoaderConfig(
     jdbcOptions: Map[String, String],
     // Spark write options.
     sparkWriteOptions: Map[String, String],
-    // Note: This disable table creation by our reflection based code. Spark may still create the table. Add your own
-    //       CREATE TABLE statement into beforeLoadScript if you want full manual control over the table creation.
+    // Disable table creation.
+    disableSchemaCreation: Boolean,
+    // Disable table creation by our JdbcReflection class. Spark may still create the table.
+    // Note: Add your own "CREATE TABLE" statement(s) into beforeLoadScript for full control over the table creation.
     disableTableCreation: Boolean,
     // This primary key and unique key constrains creation. JdbcReflection creates primary key on @Id annotated columns.
     // The unique key constrains are generated per column if @Column(unique=true) is present.

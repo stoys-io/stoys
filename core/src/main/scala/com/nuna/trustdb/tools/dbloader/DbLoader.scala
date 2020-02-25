@@ -44,7 +44,10 @@ class DbLoader(args: Array[String]) {
 
     IO.using(DriverManager.getConnection(config.jdbcUrl, jdbcProperties)) { connection =>
       runDbSqlFile(connection, config.beforeLoadScript, params = params)
-      runDbSql(connection, s"CREATE SCHEMA $schemaName")
+      if (!config.disableSchemaCreation) {
+        logger.info(s"Creating schema $schemaName.")
+        runDbSql(connection, s"CREATE SCHEMA $schemaName")
+      }
       val tableNameLookup = new TableNameLookup(lookupClasses(config.caseClassNames))
       config.tableNames.foreach { fullTableName =>
         tableNameLookup.parse(fullTableName) match {
