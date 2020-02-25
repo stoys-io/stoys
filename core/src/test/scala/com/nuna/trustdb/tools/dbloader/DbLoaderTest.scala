@@ -44,7 +44,8 @@ class DbLoaderTest extends SparkTestBase {
       s"db_loader_config@@table_names@@0=$tableName",
       s"db_loader_config@@case_class_names@@0=$caseClassName",
       s"db_loader_config@@jdbc_url=$jdbcUrl",
-      s"db_loader_config@@after_load_script=after_load_script.sql"
+      s"db_loader_config@@after_load_script=after_load_script.sql",
+      s"db_loader_config@@executed_sql_output_file=$tmpDir/executed_sql.sql"
     )
     DbLoader.main(scala.Array("--environments=dbloader") ++ args)
 

@@ -1,5 +1,6 @@
 package com.nuna.trustdb.tools.dbloader
 
+import java.nio.file.{Files, Paths}
 import java.sql.{Connection, DriverManager}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId}
@@ -38,6 +39,8 @@ class DbLoader(args: Array[String]) {
   config.jdbcUser.map(v => jdbcProperties.put("user", v))
   config.jdbcPassword.map(v => jdbcProperties.put("password", v))
 
+  val executedSqlStatements = Seq.newBuilder[String]
+
   def run(): Unit = {
     val sparkSession = SparkUtils.createSparkSession(sparkConfig)
     val sparkIO = new SparkIO(sparkSession, sparkIOConfig)
@@ -57,6 +60,12 @@ class DbLoader(args: Array[String]) {
         }
       }
       runDbSqlFile(connection, config.afterLoadScript, params = params)
+    }
+
+    if (config.executedSqlOutputFile.isDefined) {
+      val fileName = config.executedSqlOutputFile.get
+      logger.info(s"Writing executed sql statements to $fileName.")
+      Files.write(Paths.get(fileName), executedSqlStatements.result().mkString("", ";\n\n", ";\n").getBytes())
     }
   }
 
@@ -96,10 +105,14 @@ class DbLoader(args: Array[String]) {
   }
 
   def runDbSql(connection: Connection, sql: String, params: Map[String, Any] = Map.empty): Unit = {
-    val statements = sql.split(";").map(l => Strings.unsafeRemoveLineComments(l, "--")).flatMap(Strings.trim)
+    // TODO: Can we do proper splitting and comments removing which actually understand sql language?
+    val rawSqlStatements = sql.split(";").map(l => Strings.unsafeRemoveLineComments(l, "--")).flatMap(Strings.trim)
     IO.using(connection.createStatement()) { statement =>
-      // TODO: Do we want to use mysql specific allowMultiQueries instead of hacky split on semicolon?
-      statements.map(s => Strings.replaceParams(s, params)).foreach(statement.execute)
+      rawSqlStatements.foreach { rawSqlStatement =>
+        val sqlStatement = Strings.replaceParams(rawSqlStatement, params)
+        statement.execute(sqlStatement)
+        executedSqlStatements += sqlStatement
+      }
     }
   }
 

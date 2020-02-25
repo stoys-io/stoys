@@ -40,5 +40,7 @@ case class DbLoaderConfig(
     disableTableCreation: Boolean,
     // This primary key and unique key constrains creation. JdbcReflection creates primary key on @Id annotated columns.
     // The unique key constrains are generated per column if @Column(unique=true) is present.
-    disableConstrainCreation: Boolean
+    disableConstrainCreation: Boolean,
+    // Write executed sql statements from DbLoader (not from Spark!) to a file.
+    executedSqlOutputFile: Option[String]
 )
