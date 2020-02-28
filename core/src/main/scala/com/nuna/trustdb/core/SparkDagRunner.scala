@@ -1,13 +1,17 @@
 package com.nuna.trustdb.core
 
+import java.sql.Timestamp
+
 import com.nuna.trustdb.core.spark.{SparkIO, SparkIOConfig, SparkUtils, TableName}
-import com.nuna.trustdb.core.util.Configuration
+import com.nuna.trustdb.core.util.{Configuration, IO}
+import org.apache.commons.io.IOUtils
+import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{Dataset, Encoder, SparkSession}
 
 import scala.collection.mutable
 import scala.reflect.runtime.universe._
 
-class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, sparkDagRunnerConfig: SparkDagRunnerConfig) {
+class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: SparkDagRunnerConfig) {
   import sparkSession.implicits._
 
   private val logger = org.log4s.getLogger
@@ -29,13 +33,13 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, sparkDagRunne
 
   def wrap[T <: Product : Encoder](ds: Dataset[T], tableName: TableName[T]): Dataset[T] = {
     val fullTableName = tableName.fullTableName()
-    sparkIO.inputTables.find(_.fullTableName == fullTableName) match {
+    sparkIO.resolvedInputTables.find(_.fullTableName == fullTableName) match {
       case Some(dsFromInputTables) =>
         logger.warn(s"Overriding $tableName from ${dsFromInputTables.path}!")
         //NOTE: ignore computing metrics for overriding collections
         sparkIO.ds[T](tableName)
       case None =>
-        if (sparkDagRunnerConfig.debug || sparkDagRunnerConfig.computeCollections.contains(fullTableName)) {
+        if (config.debug || config.computeCollections.contains(fullTableName)) {
           logger.info(s"Computing and writing $fullTableName")
           sparkIO.write(ds, tableName)
         }
@@ -47,9 +51,22 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, sparkDagRunne
     metricDatasets.append(metrics)
   }
 
-  private def finish(): Unit = {
-    sparkIO.writeMetrics(metricDatasets, sparkDagRunnerConfig.runTimestamp)
-    sparkIO.writeInputOutputTableList()
+  def finish(): Unit = {
+    val mergedMetrics = metricDatasets.reduceOption((m1, m2) => m1.union(m2))
+
+    mergedMetrics.foreach(mm => sparkIO.write(mm, TableName[Metric]))
+
+    config.sharedOutputPath.foreach { sharedOutputPath =>
+      mergedMetrics.foreach { mm =>
+        mm.withColumn("run_timestamp", lit(Timestamp.valueOf(config.runTimestamp)))
+            .write.format("delta").mode("append").save(s"$sharedOutputPath/metric")
+      }
+      sparkIO.config.outputPath.foreach { outputPath =>
+        IO.using(sparkIO.dfs.create(s"$sharedOutputPath/latest.list")) { dos =>
+          IOUtils.write(s"$outputPath?sos-listing_strategy=dag\n", dos)
+        }
+      }
+    }
   }
 }
 
@@ -60,16 +77,17 @@ object SparkDagRunner {
     val sparkDagRunnerConfig = configuration.readConfig[SparkDagRunnerConfig]
     val sparkSession = SparkUtils.createSparkSession(sparkConfig)
     val sparkIOConfig = configuration.readConfig[SparkIOConfig]
-    val sparkIO = new SparkIO(sparkSession, sparkIOConfig)
-    val sparkDagRunner = new SparkDagRunner(sparkSession, sparkIO, sparkDagRunnerConfig)
 
-    // Note: Main dag has to take the following arguments in constructor (exact types and order) and implement Runnable.
-    val mainDag = Class.forName(sparkDagRunnerConfig.mainDagClass)
-        .getDeclaredConstructor(classOf[Configuration], classOf[SparkSession], classOf[SparkDagRunner])
-        .newInstance(configuration, sparkSession, sparkDagRunner)
-        .asInstanceOf[Runnable]
-
-    mainDag.run()
-    sparkDagRunner.finish()
+    IO.using(new SparkIO(sparkSession, sparkIOConfig)) { sparkIO =>
+      sparkIO.init()
+      val sparkDagRunner = new SparkDagRunner(sparkSession, sparkIO, sparkDagRunnerConfig)
+      // Main dag has to take the following arguments in constructor (exact types and order) and implement Runnable.
+      val mainDag = Class.forName(sparkDagRunnerConfig.mainDagClass)
+          .getDeclaredConstructor(classOf[Configuration], classOf[SparkSession], classOf[SparkDagRunner])
+          .newInstance(configuration, sparkSession, sparkDagRunner)
+          .asInstanceOf[Runnable]
+      mainDag.run()
+      sparkDagRunner.finish()
+    }
   }
 }

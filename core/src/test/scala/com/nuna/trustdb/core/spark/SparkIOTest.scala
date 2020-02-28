@@ -12,7 +12,7 @@ class SparkIOTest extends SparkTestBase {
   val dfs = new Dfs(sparkSession)
 
   val emptySparkIOConfig = Arbitrary.empty[SparkIOConfig]
-  val defaultSosParams = Arbitrary.empty[SosParams].copy(format = DEFAULT_FORMAT)
+  val emptySosTable = Arbitrary.empty[SosTable]
 
   test("parsePathParams") {
     assert(parsePathParams("dir") === ("dir", Seq.empty))
@@ -28,26 +28,28 @@ class SparkIOTest extends SparkTestBase {
     val tmp = createTemporaryDirectory().toAbsolutePath
     val sparkIO = new SparkIO(sparkSession, emptySparkIOConfig)
 
-    mkdirsWithSuccess(s"$tmp/1/foo")
-    mkdirsWithSuccess(s"$tmp/10/foo")
-    mkdirsWithSuccess(s"$tmp/10/bar")
-    mkdirsWithSuccess(s"$tmp/11/foo", success = false)
-    mkdirsWithSuccess(s"$tmp/20/foo")
-    writeStringToFile(s"$tmp/10.list", s"$tmp/10/foo\n$tmp/10/foo?sos-table_name=bar\n")
+    mkdirsWithSuccess(s"$tmp/foo")
+    mkdirsWithSuccess(s"$tmp/bar")
+    dfs.mkdirs(s"$tmp/baz")
+    dfs.mkdirs(s"$tmp/.meta")
+    writeStringToFile(s"$tmp/output.list", s"$tmp/foo\n$tmp/foo?sos-table_name=bar\n")
 
-    assertThrows[IllegalArgumentException](sparkIO.resolveInputTables("foo.list?sos-table_name=bar"))
-    assertThrows[IllegalArgumentException](sparkIO.resolveInputTables("foo?sos-listing_strategy=@&sos-table_name=bar"))
+    assertThrows[IllegalArgumentException](sparkIO.resolveInputTables(s"$tmp/output.list?sos-table_name=bar"))
+    assertThrows[IllegalArgumentException](
+      sparkIO.resolveInputTables(s"$tmp/foo?sos-listing_strategy=tables&sos-table_name=bar"))
 
-    assert(sparkIO.resolveInputTables(s"$tmp/10.list") === Seq(
-      ReaderConfig("bar", s"$tmp/10/foo", defaultSosParams.format, Map.empty),
-      ReaderConfig("foo", s"$tmp/10/foo", defaultSosParams.format, Map.empty)))
-
-    assert(sparkIO.resolveInputTables(s"$tmp/10/foo?sos-table_name=bar") === Seq(
-      ReaderConfig("bar", s"$tmp/10/foo", defaultSosParams.format, Map.empty)))
-
-    assert(sparkIO.resolveInputTables(s"$tmp/10?sos-listing_strategy=@") === Seq(
-      ReaderConfig("bar", s"file:$tmp/10/bar", defaultSosParams.format, Map.empty),
-      ReaderConfig("foo", s"file:$tmp/10/foo", defaultSosParams.format, Map.empty)))
+    assert(sparkIO.resolveInputTables(s"$tmp/output.list").toSet === Set(
+      emptySosTable.copy(fullTableName = "bar", path = s"$tmp/foo"),
+      emptySosTable.copy(fullTableName = "foo", path = s"$tmp/foo")))
+    assert(sparkIO.resolveInputTables(s"$tmp/foo?sos-table_name=bar").toSet === Set(
+      emptySosTable.copy(fullTableName = "bar", path = s"$tmp/foo")))
+    assert(sparkIO.resolveInputTables(s"$tmp?sos-listing_strategy=dag").toSet === Set(
+      emptySosTable.copy(fullTableName = "bar", path = s"$tmp/foo"),
+      emptySosTable.copy(fullTableName = "foo", path = s"$tmp/foo")))
+    assert(sparkIO.resolveInputTables(s"$tmp?sos-listing_strategy=tables").toSet === Set(
+      emptySosTable.copy(fullTableName = "bar", path = s"file:$tmp/bar"),
+      emptySosTable.copy(fullTableName = "baz", path = s"file:$tmp/baz"),
+      emptySosTable.copy(fullTableName = "foo", path = s"file:$tmp/foo")))
   }
 
   def createTemporaryDirectory(deleteOnExit: Boolean = true): Path = {
@@ -58,11 +60,9 @@ class SparkIOTest extends SparkTestBase {
     directory
   }
 
-  def mkdirsWithSuccess(path: String, success: Boolean = true): Unit = {
+  def mkdirsWithSuccess(path: String): Unit = {
     dfs.mkdirs(path)
-    if (success) {
-      dfs.createNewFile(s"$path/_SUCCESS")
-    }
+    dfs.createNewFile(s"$path/_SUCCESS")
   }
 
   def writeStringToFile(path: String, content: String): Unit = {
