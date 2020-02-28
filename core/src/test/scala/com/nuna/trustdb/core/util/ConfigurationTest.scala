@@ -27,9 +27,9 @@ class ConfigurationTest extends AnyFunSuite {
     assert(Configuration().readConfig[TestConfig] === defaultTestConfig)
     assert(Configuration("--environments=foo").readConfig[TestConfig] === fooTestConfig)
     val envArgs = Configuration("--environments=foo", "unused@@string=unused", "test_config@@seq@@0=prop",
-      "test_config@@map@@some.key=value", "test_config@@date=20191104", "test_config@@password=secret")
+      "test_config@@map@@some.key=value", "test_config@@date=2020-02-02", "test_config@@password=secret")
     assert(envArgs.readConfig[TestConfig]
-        === TestConfig(42, "foo", Seq("prop"), Map("some.key" -> "value"), LocalDate.of(2019, 11, 4), "secret"))
+        === TestConfig(42, "foo", Seq("prop"), Map("some.key" -> "value"), LocalDate.of(2020, 2, 2), "secret"))
     assert(Configuration("--environments=master").readConfig[TestConfig] === defaultTestConfig.copy(string = "master"))
   }
 

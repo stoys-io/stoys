@@ -23,7 +23,7 @@ class SparkDagRunnerTest extends SparkTestBase {
     val testDir = Files.createTempDirectory(this.getClass.getSimpleName + ".").toFile
     testDir.deleteOnExit()
 
-    val runTimestamp = "20191104125146"
+    val runTimestamp = "2020-02-02T02:22:20"
     val inputPath = s"$testDir/ingestion"
     val outputPath = s"$testDir/output"
     val publishPath = s"$testDir/shared"
@@ -52,7 +52,7 @@ class SparkDagRunnerTest extends SparkTestBase {
     assertDatasetEquality(actual, expected, ignoreNullable = true)
 
     val actualMetrics = sparkSession.read.format("delta").load(s"$publishPath/metric")
-    val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp, DateTimeFormatter.ofPattern("yyyyMMddHHmmss")))
+    val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp))
     val expectedMetrics = Array(
       Row("add_metric_1", 1.0, Map.empty[String, String], ts),
       Row("add_metric_2", 2.0, Map("k1" -> "v1"), ts))
