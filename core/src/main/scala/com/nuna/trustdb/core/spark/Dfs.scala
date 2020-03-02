@@ -1,20 +1,21 @@
 package com.nuna.trustdb.core.spark
 
-import org.apache.hadoop.fs.{FSDataInputStream, FSDataOutputStream, FileStatus, FileSystem, Path}
+import java.nio.charset.StandardCharsets
+
+import com.nuna.trustdb.core.util.IO
+import org.apache.commons.io.IOUtils
+import org.apache.hadoop.fs._
 import org.apache.spark.sql.SparkSession
 
 // Philosophy:
 //   1) asQualifiedPath is utility function to return concrete filesystem implementation and Path from path string.
-//   2) All other functions should have exactly the same api as the underlying fs api but this taking path as string.
+//   2) There are a few utility functions like path, readString and writeString in here.
+//   3) All other functions should have the same api as the underlying FileSystem api but taking path as string.
 class Dfs(sparkSession: SparkSession) {
   private val hadoopConfiguration = sparkSession.sparkContext.hadoopConfiguration
 
   def path(path: String): Path = {
     new Path(path)
-  }
-
-  def fs(path: Path): FileSystem = {
-    path.getFileSystem(hadoopConfiguration)
   }
 
   def asQualifiedPath(path: String): (FileSystem, Path) = {
@@ -24,14 +25,27 @@ class Dfs(sparkSession: SparkSession) {
     (fs, qualifiedPath)
   }
 
-  def createNewFile(path: String): Boolean = {
-    val (fs, qualifiedPath) = asQualifiedPath(path)
-    fs.createNewFile(qualifiedPath)
+  def readString(path: String): String = {
+    IO.using(open(path))(is => IOUtils.toString(is, StandardCharsets.UTF_8))
+  }
+
+  def writeString(path: String, content: String): Unit = {
+    IO.using(create(path))(_.write(content.getBytes(StandardCharsets.UTF_8)))
   }
 
   def create(path: String): FSDataOutputStream = {
     val (fs, qualifiedPath) = asQualifiedPath(path)
     fs.create(qualifiedPath)
+  }
+
+  def createNewFile(path: String): Boolean = {
+    val (fs, qualifiedPath) = asQualifiedPath(path)
+    fs.createNewFile(qualifiedPath)
+  }
+
+  def exists(path: String): Boolean = {
+    val (fs, qualifiedPath) = asQualifiedPath(path)
+    fs.exists(qualifiedPath)
   }
 
   def listStatus(path: String): Array[FileStatus] = {
