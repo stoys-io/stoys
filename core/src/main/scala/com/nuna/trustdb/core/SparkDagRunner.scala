@@ -4,7 +4,6 @@ import java.sql.Timestamp
 
 import com.nuna.trustdb.core.spark.{SparkIO, SparkIOConfig, SparkUtils, TableName}
 import com.nuna.trustdb.core.util.{Configuration, IO}
-import org.apache.commons.io.IOUtils
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{Dataset, Encoder, SparkSession}
 
@@ -33,10 +32,9 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
 
   def wrap[T <: Product : Encoder](ds: Dataset[T], tableName: TableName[T]): Dataset[T] = {
     val fullTableName = tableName.fullTableName()
-    sparkIO.resolvedInputTables.find(_.fullTableName == fullTableName) match {
-      case Some(dsFromInputTables) =>
-        logger.warn(s"Overriding $tableName from ${dsFromInputTables.path}!")
-        //NOTE: ignore computing metrics for overriding collections
+    sparkIO.getInputTable(fullTableName) match {
+      case Some(sosTable) =>
+        logger.warn(s"Overriding $tableName from ${sosTable.path}!")
         sparkIO.ds[T](tableName)
       case None =>
         if (config.debug || config.computeCollections.contains(fullTableName)) {
@@ -61,11 +59,7 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
         mm.withColumn("run_timestamp", lit(Timestamp.valueOf(config.runTimestamp)))
             .write.format("delta").mode("append").save(s"$sharedOutputPath/metric")
       }
-      sparkIO.config.outputPath.foreach { outputPath =>
-        IO.using(sparkIO.dfs.create(s"$sharedOutputPath/latest.list")) { dos =>
-          IOUtils.write(s"$outputPath?sos-listing_strategy=dag\n", dos)
-        }
-      }
+      sparkIO.writeSymLink(s"$sharedOutputPath/latest.list")
     }
   }
 }

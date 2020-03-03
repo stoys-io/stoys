@@ -46,9 +46,9 @@ class SparkDagRunnerTest extends SparkTestBase {
     val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp))
     assert(sharedMetrics.collect() === Array(Row("add_metric", 42.0, Map("foo" -> "bar"), ts)))
 
-    assert(Source.fromFile(s"$outputPath/.meta/resolved_input_tables.list").getLines.toSet
+    assert(Source.fromFile(s"$outputPath/.dag/input_tables.list").getLines.toSet
         === Set(s"file:$inputPath/bar?sos-table_name=bar", s"file:$inputPath/foo?sos-table_name=foo"))
-    assert(Source.fromFile(s"$outputPath/output.list").getLines.toSet === Set(
+    assert(Source.fromFile(s"$outputPath/.dag/output_tables.list").getLines.toSet === Set(
       s"$outputPath/pack?sos-format=parquet&sos-table_name=pack",
       s"$outputPath/metric?sos-format=parquet&sos-table_name=metric"))
     assert(Source.fromFile(s"$sharedOutputPath/latest.list").getLines.toSet

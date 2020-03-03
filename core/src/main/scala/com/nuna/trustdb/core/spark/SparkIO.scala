@@ -1,39 +1,55 @@
 package com.nuna.trustdb.core.spark
 
+import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-import com.nuna.trustdb.core.util.IO
-import org.apache.commons.io.IOUtils
 import org.apache.http.client.utils.{URIBuilder, URLEncodedUtils}
 import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-class SparkIO(sparkSession: SparkSession, val config: SparkIOConfig) extends AutoCloseable {
+// Note: Do not forget to call init() first to register config.inputPaths!
+class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoCloseable {
   import SparkIO._
 
   private val logger = org.log4s.getLogger
 
   val dfs = new Dfs(sparkSession)
 
-  val inputPaths = mutable.Buffer.empty[String]
-  val resolvedInputTables = mutable.Buffer.empty[SosTable]
-  val outputTables = mutable.Buffer.empty[SosTable]
+  private val inputPaths = mutable.Buffer.empty[String]
+  private val inputDags = mutable.Buffer.empty[SosDag]
+  private val inputTables = mutable.Map.empty[String, SosTable]
+  private val outputTables = mutable.Map.empty[String, SosTable]
 
   def init(): Unit = {
     addInputPaths(config.inputPaths: _*)
   }
 
+  private def addInputTable(table: SosTable): Unit = {
+    inputTables.get(table.name) match {
+      case Some(existingTable) if existingTable == table =>
+        logger.debug(s"Resolved the same table again ($table).")
+      case Some(existingTable) =>
+        val msg = s"Resolved conflicting tables for table_name ${table.name} ($existingTable and $table)!"
+        logger.error(msg)
+        throw new IOException(msg)
+      case None =>
+        inputTables.put(table.name, table)
+        registerInputTable(table)
+    }
+  }
+
   def addInputPaths(paths: String*): Unit = {
     paths.foreach { path =>
       inputPaths.append(path)
-      val tables = resolveInputTables(path)
-      resolvedInputTables.appendAll(tables)
-      tables.foreach(registerInputTable)
+      resolveInputs(path).foreach {
+        case dag: SosDag => inputDags.append(dag)
+        case table: SosTable => addInputTable(table)
+      }
     }
   }
 
@@ -47,55 +63,77 @@ class SparkIO(sparkSession: SparkSession, val config: SparkIOConfig) extends Aut
 
   private def writeDF(df: DataFrame, fullTableName: String): Unit = {
     val path = s"${config.outputPath.get}/$fullTableName"
-    logger.info(s"Writing $fullTableName to $path.")
-    var writer = df.write
-    config.writeFormat.foreach(f => writer = writer.format(f))
-    config.writeMode.foreach(m => writer = writer.mode(m))
-    writer = writer.options(config.writeOptions)
-    writer.save(path)
     val table = SosTable(fullTableName, path, config.writeFormat, config.writeOptions)
-    outputTables.append(table)
+    if (outputTables.contains(table.name)) {
+      val msg = s"Writing table with the same table_name ${table.name} multiple times!"
+      logger.error(msg)
+      throw new IOException(msg)
+    } else {
+      logger.info(s"Writing $fullTableName to $path.")
+      var writer = df.write
+      config.writeFormat.foreach(f => writer = writer.format(f))
+      config.writeMode.foreach(m => writer = writer.mode(m))
+      writer = writer.options(config.writeOptions)
+      writer.save(path)
+      outputTables.put(table.name, table)
+    }
   }
 
   def write[T <: Product](ds: Dataset[T], tableName: TableName[T]): Unit = {
     writeDF(ds.toDF(), tableName.fullTableName())
   }
 
-  private[spark] def resolveInputTables(inputPath: String): Seq[SosTable] = {
+  // TODO: Add listing strategies based on timestamp, checking success, etc.
+  private[spark] def resolveInputs(inputPath: String): Seq[SosInput] = {
     val (path, params) = parsePathParams(inputPath)
-    val (rawSosOptions, sparkOptions) = params.toMap.partition(_._1.toLowerCase(Locale.ROOT).startsWith(SOS_PREFIX))
+    val (rawSosOptions, options) = params.toMap.partition(_._1.toLowerCase(Locale.ROOT).startsWith(SOS_PREFIX))
     val sosOptions = toSosOptions(rawSosOptions)
+    val defaultTable = SosTable(null, path, sosOptions.format, options)
 
-    val lastPathSegment = dfs.path(path).getName
     val tnAndLsMsg = s"${SOS_PREFIX}table_name and ${SOS_PREFIX}listing_strategy"
-    val inputTables = (lastPathSegment, sosOptions.tableName, sosOptions.listingStrategy) match {
+    val inputs = (dfs.path(path).getName, sosOptions.tableName, sosOptions.listingStrategy) match {
       case (_, Some(_), Some(_)) =>
         throw new IllegalArgumentException(s"Having both $tnAndLsMsg at the same time are not supported ($inputPath).")
       case (SOS_LIST_PATTERN(_), Some(_), _) | (SOS_LIST_PATTERN(_), _, Some(_)) =>
-        throw new IllegalArgumentException(s"Parameters $tnAndLsMsg are not supported *.list files ($inputPath).")
+        throw new IllegalArgumentException(s"Parameters $tnAndLsMsg are not supported on *.list files ($inputPath).")
       case (SOS_LIST_PATTERN(_), None, None) =>
-        val content = IO.using(dfs.open(path)) { is => IOUtils.toString(is, StandardCharsets.UTF_8) }
-        // TODO: async, cycles, max depth
-        content.split('\n').filterNot(_.startsWith("#")).flatMap(resolveInputTables).toSeq
-      case (_, None, Some(strategy)) => listTables(strategy, path, sosOptions.copy(listingStrategy = None),
-        sparkOptions)
-      case (lastPathSegment, None, None) => Seq(SosTable(lastPathSegment, path, sosOptions.format, sparkOptions))
-      case (_, Some(tableName), None) => Seq(SosTable(tableName, path, sosOptions.format, sparkOptions))
+        dfs.readString(path).split('\n').filterNot(_.startsWith("#")).filterNot(_.isEmpty).flatMap(resolveInputs).toSeq
+      case (_, None, Some("tables")) =>
+        val fileStatuses = dfs.listStatus(path).filter(s => s.isDirectory && !s.getPath.getName.startsWith("."))
+        fileStatuses.map(s => defaultTable.copy(name = s.getPath.getName, path = s.getPath.toString)).toSeq
+      case (_, None, Some(strategy)) if strategy.startsWith("dag") => resolveDagInputs(path, sosOptions, options)
+      case (_, None, Some(strategy)) => throw new IllegalArgumentException(s"Unsupported listing strategy '$strategy'.")
+      case (DAG_DIR, None, None) =>
+        resolveDagInputs(dfs.path(path).getParent.toString, sosOptions.copy(listingStrategy = Some("dag")), options)
+      case (lastPathSegment, None, None) if !lastPathSegment.startsWith(".") =>
+        Seq(defaultTable.copy(name = lastPathSegment))
+      case (_, Some(tableName), None) => Seq(defaultTable.copy(name = tableName))
+      case (lastPathSegment, None, None) if lastPathSegment.startsWith(".") =>
+        throw new IllegalArgumentException(s"Unsupported path starting with dot '$lastPathSegment'.")
     }
-    inputTables
+    inputs
   }
 
-  private[spark] def listTables(strategy: String, path: String, sosOptions: SosOptions, options: Map[String, String])
-  : Seq[SosTable] = {
-    strategy match {
-      case "dag" => resolveInputTables(SosTable(null, s"$path/output.list", sosOptions.format, options).toUrlString())
-      case "tables" =>
-        dfs.listStatus(path)
-            .filter(s => s.isDirectory && !s.getPath.getName.startsWith("."))
-            .map(s => SosTable(s.getPath.getName, s.getPath.toString, sosOptions.format, options))
-      case s => throw new IllegalArgumentException(s"Unsupported listing strategy '$s'.")
-      // TODO: add timestamp based strategies
+  private def resolveDagInputs(path: String, sosOptions: SosOptions, options: Map[String, String]): Seq[SosInput] = {
+    def resolveDagList(path: String): Seq[SosInput] = {
+      resolveInputs(SosTable(null, path, sosOptions.format, options).toUrlString())
     }
+
+    lazy val inputTables = resolveDagList(s"$path/$DAG_DIR/input_tables.list")
+    lazy val outputTables = resolveDagList(s"$path/$DAG_DIR/output_tables.list")
+    lazy val inputDags = resolveDagList(s"$path/$DAG_DIR/input_dags.list")
+    val inputs = sosOptions.listingStrategy match {
+      case Some("dag") => outputTables
+      case Some("dag_io") => outputTables ++ inputTables
+      case Some("dag_io_recursive") =>
+        // TODO: async, cycles, max depth
+        val upstreamInputs = inputDags.collect {
+          case dag: SosDag => resolveDagInputs(dag.path, sosOptions, options)
+        }
+        outputTables ++ inputTables ++ upstreamInputs.flatten
+      case strategy => throw new IllegalArgumentException(s"Unsupported dag listing strategy '$strategy'.")
+    }
+    Seq(SosDag(path)) ++ inputs
   }
 
   private[spark] def registerInputTable(inputTable: SosTable): DataFrame = {
@@ -104,41 +142,56 @@ class SparkIO(sparkSession: SparkSession, val config: SparkIOConfig) extends Aut
     inputTable.format.foreach(f => reader = reader.format(f))
     reader = reader.options(inputTable.options)
     val table = reader.load(inputTable.path)
-    table.createOrReplaceTempView(inputTable.fullTableName)
+    table.createOrReplaceTempView(inputTable.name)
     table
   }
 
   override def close(): Unit = {
     config.outputPath.foreach { outputPath =>
-      IO.using(dfs.create(s"$outputPath/$METADATA_DIR/input_paths.list")) { dos =>
-        IOUtils.write(inputPaths.mkString("", "\n", "\n"), dos)
-      }
-      IO.using(dfs.create(s"$outputPath/$METADATA_DIR/resolved_input_tables.list")) { dos =>
-        IOUtils.write(resolvedInputTables.map(_.toUrlString()).mkString("", "\n", "\n"), dos)
-      }
-      IO.using(dfs.create(s"$outputPath/output.list")) { dos =>
-        IOUtils.write(outputTables.map(_.toUrlString()).mkString("", "\n", "\n"), dos)
-      }
+      dfs.writeString(s"$outputPath/$DAG_DIR/input_paths.list", inputPaths.mkString("\n"))
+      dfs.writeString(s"$outputPath/$DAG_DIR/input_dags.list", inputDags.map(_.toUrlString()).mkString("\n"))
+      val inputTablesContent = inputTables.map(_._2.toUrlString()).toSeq.sorted.mkString("\n")
+      dfs.writeString(s"$outputPath/$DAG_DIR/input_tables.list", inputTablesContent)
+      val outputTablesContent = outputTables.map(_._2.toUrlString()).toSeq.sorted.mkString("\n")
+      dfs.writeString(s"$outputPath/$DAG_DIR/output_tables.list", outputTablesContent)
     }
+  }
+
+  def getInputTable(tableName: String): Option[SosTable] = {
+    inputTables.get(tableName)
+  }
+
+  def writeSymLink(path: String): Unit = {
+    config.outputPath.foreach(outputPath => dfs.writeString(path, SosDag(outputPath).toUrlString()))
   }
 }
 
 object SparkIO {
   val DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-  val METADATA_DIR = ".meta"
-
+  val DAG_DIR = ".dag"
   val SOS_PREFIX = "sos-"
   val SOS_LIST_PATTERN = "(?i)(.*)\\.list".r
 
   case class SosOptions(format: Option[String], tableName: Option[String], listingStrategy: Option[String])
 
-  case class SosTable(fullTableName: String, path: String, format: Option[String], options: Map[String, String]) {
-    def toUrlString(): String = {
+  sealed trait SosInput {
+    def toUrlString(): String
+  }
+
+  case class SosTable(name: String, path: String, format: Option[String],
+      options: Map[String, String]) extends SosInput {
+    override def toUrlString(): String = {
       val uriBuilder = new URIBuilder(path)
       format.foreach(f => uriBuilder.addParameter(s"${SOS_PREFIX}format", f))
-      Option(fullTableName).foreach(ftn => uriBuilder.addParameter(s"${SOS_PREFIX}table_name", ftn))
+      Option(name).foreach(n => uriBuilder.addParameter(s"${SOS_PREFIX}table_name", n))
       options.foreach(kv => uriBuilder.addParameter(kv._1, kv._2))
       uriBuilder.build().toString
+    }
+  }
+
+  case class SosDag(path: String) extends SosInput {
+    override def toUrlString(): String = {
+      s"$path?sos-listing_strategy=dag"
     }
   }
 
