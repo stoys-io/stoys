@@ -32,7 +32,7 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
 
   def wrap[T <: Product : Encoder](ds: Dataset[T], tableName: TableName[T]): Dataset[T] = {
     val fullTableName = tableName.fullTableName()
-    sparkIO.getInputTable(fullTableName) match {
+    val result = sparkIO.getInputTable(fullTableName) match {
       case Some(sosTable) =>
         logger.warn(s"Overriding $tableName from ${sosTable.path}!")
         sparkIO.ds[T](tableName)
@@ -43,17 +43,37 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
         }
         ds
     }
+    cached(result)
   }
 
   def wrapMetrics(metrics: Dataset[Metric]): Unit = {
     metricDatasets.append(metrics)
   }
 
-  def finish(): Unit = {
-    val mergedMetrics = metricDatasets.reduceOption((m1, m2) => m1.union(m2))
+  def run(mainDag: Runnable): Unit = {
+    val mainDagRunTry = scala.util.Try(mainDag.run())
 
+    val mergedMetrics = metricDatasets.reduceOption((m1, m2) => m1.union(m2)).map(cached)
     mergedMetrics.foreach(mm => sparkIO.write(mm, TableName[Metric]))
 
+    mainDagRunTry match {
+      case scala.util.Success(_) =>
+        writeSharedOutputPath(mergedMetrics)
+      case scala.util.Failure(t) =>
+        logger.error(t)(s"Running main dag ${mainDag.getClass} has failed!")
+        throw t
+    }
+  }
+
+  private def cached[T <: Product : Encoder](ds: Dataset[T]): Dataset[T] = {
+    if (config.disableCaching) {
+      ds
+    } else {
+      ds.cache()
+    }
+  }
+
+  private def writeSharedOutputPath(mergedMetrics: Option[Dataset[Metric]]): Unit = {
     config.sharedOutputPath.foreach { sharedOutputPath =>
       mergedMetrics.foreach { mm =>
         mm.withColumn("run_timestamp", lit(Timestamp.valueOf(config.runTimestamp)))
@@ -74,14 +94,17 @@ object SparkDagRunner {
 
     IO.using(new SparkIO(sparkSession, sparkIOConfig)) { sparkIO =>
       sparkIO.init()
-      val sparkDagRunner = new SparkDagRunner(sparkSession, sparkIO, sparkDagRunnerConfig)
-      // Main dag has to take the following arguments in constructor (exact types and order) and implement Runnable.
-      val mainDag = Class.forName(sparkDagRunnerConfig.mainDagClass)
-          .getDeclaredConstructor(classOf[Configuration], classOf[SparkSession], classOf[SparkDagRunner])
-          .newInstance(configuration, sparkSession, sparkDagRunner)
-          .asInstanceOf[Runnable]
-      mainDag.run()
-      sparkDagRunner.finish()
+      try {
+        val sparkDagRunner = new SparkDagRunner(sparkSession, sparkIO, sparkDagRunnerConfig)
+        // Main dag has to take the following arguments in constructor (exact types and order) and implement Runnable.
+        val mainDag = Class.forName(sparkDagRunnerConfig.mainDagClass)
+            .getDeclaredConstructor(classOf[Configuration], classOf[SparkSession], classOf[SparkDagRunner])
+            .newInstance(configuration, sparkSession, sparkDagRunner)
+            .asInstanceOf[Runnable]
+        sparkDagRunner.run(mainDag)
+      } finally {
+        sparkSession.sqlContext.clearCache()
+      }
     }
   }
 }

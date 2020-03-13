@@ -18,6 +18,8 @@ case class SparkDagRunnerConfig(
     computeCollections: Seq[String],
     // Output path for latest.list (pointer to dag output) and aggregated metrics (using delta table).
     sharedOutputPath: Option[String],
+    // Cache every edge in the dag to avoid computing the same dataset many times.
+    disableCaching: Boolean,
     // Debug will force evaluation of dag nodes one by one.
     debug: Boolean
 )
