@@ -1,15 +1,18 @@
-CREATE OR REPLACE TEMPORARY VIEW tmp_dummy AS
-  (SELECT value FROM tagged_value);
+CREATE OR REPLACE TEMPORARY VIEW tagged_value__create_view_statement AS (
+SELECT value, tag FROM tagged_value
+);
 
-WITH tmp_tagged_values AS
-  (SELECT value, tags FROM tagged_value)
+WITH
+tagged_values__with_statement AS (
+SELECT value, tag FROM tagged_value__create_view_statement
+)
 SELECT
-  value AS value,
+  value,
   value * value AS squared_value
 FROM
-  tmp_tagged_values
+  tagged_values__with_statement
 WHERE
-  ARRAY_CONTAINS(tags, "${tag}")
+  tag = "${tag}"
 ;
 
 
@@ -18,5 +21,5 @@ WHERE
 
 /*
 -- other cells
-SELECT * FROM foo;
+SELECT * FROM non_existing_table_is_fine_in_comment;
 */
