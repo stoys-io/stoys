@@ -1,13 +1,13 @@
 package com.nuna.trustdb.core
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{Dataset}
 
 package object spark {
   object implicits {
     import scala.language.implicitConversions
 
-    implicit def toRichDataFrame(df: DataFrame): DataFrameUtils.RichDataFrame = {
-      new DataFrameUtils.RichDataFrame(df)
+    implicit def toRichDataset(ds: Dataset[_]): Datasets.RichDataset = {
+      new Datasets.RichDataset(ds)
     }
   }
 }
