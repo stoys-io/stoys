@@ -11,9 +11,7 @@ object SparkSqlRunner {
   import com.nuna.trustdb.core.spark.implicits._
 
   val SPECIAL_COLUMN_NAMES_PATTERN = "__(.*)__"
-  val METRIC_TAG_SPECIAL_COLUMN_NAME = "__metric_tag__"
-  val METRIC_LABELS_SPECIAL_COLUMN_NAME = "__metric_labels__"
-  val TAG_SEPARATOR = "__"
+  val LABELS_SPECIAL_COLUMN_NAME = "__labels__"
 
   private[sql] def splitSqlStatements(databricksNotebookText: String): Seq[String] = {
     databricksNotebookText.split("-- COMMAND --").head.split(';').map(_.trim).filterNot(_.isEmpty)
@@ -66,8 +64,7 @@ object SparkSqlRunner {
    * Note: It is also adding "class_name" label taken from clazz argument.
    *
    * A few special columns are supported:
-   * 1) __metric_tag__ column value will be appended to metric key
-   * 2) __metric_labels__ column value (map type) will be merged with other labels
+   * 1) __labels__ column value (map type) will be merged with other labels
    *
    * @return [[Dataset]] of [[Metric]]
    */
@@ -79,12 +76,9 @@ object SparkSqlRunner {
     val (specialColumnNames, regularColumnNames) = metricsDf.columns.partition(_.matches(SPECIAL_COLUMN_NAMES_PATTERN))
     val metricColumnsTransposed = explode(map(regularColumnNames.flatMap(c => Array(lit(c), col(c))): _*))
     var df = metricsDf.select(specialColumnNames.map(col) :+ metricColumnsTransposed: _*)
-    if (specialColumnNames.contains(METRIC_TAG_SPECIAL_COLUMN_NAME)) {
-      df = df.withColumn("key", concat(col("key"), lit(TAG_SEPARATOR), col(METRIC_TAG_SPECIAL_COLUMN_NAME)))
-    }
     val staticLabelsColumn = typedLit(Map("class_name" -> clazz.getSimpleName) ++ labels)
-    if (specialColumnNames.contains(METRIC_LABELS_SPECIAL_COLUMN_NAME)) {
-      df = df.withColumn("labels", map_concat(staticLabelsColumn, col(METRIC_LABELS_SPECIAL_COLUMN_NAME)))
+    if (specialColumnNames.contains(LABELS_SPECIAL_COLUMN_NAME)) {
+      df = df.withColumn("labels", map_concat(staticLabelsColumn, col(LABELS_SPECIAL_COLUMN_NAME)))
     } else {
       df = df.withColumn("labels", staticLabelsColumn)
     }

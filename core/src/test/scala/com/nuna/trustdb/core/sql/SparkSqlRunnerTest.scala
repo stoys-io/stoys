@@ -32,10 +32,10 @@ class SparkSqlRunnerTest extends SparkTestBase {
     val actualMetrics = runSqlMetric(sparkSession, this.getClass, "metrics_test.sql", inputs, labels = labels)
     val defaultLabels = Map("class_name" -> this.getClass.getSimpleName)
     val expectedMetrics = Seq(
-      Metric("count__odd", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "odd")),
-      Metric("avg_value__odd", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "odd")),
-      Metric("count__even", 1.0, defaultLabels ++ labels ++ Map("grouped_by" -> "even")),
-      Metric("avg_value__even", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "even")),
+      Metric("count", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "odd")),
+      Metric("avg_value", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "odd")),
+      Metric("count", 1.0, defaultLabels ++ labels ++ Map("grouped_by" -> "even")),
+      Metric("avg_value", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "even")),
     )
     assert(actualMetrics.collect() === expectedMetrics)
   }
