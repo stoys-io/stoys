@@ -4,7 +4,6 @@ import java.io.IOException
 
 import com.nuna.trustdb.core.SparkTestBase
 import com.nuna.trustdb.core.util.{Arbitrary, IO}
-import org.apache.spark.sql.SaveMode
 
 class SparkIOTest extends SparkTestBase {
   import SparkIO._
@@ -120,6 +119,6 @@ class SparkIOTest extends SparkTestBase {
 
   def writeDummyParquetTables(tmpDir: String, outputTablePaths: String*): Unit = {
     val dummyDf = sparkSession.range(1).toDF()
-    outputTablePaths.foreach(p => dummyDf.write.format("parquet").mode(SaveMode.Overwrite).save(s"$tmpDir/$p"))
+    outputTablePaths.foreach(p => writeDataFrame(s"$tmpDir/$p", dummyDf))
   }
 }

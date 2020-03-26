@@ -45,16 +45,24 @@ class SparkTestBase extends AnyFunSuite {
     directory
   }
 
+  def readDataFrame(path: String): DataFrame = {
+    sparkSession.read.format("parquet").load(path)
+  }
+
   def readDataset[T: Encoder](path: String): Dataset[T] = {
-    sparkSession.read.format("parquet").load(path).as[T]
+    readDataFrame(path).as[T]
   }
 
   def readData[T: Encoder](path: String): Seq[T] = {
     readDataset[T](path).collect()
   }
 
-  def writeDataset[T: Encoder](path: String, dataset: Dataset[T]): Unit = {
-    dataset.write.format("parquet").mode(SaveMode.Overwrite).save(path)
+  def writeDataFrame(path: String, df: DataFrame): Unit = {
+    df.write.format("parquet").mode(SaveMode.Overwrite).save(path)
+  }
+
+  def writeDataset[T](path: String, ds: Dataset[T]): Unit = {
+    writeDataFrame(path, ds.toDF())
   }
 
   def writeData[T: Encoder](path: String, data: Seq[T]): Unit = {

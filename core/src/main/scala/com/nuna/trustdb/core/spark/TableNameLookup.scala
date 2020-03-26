@@ -32,7 +32,7 @@ class TableNameLookup(classes: Iterable[Class[_]]) {
   }
 
   def parse[T <: Product](fullTableName: String): Option[TableName[T]] = {
-    fullTableName.split(TableName.SEPARATOR) match {
+    fullTableName.split(TableName.LOGICAL_NAME_SEPARATOR) match {
       case Array(entityName) => maybeTableName[T](entityName, None)
       case Array(entityName, logicalName) => maybeTableName[T](entityName, Option(logicalName))
       case _ =>
@@ -40,9 +40,4 @@ class TableNameLookup(classes: Iterable[Class[_]]) {
         None
     }
   }
-}
-
-object TableNameLookup {
-  // TODO: add classpath scanning
-//  lazy val default = new TableNameLookup(scanClassPath[Entity]("com.nuna"))
 }

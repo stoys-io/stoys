@@ -23,8 +23,8 @@ class SparkDagRunnerTest extends SparkTestBase {
     val outputPath = s"$testDir/output"
     val sharedOutputPath = s"$testDir/shared_output_path"
 
-    writeTestData(Seq(Foo(1, 11), Foo(2, 21)), s"$inputPath/foo")
-    writeTestData(Seq(Bar(1, 12), Bar(2, 22)), s"$inputPath/bar")
+    writeData(s"$inputPath/foo", Seq(Foo(1, 11), Foo(2, 21)))
+    writeData(s"$inputPath/bar", Seq(Bar(1, 12), Bar(2, 22)))
 
     val sparkDagRunnerArgs = Array(
       s"spark_dag_runner_config@@main_dag_class=${classOf[MainDag].getName}",
@@ -40,7 +40,7 @@ class SparkDagRunnerTest extends SparkTestBase {
     SparkDagRunner.main(Array("--environments=dev") ++ sparkDagRunnerArgs ++ insightArgs)
 
     val expectedPack = Seq(Pack(1, 1000 * 11 * 12 + 11 + 12), Pack(2, 1000 * 21 * 22 + 21 + 22)).toDS()
-    assertDatasetEquality(readTestResult[Pack](s"$outputPath/pack"), expectedPack, ignoreNullable = true)
+    assertDatasetEquality(readDataset[Pack](s"$outputPath/pack"), expectedPack, ignoreNullable = true)
 
     val sharedMetrics = sparkSession.read.format("delta").load(s"$sharedOutputPath/metric")
     val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp))
@@ -53,14 +53,6 @@ class SparkDagRunnerTest extends SparkTestBase {
       s"$outputPath/metric?sos-format=parquet&sos-table_name=metric"))
     assert(Source.fromFile(s"$sharedOutputPath/latest.list").getLines.toSet
       === Set(s"$outputPath?sos-listing_strategy=dag"))
-  }
-
-  private def writeTestData[T: Encoder](data: Seq[T], path: String): Unit = {
-    data.toDS().write.format("parquet").mode("overwrite").save(path)
-  }
-
-  private def readTestResult[T: Encoder](path: String): Dataset[T] = {
-    sparkSession.read.format("parquet").load(path).as[T]
   }
 }
 

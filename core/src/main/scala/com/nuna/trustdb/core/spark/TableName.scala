@@ -8,13 +8,14 @@ case class TableName[T <: Product : TypeTag] private (entityName: String, logica
   val typeTag = implicitly[TypeTag[T]]
 
   def fullTableName(): String = {
-    val rawFullTableName = logicalName.map(ln => s"$entityName${TableName.SEPARATOR}$ln").getOrElse(entityName)
+    import TableName.LOGICAL_NAME_SEPARATOR
+    val rawFullTableName = logicalName.map(ln => s"$entityName$LOGICAL_NAME_SEPARATOR$ln").getOrElse(entityName)
     Strings.toSnakeCase(Strings.toWordCharactersCollapsing(rawFullTableName))
   }
 }
 
 object TableName {
-  val SEPARATOR = "__"
+  val LOGICAL_NAME_SEPARATOR = "__"
 
   def apply[T <: Product : TypeTag]: TableName[T] = {
     TableName.apply[T](logicalName = null)

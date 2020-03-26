@@ -5,12 +5,9 @@ import java.sql._
 import com.nuna.trustdb.core.SparkTestBase
 import com.nuna.trustdb.core.util.{IO, Jackson}
 import org.apache.commons.lang3.StringEscapeUtils
-import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects}
 import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType}
-
-import scala.reflect.runtime.universe._
 
 class DbLoaderTest extends SparkTestBase {
   import DbLoaderTest._
@@ -29,7 +26,7 @@ class DbLoaderTest extends SparkTestBase {
   test("DbLoader") {
     val tmpDir = "./target/tmp"
     val dbName = this.getClass.getSimpleName
-    writeTestData(items, s"$tmpDir/$dbName/$tableName")
+    writeData(s"$tmpDir/$dbName/$tableName", items)
 
     val jdbcUrl = s"jdbc:h2:mem:$dbName;USER=sa;PASSWORD=;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;"
 //    val jdbcUrl = s"jdbc:h2:file:$tmpDir/$dbName;USER=sa;PASSWORD=;CASE_INSENSITIVE_IDENTIFIERS=TRUE;AUTO_SERVER=TRUE;"
@@ -58,17 +55,13 @@ class DbLoaderTest extends SparkTestBase {
     assert(readIndexNamesFromDb(connection, latestSchema, tableName).map(_.toLowerCase).contains("item_by_name"))
   }
 
-  private def writeTestData[T: TypeTag : Encoder](data: Seq[T], path: String): Unit = {
-    data.toDS().write.format("parquet").mode("overwrite").save(path)
-  }
-
   private def printQueryResult(jdbcUrl: String, query: String): Unit = {
     sparkSession.read.format("jdbc")
         .option(JDBCOptions.JDBC_URL, jdbcUrl).option(JDBCOptions.JDBC_QUERY_STRING, query).load().show()
   }
 
   private def getLatestDataSchemaName(connection: Connection): String = {
-//    val schemaNames = mapResultSet(connection.getMetaData.getSchemas)(_.getString("SCHEMA_NAME"))
+    //    val schemaNames = mapResultSet(connection.getMetaData.getSchemas)(_.getString("SCHEMA_NAME"))
     val schemaNames =
       mapQueryResultSet(connection, "SELECT * FROM information_schema.schemata")(_.getString("SCHEMA_NAME"))
     schemaNames.filter(_.matches("(?i)data_.*")).max
