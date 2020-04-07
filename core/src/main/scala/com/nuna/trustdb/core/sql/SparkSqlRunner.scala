@@ -52,7 +52,6 @@ object SparkSqlRunner {
    */
   def runSql[U <: Product : TypeTag](sparkSession: SparkSession, clazz: Class[_], sqlFileName: String,
       tables: Map[String, Dataset[_]], params: Option[Product] = None): Dataset[U] = {
-    import sparkSession.implicits._
     runSqlDF(sparkSession, clazz, sqlFileName, tables, params).asDataset[U]
   }
 

@@ -6,7 +6,7 @@ import java.time.LocalDateTime
 
 import com.nuna.trustdb.core.sql.SparkSqlRunner
 import com.nuna.trustdb.core.util.Configuration
-import org.apache.spark.sql.{Dataset, Encoder, Row, SparkSession}
+import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
 import scala.io.Source
 

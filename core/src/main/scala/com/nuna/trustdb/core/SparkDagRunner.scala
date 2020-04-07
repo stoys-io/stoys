@@ -5,7 +5,7 @@ import java.sql.Timestamp
 import com.nuna.trustdb.core.spark.{SparkIO, SparkIOConfig, SparkUtils, TableName}
 import com.nuna.trustdb.core.util.{Configuration, IO}
 import org.apache.spark.sql.functions.lit
-import org.apache.spark.sql.{Dataset, Encoder, SparkSession}
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 import scala.collection.mutable
 import scala.reflect.runtime.universe._
@@ -30,7 +30,7 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
     wrap(ds, TableName[T](logicalName))
   }
 
-  def wrap[T <: Product : Encoder](ds: Dataset[T], tableName: TableName[T]): Dataset[T] = {
+  def wrap[T <: Product : TypeTag](ds: Dataset[T], tableName: TableName[T]): Dataset[T] = {
     val fullTableName = tableName.fullTableName()
     val result = sparkIO.getInputTable(fullTableName) match {
       case Some(sosTable) =>
@@ -65,7 +65,7 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
     }
   }
 
-  private def cached[T <: Product : Encoder](ds: Dataset[T]): Dataset[T] = {
+  private def cached[T](ds: Dataset[T]): Dataset[T] = {
     if (config.disableCaching) {
       ds
     } else {

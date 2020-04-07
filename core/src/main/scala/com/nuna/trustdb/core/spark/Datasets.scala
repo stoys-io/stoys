@@ -2,7 +2,7 @@ package com.nuna.trustdb.core.spark
 
 import com.nuna.trustdb.core.util.Reflection
 import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.{DataFrame, Dataset, Encoder}
+import org.apache.spark.sql.{DataFrame, Dataset}
 
 import scala.reflect.runtime.universe._
 
@@ -17,8 +17,10 @@ object Datasets {
    * @tparam T case class to which we are casting the df
    * @return [[Dataset]][T] with only the columns present in case class and in that order
    */
-  def asDataset[T: Encoder : TypeTag](ds: Dataset[_]): Dataset[T] = {
-    // TODO: Can we make this work for nested records?
+  // TODO: Can we make this work for nested records?
+  def asDataset[T <: Product : TypeTag](ds: Dataset[_]): Dataset[T] = {
+    import ds.sparkSession.implicits._
+
     val actualColumns = ds.columns.toSeq
     val expectedColumns = Reflection.getCaseClassFields[T].map(_.name.decodedName.toString)
 
@@ -40,7 +42,7 @@ object Datasets {
   }
 
   class RichDataset(val ds: Dataset[_]) extends AnyVal {
-    def asDataset[T: Encoder : TypeTag]: Dataset[T] = {
+    def asDataset[T <: Product : TypeTag]: Dataset[T] = {
       Datasets.asDataset[T](ds)
     }
   }
