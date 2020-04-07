@@ -22,7 +22,7 @@ object Datasets {
     import ds.sparkSession.implicits._
 
     val actualColumns = ds.columns.toSeq
-    val expectedColumns = Reflection.getCaseClassFields[T].map(_.name.decodedName.toString)
+    val expectedColumns = Reflection.getCaseClassFieldNames[T]
 
     if (actualColumns == expectedColumns) {
       ds.as[T]

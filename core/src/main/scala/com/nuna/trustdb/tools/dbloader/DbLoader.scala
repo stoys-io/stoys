@@ -117,8 +117,8 @@ class DbLoader(args: Array[String]) {
   }
 
   def normalizeTable[T: TypeTag](df: DataFrame): DataFrame = {
-    val expectedCols = Reflection.getCaseClassFields[T].map(_.name.decodedName.toString)
-    val normalizedColumns = df.schema.filter(field => expectedCols.contains(field.name)).map { field =>
+    val expectedColumnNames = Reflection.getCaseClassFieldNames[T]
+    val normalizedColumns = df.schema.filter(field => expectedColumnNames.contains(field.name)).map { field =>
       val normalizedName = Strings.toSnakeCase(field.name)
       val normalizedColumn = field.dataType match {
         case _: ArrayType | _: MapType | _: StructType => to_json(col(field.name))

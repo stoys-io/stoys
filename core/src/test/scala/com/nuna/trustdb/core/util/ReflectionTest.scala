@@ -93,6 +93,11 @@ class ReflectionTest extends AnyFunSuite {
     assert(getCaseClassFields[RecordAlias] === getCaseClassFields[Record])
   }
 
+  test("getCaseClassFieldNames") {
+    assert(getCaseClassFieldNames[Record] === Seq("s", "i", "nested"))
+    assert(getCaseClassFieldNames[RecordAlias] === getCaseClassFieldNames[Record])
+  }
+
   test("createCaseClassInstance") {
     assert(createCaseClassInstance[Record](Seq("foo", 1, NestedRecord(0.0))) === Record("foo", 1, NestedRecord(0.0)))
     assertThrows[RuntimeException](createCaseClassInstance[Record](Seq("missingArgs")))

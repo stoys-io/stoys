@@ -73,6 +73,10 @@ object Reflection {
     dealiasedTypeSymbolOf[T].asClass.primaryConstructor.typeSignature.paramLists.head
   }
 
+  def getCaseClassFieldNames[T: TypeTag]: Seq[String] = {
+    getCaseClassFields[T].map(_.name.decodedName.toString)
+  }
+
   def createCaseClassInstance[T: TypeTag](args: Seq[Any]): T = {
     val dealiasedType = dealiasedTypeOf[T]
     val applyMethod = dealiasedType.companion.decl(TermName("apply")).asMethod
