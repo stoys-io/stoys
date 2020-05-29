@@ -12,7 +12,7 @@ public @interface TestAnnotation {
 
     int[] arrayValue() default {42};
 
-    FooBarBazJava enumValue() default FooBarBazJava.FOO;
+    TestEnum enumValue() default TestEnum.FOO;
 
     Class<?> classValue() default TestAnnotation.class;
 

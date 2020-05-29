@@ -128,7 +128,7 @@ class ReflectionTest extends AnyFunSuite {
     assert(getAnnotationParams[TestAnnotation](symbolOf[NotAnnotated]) === None)
     assert(getAnnotationParams[TestAnnotation](symbolOf[AnnotatedNoParams]) === Some(Seq.empty))
     assert(getAnnotationParams[TestAnnotation](symbolOf[AnnotatedExplicitParams])
-        === Some(Seq("stringValue" -> "overridden", "arrayValue" -> Seq(4, 2), "enumValue" -> FooBarBazJava.BAR,
+        === Some(Seq("stringValue" -> "overridden", "arrayValue" -> Seq(4, 2), "enumValue" -> TestEnum.BAR,
       "classValue" -> classOf[Record])))
   }
 
@@ -168,7 +168,7 @@ object ReflectionTest {
   case class AnnotatedNoParams(value: String)
 
   // TODO: What si correct scala syntax for: annotationValue = @TestAnnotationValue(value = "foo")
-  @TestAnnotation(stringValue = "overridden", arrayValue = Array(4, 2), enumValue = FooBarBazJava.BAR,
+  @TestAnnotation(stringValue = "overridden", arrayValue = Array(4, 2), enumValue = TestEnum.BAR,
     classValue = classOf[Record])
   case class AnnotatedExplicitParams(value: String)
 }

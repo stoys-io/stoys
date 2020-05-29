@@ -1,5 +1,5 @@
 package com.nuna.trustdb.core.util;
 
-public enum FooBarBazJava {
+public enum TestEnum {
     FOO, BAR, BAZ;
 }
