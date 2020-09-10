@@ -20,12 +20,12 @@ import scala.reflect.{ClassTag, classTag}
 // is environment in order specified). Finally the instance get updated by command line arguments
 // (highest priority). Command line arguments are treated as property files prefixed by snake_cased_class_name.
 //
-// Note: Command line argument path separator is "@@" instead of usual "." because sparkOptions
+// Note: Command line argument path separator is "__" instead of usual "." because sparkOptions
 //       have all the keys with "." and that would confuse the parser.
 //
 // Note: Do not use nested config classes. (your collections would become null instead of empty)
 //
-// Note: repeated properties are not comma separated. Instead they use "field@@0=foo" "field@@1=bar" notation.
+// Note: repeated properties are not comma separated. Instead they use "field__0=foo" "field__1=bar" notation.
 // Note: This class is inspired by spring boot config. But that sadly does not work for scala case classes.
 // Note: We can trivially add support for *.properties and *.json.
 case class Configuration(config: ConfigurationConfig) {
@@ -92,7 +92,7 @@ case class Configuration(config: ConfigurationConfig) {
 object Configuration {
   private val ENVIRONMENT_ARGS_PREFIX = "--environments="
   private val DEFAULT_ENVIRONMENTS = Seq("local")
-  private val PROPERTIES_PATH_SEPARATOR = "@@"
+  private val PROPERTIES_PATH_SEPARATOR = "__"
 
   private val objectReader = objectMapper.reader()
   private val javaPropsSchema = JavaPropsSchema.emptySchema().withPathSeparator(PROPERTIES_PATH_SEPARATOR)

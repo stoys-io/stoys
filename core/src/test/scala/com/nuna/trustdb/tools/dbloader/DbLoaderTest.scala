@@ -36,13 +36,13 @@ class DbLoaderTest extends SparkTestBase {
 //    val jdbcUrl = s"jdbc:postgresql://[::]:5432/?user=postgres&password=secret"
 
     val args = scala.Array(
-      s"spark_io_config@@input_paths@@0=$tmpDir/$dbName/$tableName",
-      s"spark_io_config@@output_path=$tmpDir/output",
-      s"db_loader_config@@table_names@@0=$tableName",
-      s"db_loader_config@@case_class_names@@0=$caseClassName",
-      s"db_loader_config@@jdbc_url=$jdbcUrl",
-      s"db_loader_config@@after_load_script=after_load_script.sql",
-      s"db_loader_config@@executed_sql_output_file=$tmpDir/executed_sql.sql"
+      s"spark_io_config__input_paths__0=$tmpDir/$dbName/$tableName",
+      s"spark_io_config__output_path=$tmpDir/output",
+      s"db_loader_config__table_names__0=$tableName",
+      s"db_loader_config__case_class_names__0=$caseClassName",
+      s"db_loader_config__jdbc_url=$jdbcUrl",
+      s"db_loader_config__after_load_script=after_load_script.sql",
+      s"db_loader_config__executed_sql_output_file=$tmpDir/executed_sql.sql"
     )
     DbLoader.main(scala.Array("--environments=dbloader") ++ args)
 

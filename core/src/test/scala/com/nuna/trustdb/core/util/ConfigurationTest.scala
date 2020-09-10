@@ -26,11 +26,13 @@ class ConfigurationTest extends AnyFunSuite {
   test("readConfig") {
     assert(Configuration().readConfig[TestConfig] === defaultTestConfig)
     assert(Configuration("--environments=foo").readConfig[TestConfig] === fooTestConfig)
-    val envArgs = Configuration("--environments=foo", "unused@@string=unused", "test_config@@seq@@0=prop",
-      "test_config@@map@@some.key=value", "test_config@@date=2020-02-02", "test_config@@password=secret")
+    val envArgs = Configuration("--environments=foo", "non_existing__keys=are_ignored", "test_config__seq__0=prop",
+      "test_config__map__some.key=value", "test_config__date=2020-02-02", "test_config__password=secret")
     assert(envArgs.readConfig[TestConfig]
         === TestConfig(42, "foo", Seq("prop"), Map("some.key" -> "value"), LocalDate.of(2020, 2, 2), "secret"))
     assert(Configuration("--environments=master").readConfig[TestConfig] === defaultTestConfig.copy(string = "master"))
+    assert(Configuration("test_config__string=double_underscores__in___values__are_fine").readConfig[TestConfig]
+        === defaultTestConfig.copy(string = "double_underscores__in___values__are_fine"))
   }
 
   test("allowInRootPackage") {

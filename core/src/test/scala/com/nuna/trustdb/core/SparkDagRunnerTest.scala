@@ -27,16 +27,16 @@ class SparkDagRunnerTest extends SparkTestBase {
     writeData(s"$inputPath/bar", Seq(Bar(1, 12), Bar(2, 22)))
 
     val sparkDagRunnerArgs = Array(
-      s"spark_dag_runner_config@@main_dag_class=${classOf[MainDag].getName}",
-      s"spark_dag_runner_config@@run_timestamp=$runTimestamp",
-      s"spark_dag_runner_config@@compute_collections@@0=pack",
-      s"spark_dag_runner_config@@shared_output_path=$sharedOutputPath",
-      s"spark_io_config@@input_paths@@0=$inputPath?sos-listing_strategy=tables",
-      s"spark_io_config@@output_path=$outputPath"
+      s"spark_dag_runner_config__main_dag_class=${classOf[MainDag].getName}",
+      s"spark_dag_runner_config__run_timestamp=$runTimestamp",
+      s"spark_dag_runner_config__compute_collections__0=pack",
+      s"spark_dag_runner_config__shared_output_path=$sharedOutputPath",
+      s"spark_io_config__input_paths__0=$inputPath?sos-listing_strategy=tables",
+      s"spark_io_config__output_path=$outputPath"
     )
     val insightArgs = Array(
-      "pack_insight_params@@add_multiplier=1",
-      "pack_insight_params@@multiply_multiplier=1000")
+      "pack_insight_params__add_multiplier=1",
+      "pack_insight_params__multiply_multiplier=1000")
     SparkDagRunner.main(Array("--environments=dev") ++ sparkDagRunnerArgs ++ insightArgs)
 
     val expectedPack = Seq(Pack(1, 1000 * 11 * 12 + 11 + 12), Pack(2, 1000 * 21 * 22 + 21 + 22)).toDS()
