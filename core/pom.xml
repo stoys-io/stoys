@@ -10,8 +10,8 @@
 
     <properties>
         <h2.version>1.4.200</h2.version>
-        <mysql.version>8.0.19</mysql.version>
-        <postgresql.version>42.2.10</postgresql.version>
+        <mysql.version>8.0.21</mysql.version>
+        <postgresql.version>42.2.16</postgresql.version>
     </properties>
 
     <dependencies>

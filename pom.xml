@@ -12,7 +12,6 @@
     <url>https://github.com/NunaHealth/nuna-core</url>
     <inceptionYear>2019</inceptionYear>
 
-
     <scm>
         <url>https://github.com/NunaHealth/nuna-core.git</url>
         <connection>scm:git:git@github.com:NunaHealth/nuna-core.git</connection>
@@ -46,18 +45,17 @@
         <jdk.version>11</jdk.version>
         <character.encoding>UTF-8</character.encoding>
 
-        <scala.version>2.12.10</scala.version>
+        <scala.version>2.12.12</scala.version>
         <scala.compat.version>2.12</scala.compat.version>
 
-        <delta.version>0.5.0</delta.version>
-        <!--        <jackson.version>2.10.2</jackson.version>-->
-        <jackson.version>2.9.10</jackson.version>
+        <delta.version>0.7.0</delta.version>
+        <jackson.version>2.11.2</jackson.version>
         <log4s.version>1.8.2</log4s.version>
         <logback.version>1.2.3</logback.version>
         <persistence-api.version>2.2</persistence-api.version>
-        <scalatest.version>3.1.0</scalatest.version>
+        <scalatest.version>3.2.2</scalatest.version>
         <slf4j.version>1.7.30</slf4j.version>
-        <spark.version>2.4.5</spark.version>
+        <spark.version>3.0.1</spark.version>
         <spark-fast-tests.version>0.20.0-s_${scala.compat.version}</spark-fast-tests.version>
     </properties>
 
@@ -280,20 +278,6 @@
             <id>java-8</id>
             <properties>
                 <jdk.version>8</jdk.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>scala-11</id>
-            <properties>
-                <scala.version>2.11.12</scala.version>
-                <scala.compat.version>2.11</scala.compat.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>scala-12</id>
-            <properties>
-                <scala.version>2.12.10</scala.version>
-                <scala.compat.version>2.12</scala.compat.version>
             </properties>
         </profile>
     </profiles>
