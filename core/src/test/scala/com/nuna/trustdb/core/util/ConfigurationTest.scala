@@ -4,6 +4,7 @@ import java.time.LocalDate
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonProperty.Access
+import com.fasterxml.jackson.databind.JsonNode
 import com.nuna.trustdb.core.util.Configuration.ConfigurationConfig
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -38,6 +39,17 @@ class ConfigurationTest extends AnyFunSuite {
   test("allowInRootPackage") {
     assert(Configuration("--environments=foo").readConfig[TestConfig] === fooTestConfig)
     assert(Configuration("--environments=foo,root").readConfig[TestConfig] === fooTestConfig.copy(string = "root"))
+  }
+
+  test("prettyPrintJsonNode") {
+    val node = Jackson.objectMapper.valueToTree[JsonNode](defaultTestConfig.copy(password = "secret"))
+    val expected ="""
+        |{
+        |  "int" : 42,
+        |  "seq" : [ ],
+        |  "map" : { }
+        |}""".stripMargin.trim
+    assert(Configuration.prettyPrintJsonNode[TestConfig](node) === expected)
   }
 }
 

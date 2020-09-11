@@ -82,11 +82,6 @@ case class Configuration(config: ConfigurationConfig) {
         originalValue
     }
   }
-
-  private def prettyPrintJsonNode[T <: Product : ClassTag : TypeTag](jsonNode: JsonNode): String = {
-    val overrides = objectReader.withValueToUpdate(Arbitrary.empty[T]).readValue[T](jsonNode)
-    objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(overrides)
-  }
 }
 
 object Configuration {
@@ -113,5 +108,10 @@ object Configuration {
     val (environmentArgs, remainingArgs) = args.partition(_.startsWith(ENVIRONMENT_ARGS_PREFIX))
     val environments = environmentArgs.flatMap(_.stripPrefix(ENVIRONMENT_ARGS_PREFIX).split(','))
     ConfigurationConfig(environments ++ DEFAULT_ENVIRONMENTS, remainingArgs)
+  }
+
+  private[util] def prettyPrintJsonNode[T <: Product : ClassTag : TypeTag](jsonNode: JsonNode): String = {
+    val overrides = objectReader.withValueToUpdate(Arbitrary.empty[T]).readValue[T](jsonNode)
+    objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(overrides)
   }
 }
