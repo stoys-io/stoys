@@ -4,7 +4,7 @@ import com.nuna.trustdb.core.util.Reflection
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, Dataset}
 
-import scala.reflect.runtime.universe._
+import scala.reflect.runtime.universe.TypeTag
 
 object Datasets {
   /**
@@ -29,7 +29,7 @@ object Datasets {
     } else {
       val missingColumns = expectedColumns.toSet -- actualColumns
       if (missingColumns.nonEmpty) {
-        throw new RuntimeException(s"Data frame with columns $actualColumns is missing columns: $missingColumns")
+        throw new RuntimeException(s"Data frame with columns $actualColumns is missing columns $missingColumns")
       }
 
       val duplicateColumns = actualColumns.diff(actualColumns.distinct).distinct

@@ -6,45 +6,44 @@ class DatasetsTest extends SparkTestBase {
   import DatasetsTest._
   import sparkSession.implicits._
 
-  lazy val records = Seq(Record("foo", "bar", NestedRecord("baz"))).toDF()
+  lazy val records = Seq(Record("foo", 42, NestedRecord("nested"))).toDF()
 
   test("projection") {
     val subsetOfRecords = Datasets.asDataset[SubsetOfRecord](records)
-    assert(subsetOfRecords.columns === Seq("foo", "nested"))
+    assert(subsetOfRecords.columns === Seq("str", "nested"))
   }
 
   test("reordering") {
-    val recordsWithReorderedColumns = records.select("bar", "foo", "nested")
-    assert(recordsWithReorderedColumns.columns === Seq("bar", "foo", "nested"))
+    val recordsWithReorderedColumns = records.select("num", "str", "nested")
+    assert(recordsWithReorderedColumns.columns === Seq("num", "str", "nested"))
     val recordsWithProperlyReorderedColumns = Datasets.asDataset[Record](recordsWithReorderedColumns)
-    assert(recordsWithProperlyReorderedColumns.columns === Seq("foo", "bar", "nested"))
+    assert(recordsWithProperlyReorderedColumns.columns === Seq("str", "num", "nested"))
   }
 
   test("missing columns") {
-    val caught = intercept[RuntimeException](Datasets.asDataset[MissingColumnRecord](records))
+    val caught = intercept[RuntimeException](Datasets.asDataset[NestedRecord](records))
     assert(caught.getMessage.contains("missing columns"))
-    assert(caught.getMessage.contains("missingColumn"))
+    assert(caught.getMessage.contains("nestedStr"))
   }
 
   test("duplicate columns") {
-    val recordsWithDuplicateColumns = records.select("foo", "foo", "nested")
+    val recordsWithDuplicateColumns = records.select("str", "str", "nested")
     val caught = intercept[RuntimeException](Datasets.asDataset[SubsetOfRecord](recordsWithDuplicateColumns))
     assert(caught.getMessage.contains("duplicate columns"))
-    assert(caught.getMessage.contains("foo"))
+    assert(caught.getMessage.contains("str"))
   }
 
   test("implicits") {
     import com.nuna.trustdb.core.spark.implicits._
-    val recordsWithReorderedColumns = records.select("bar", "foo", "nested")
-    assert(recordsWithReorderedColumns.asDataset[SubsetOfRecord].columns === Seq("foo", "nested"))
+    val recordsWithReorderedColumns = records.select("num", "str", "nested")
+    assert(recordsWithReorderedColumns.asDataset[SubsetOfRecord].columns === Seq("str", "nested"))
     val recordsWithReorderedColumnsDS = recordsWithReorderedColumns.as[SubsetOfRecord]
-    assert(recordsWithReorderedColumnsDS.asDataset[SubsetOfRecord].columns === Seq("foo", "nested"))
+    assert(recordsWithReorderedColumnsDS.asDataset[SubsetOfRecord].columns === Seq("str", "nested"))
   }
 }
 
 object DatasetsTest {
-  case class NestedRecord(baz: String)
-  case class Record(foo: String, bar: String, nested: NestedRecord)
-  case class SubsetOfRecord(foo: String, nested: NestedRecord)
-  case class MissingColumnRecord(missingColumn: String)
+  case class NestedRecord(nestedStr: String)
+  case class Record(str: String, num: Int, nested: NestedRecord)
+  case class SubsetOfRecord(str: String, nested: NestedRecord)
 }
