@@ -25,6 +25,14 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   private val inputTables = mutable.Map.empty[String, SosTable]
   private val outputTables = mutable.Map.empty[String, SosTable]
 
+  private val reshapeConfig = Datasets.ReshapeConfig.safe.copy(
+//    coerceTypes = true,
+    dropExtraColumns = false,
+    failOnDroppingExtraColumn = false,
+    failOnIgnoringNullability = false,
+    fillMissingNulls = true,
+  )
+
   def init(): Unit = {
     addInputPaths(config.inputPaths: _*)
   }
@@ -58,7 +66,8 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   def ds[T <: Product : Encoder](tableName: TableName[T]): Dataset[T] = {
-    df(tableName).as[T]
+    implicit val typeTagT = tableName.typeTag
+    Datasets.reshape[T](df(tableName), reshapeConfig)
   }
 
   private def writeDF(df: DataFrame, fullTableName: String): Unit = {
