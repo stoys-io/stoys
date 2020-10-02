@@ -45,25 +45,44 @@ object Datasets {
     }
   }
 
-  case class Config(
+  case class ReshapeConfig(
       /**
-       * Coerce types. It will automatically do the usual upcasting like [[Int]] to [[Long]] but not the other way
-       * around (as it would loose precision). Beware of strings though! Everything can be casted implicitly
-       * to [[String]] but it may not be what one intends to do.
+       * Should primitive types be coerced?
+       *
+       * If enabled it will automatically do the usual upcasting like [[Int]] to [[Long]] but not the other way around
+       * (as it would loose precision).
+       *
+       * BEWARE: Everything can be casted implicitly to [[String]]! But often it is not desirable.
        */
       coerceTypes: Boolean,
       /**
-       * NOT IMPLEMENTED YET!!! It throws [[Config.ConflictResolution.ERROR]] regardless of the config (for now).
+       * NOT IMPLEMENTED YET!!! It throws [[ReshapeConfig.ConflictResolution.ERROR]] regardless of the config (for now).
        *
-       * What should happen when two conflicting column definitions are encountered? In particular the value
-       * [[Config.ConflictResolution.LAST]] is useful. It solves the common pattern of conflicting columns occurring
-       * in queries like "SELECT *, "some_value" AS value FROM table" when "table" already has "value".
+       * What should happen when two conflicting column definitions are encountered?
+       *
+       * In particular the value [[ReshapeConfig.ConflictResolution.LAST]] is useful. It solves the common pattern
+       * of conflicting columns occurring in queries like "SELECT *, "some_value" AS value FROM table" where "table"
+       * already has "value".
        */
-      conflictResolution: Config.ConflictResolution.ConflictingNameResolution,
+      conflictResolution: ReshapeConfig.ConflictResolution.ConflictingNameResolution,
+      /**
+       * Should we drop the extra columns (not present in target schema)?
+       *
+       * Use false to keep the extra columns (just like [[Dataset.as]] does).
+       */
+      dropExtraColumns: Boolean,
       /**
        * Should we fail if we drop extra column (not present in target schema)?
        */
       failOnDroppingExtraColumn: Boolean,
+      /**
+       * Should we fail on nullable source field being assigned to non nullable target field?
+       *
+       * Note: It is useful to ignore nullability by default (just like [[Dataset.as]] does). Spark inferred type
+       * for every json and csv field as nullable. This is true even if there is not a single null in the dataset.
+       * All parquet files written by spark also have every field nullable for compatibility.
+       */
+      failOnIgnoringNullability: Boolean,
       /**
        * Should we fill in default values instead of nulls for non nullable columns?
        *
@@ -89,17 +108,14 @@ object Datasets {
        */
       normalizedNameMatching: Boolean,
       /**
-       * How should the output columns be sorted? Use [[Config.SortOrder.TARGET]] to get the order of target schema.
+       * How should the output columns be sorted?
+       *
+       * Use [[ReshapeConfig.SortOrder.TARGET]] to get the order of target schema.
        */
-      sortOrder: Config.SortOrder.SortOrder,
-      /**
-       * Should we remove the extra columns (not present in target schema)? Use false to keep ghe extra columns
-       * (just like [[Dataset.as]] does).
-       */
-      removeExtraColumns: Boolean,
+      sortOrder: ReshapeConfig.SortOrder.SortOrder,
   )
 
-  object Config {
+  object ReshapeConfig {
     object ConflictResolution extends Enumeration {
       type ConflictingNameResolution = Value
       val UNDEFINED, ERROR, FIRST, LAST = Value
@@ -110,29 +126,29 @@ object Datasets {
       val UNDEFINED, ALPHABETICAL, SOURCE, TARGET = Value
     }
 
-    val safe = Config(
+    val safe = ReshapeConfig(
       coerceTypes = false,
-      conflictResolution = Config.ConflictResolution.ERROR,
+      conflictResolution = ReshapeConfig.ConflictResolution.ERROR,
+      dropExtraColumns = false,
       failOnDroppingExtraColumn = true,
+      failOnIgnoringNullability = true,
       fillDefaultValues = false,
       fillMissingNulls = false,
       normalizedNameMatching = false,
-      sortOrder = Config.SortOrder.SOURCE,
-      removeExtraColumns = false,
+      sortOrder = ReshapeConfig.SortOrder.SOURCE,
     )
     val default = safe.copy(
       coerceTypes = true,
+      dropExtraColumns = true,
       failOnDroppingExtraColumn = false,
-      sortOrder = Config.SortOrder.TARGET,
-      removeExtraColumns = true,
+      failOnIgnoringNullability = false,
+      sortOrder = ReshapeConfig.SortOrder.TARGET,
     )
-    val powerful = default.copy(
-      conflictResolution = Config.ConflictResolution.LAST,
+    val dangerous = default.copy(
+      conflictResolution = ReshapeConfig.ConflictResolution.LAST,
+      fillDefaultValues = true,
       fillMissingNulls = true,
       normalizedNameMatching = true,
-    )
-    val dangerous = powerful.copy(
-      fillDefaultValues = true,
     )
   }
 
@@ -172,7 +188,7 @@ object Datasets {
     Seq(path, fieldName).filter(_ != null).mkString(".")
   }
 
-  private def coarseStructField(source: StructField, target: StructField, config: Config,
+  private def reshapeStructField(source: StructField, target: StructField, config: ReshapeConfig,
       path: String): Either[List[StructValidationError], List[Column]] = {
     val fieldPath = makeFiledPath(path, target.name)
 
@@ -181,14 +197,14 @@ object Datasets {
     if (source.nullable && !target.nullable) {
       if (config.fillDefaultValues) {
         column = coalesce(column, new Column(defaultValueExpression(target.dataType)))
-      } else {
+      } else if (config.failOnIgnoringNullability) {
         errors += StructValidationError(fieldPath, "is nullable but target column is not")
       }
     }
     (source.dataType, target.dataType) match {
       case (sourceDataType, targetDataType) if sourceDataType == targetDataType => // pass
       case (sourceStructType: StructType, targetStructType: StructType) =>
-        coarseStructType(sourceStructType, targetStructType, config, fieldPath) match {
+        reshapeStructType(sourceStructType, targetStructType, config, fieldPath) match {
           case Right(nestedColumns) => column = struct(nestedColumns: _*)
           case Left(nestedErrors) => errors ++= nestedErrors
         }
@@ -199,7 +215,7 @@ object Datasets {
       case (sourceArrayType: ArrayType, targetArrayType: ArrayType) =>
         val sourceFieldType = StructField(null, sourceArrayType.elementType)
         val targetFieldType = StructField(null, targetArrayType.elementType)
-        coarseStructField(sourceFieldType, targetFieldType, config, fieldPath) match {
+        reshapeStructField(sourceFieldType, targetFieldType, config, fieldPath) match {
           case Right(nestedColumns) =>
             assert(nestedColumns.size == 1)
             column = array(nestedColumns: _*)
@@ -226,7 +242,7 @@ object Datasets {
     }
   }
 
-  private def coarseStructType(sourceStruct: StructType, targetStruct: StructType, config: Config,
+  private def reshapeStructType(sourceStruct: StructType, targetStruct: StructType, config: ReshapeConfig,
       path: String = null): Either[List[StructValidationError], List[Column]] = {
     def normalizedName(field: StructField): String = {
       // TODO: normalize even more? (leading and trailing spaces, etc)
@@ -237,9 +253,9 @@ object Datasets {
     val targetFieldsByName = targetStruct.fields.toList.groupBy(normalizedName)
 
     val fieldNames = config.sortOrder match {
-      case Config.SortOrder.ALPHABETICAL => (sourceFieldsByName.keys ++ targetFieldsByName.keys).toSeq.sorted
-      case Config.SortOrder.SOURCE => (sourceStruct.fields ++ targetStruct.fields).map(normalizedName).toSeq.distinct
-      case Config.SortOrder.TARGET | Config.SortOrder.UNDEFINED =>
+      case ReshapeConfig.SortOrder.ALPHABETICAL => (sourceFieldsByName.keys ++ targetFieldsByName.keys).toSeq.sorted
+      case ReshapeConfig.SortOrder.SOURCE => (sourceStruct.fields ++ targetStruct.fields).map(normalizedName).toSeq.distinct
+      case ReshapeConfig.SortOrder.TARGET | ReshapeConfig.SortOrder.UNDEFINED =>
         (targetStruct.fields ++ sourceStruct.fields).map(normalizedName).toSeq.distinct
     }
 
@@ -255,7 +271,7 @@ object Datasets {
             Left(List(StructValidationError(fieldPath, "is missing")))
           }
         case (source :: Nil, target :: Nil) =>
-          coarseStructField(source, target, config, path)
+          reshapeStructField(source, target, config, path)
         case (sources, target :: Nil) =>
           // TODO: ConflictResolution is more complicated than this
 //          config.conflictResolution match {
@@ -269,7 +285,7 @@ object Datasets {
           if (config.failOnDroppingExtraColumn) {
             Left(List(StructValidationError(fieldPath, s"has been dropped (${sources.size}x)")))
           } else {
-            if (config.removeExtraColumns) {
+            if (config.dropExtraColumns) {
               Right(List.empty)
             } else {
               Right(List(col(fieldPath)))
@@ -287,17 +303,18 @@ object Datasets {
   }
 
   /**
-   * [[asDS]][T] is similar to spark's own [[Dataset.as]][T] but way more powerful and configurable
+   * [[reshape]][T] is similar to spark's own [[Dataset.as]][T] but way more powerful and configurable.
    *
-   * See [[Config]] for supported configuration and/or unit tests for examples. Just be aware that the same config
-   * is applied on all the columns (even nested).
+   * See [[ReshapeConfig]] for supported configuration and/or unit tests for examples.
+   *
+   * BEWARE: The same config is applied on all the columns (even nested).
    *
    * @param ds input [[Dataset]] or [[DataFrame]]
-   * @param config configuration - see [[Config]] for details
+   * @param config configuration - see [[ReshapeConfig]] for details
    * @tparam T case class to which we are casting the df
    * @return [[Dataset]][T] with only the columns present in case class and in that order
    */
-  def asDS[T <: Product : TypeTag](ds: Dataset[_], config: Config = Config.default): Dataset[T] = {
+  def reshape[T <: Product : TypeTag](ds: Dataset[_], config: ReshapeConfig = ReshapeConfig.default): Dataset[T] = {
     import ds.sparkSession.implicits._
 
     val actualSchema = ds.schema
@@ -306,7 +323,7 @@ object Datasets {
     if (actualSchema == expectedSchema) {
       ds.as[T]
     } else {
-      coarseStructType(actualSchema, expectedSchema, config) match {
+      reshapeStructType(actualSchema, expectedSchema, config) match {
         case Left(errors) => throw new StructValidationException(errors)
         case Right(columns) => ds.select(columns: _*).as[T]
       }
@@ -318,12 +335,12 @@ object Datasets {
       Datasets.asDataset[T](ds)
     }
 
-    def asDS[T <: Product : TypeTag]: Dataset[T] = {
-      Datasets.asDS[T](ds)
+    def reshape[T <: Product : TypeTag]: Dataset[T] = {
+      Datasets.reshape[T](ds)
     }
 
-    def asDS[T <: Product : TypeTag](config: Config): Dataset[T] = {
-      Datasets.asDS[T](ds, config)
+    def reshape[T <: Product : TypeTag](config: ReshapeConfig): Dataset[T] = {
+      Datasets.reshape[T](ds, config)
     }
   }
 }
