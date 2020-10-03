@@ -25,11 +25,8 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   private val inputTables = mutable.Map.empty[String, SosTable]
   private val outputTables = mutable.Map.empty[String, SosTable]
 
-  private val reshapeConfig = Datasets.ReshapeConfig.safe.copy(
+  private val reshapeConfig = Datasets.ReshapeConfig.as.copy(
 //    coerceTypes = true,
-    dropExtraColumns = false,
-    failOnDroppingExtraColumn = false,
-    failOnIgnoringNullability = false,
     fillMissingNulls = true,
   )
 

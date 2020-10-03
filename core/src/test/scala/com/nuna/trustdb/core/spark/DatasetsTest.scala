@@ -34,13 +34,13 @@ class DatasetsTest extends SparkTestBase {
     assert(dsWithExtraColumns.columns === Seq("str", "num", "nested", "extra_column"))
   }
 
-  test("reshape - failOnDroppingExtraColumn") {
-    val fixableDF = recordsDF.selectExpr("*", "'dropped_value' AS dropped_column")
+  test("reshape - failOnExtraColumn") {
+    val fixableDF = recordsDF.selectExpr("*", "'foo' AS extra_column")
     val fixedDS = Datasets.reshape[Record](fixableDF)
     assert(fixedDS.collect() === records)
-    val config = ReshapeConfig.default.copy(failOnDroppingExtraColumn = true)
+    val config = ReshapeConfig.default.copy(failOnExtraColumn = true)
     val caught = intercept[StructValidationException](Datasets.reshape[Record](fixableDF, config))
-    assert(caught.getMessage.contains("dropped_column has been dropped"))
+    assert(caught.getMessage.contains("extra_column unexpectedly present"))
   }
 
   test("reshape - failOnIgnoringNullability") {

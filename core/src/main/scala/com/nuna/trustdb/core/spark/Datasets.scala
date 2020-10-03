@@ -38,9 +38,9 @@ object Datasets {
        */
       dropExtraColumns: Boolean,
       /**
-       * Should we fail if we drop extra column (not present in target schema)?
+       * Should we fail on presence of extra column (not present in target schema)?
        */
-      failOnDroppingExtraColumn: Boolean,
+      failOnExtraColumn: Boolean,
       /**
        * Should we fail on nullable source field being assigned to non nullable target field?
        *
@@ -92,22 +92,27 @@ object Datasets {
       val UNDEFINED, ALPHABETICAL, SOURCE, TARGET = Value
     }
 
-    val safe = ReshapeConfig(
+    /**
+     * [[ReshapeConfig.as]] behaves the same way as Spark's own [[Dataset.as]].
+     */
+    val as = ReshapeConfig(
       coerceTypes = false,
       conflictResolution = ReshapeConfig.ConflictResolution.ERROR,
       dropExtraColumns = false,
-      failOnDroppingExtraColumn = true,
-      failOnIgnoringNullability = true,
+      failOnExtraColumn = false,
+      failOnIgnoringNullability = false,
       fillDefaultValues = false,
       fillMissingNulls = false,
       normalizedNameMatching = false,
       sortOrder = ReshapeConfig.SortOrder.SOURCE,
     )
-    val default = safe.copy(
+    val safe = as.copy(
+      failOnExtraColumn = true,
+      failOnIgnoringNullability = true,
+    )
+    val default = as.copy(
       coerceTypes = true,
       dropExtraColumns = true,
-      failOnDroppingExtraColumn = false,
-      failOnIgnoringNullability = false,
       sortOrder = ReshapeConfig.SortOrder.TARGET,
     )
     val dangerous = default.copy(
@@ -161,10 +166,10 @@ object Datasets {
     val errors = mutable.Buffer.empty[StructValidationError]
     var column = col(makeFiledPath(path, source.name))
     if (source.nullable && !target.nullable) {
-      if (config.fillDefaultValues) {
-        column = coalesce(column, new Column(defaultValueExpression(target.dataType)))
-      } else if (config.failOnIgnoringNullability) {
+      if (config.failOnIgnoringNullability) {
         errors += StructValidationError(fieldPath, "is nullable but target column is not")
+      } else if (config.fillDefaultValues) {
+        column = coalesce(column, new Column(defaultValueExpression(target.dataType)))
       }
     }
     (source.dataType, target.dataType) match {
@@ -219,8 +224,10 @@ object Datasets {
     val targetFieldsByName = targetStruct.fields.toList.groupBy(normalizedName)
 
     val fieldNames = config.sortOrder match {
-      case ReshapeConfig.SortOrder.ALPHABETICAL => (sourceFieldsByName.keys ++ targetFieldsByName.keys).toSeq.sorted
-      case ReshapeConfig.SortOrder.SOURCE => (sourceStruct.fields ++ targetStruct.fields).map(normalizedName).toSeq.distinct
+      case ReshapeConfig.SortOrder.ALPHABETICAL =>
+        (sourceFieldsByName.keys ++ targetFieldsByName.keys).toSeq.sorted
+      case ReshapeConfig.SortOrder.SOURCE =>
+        (sourceStruct.fields ++ targetStruct.fields).map(normalizedName).toSeq.distinct
       case ReshapeConfig.SortOrder.TARGET | ReshapeConfig.SortOrder.UNDEFINED =>
         (targetStruct.fields ++ sourceStruct.fields).map(normalizedName).toSeq.distinct
     }
@@ -248,8 +255,8 @@ object Datasets {
 //          }
           Left(List(StructValidationError(fieldPath, s"has ${sources.size} conflicting occurrences")))
         case (sources, Nil) =>
-          if (config.failOnDroppingExtraColumn) {
-            Left(List(StructValidationError(fieldPath, s"has been dropped (${sources.size}x)")))
+          if (config.failOnExtraColumn) {
+            Left(List(StructValidationError(fieldPath, s"unexpectedly present (${sources.size}x)")))
           } else {
             if (config.dropExtraColumns) {
               Right(List.empty)
