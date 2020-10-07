@@ -77,7 +77,7 @@ class DatasetsTest extends SparkTestBase {
   test("reshape - normalizedNameMatching") {
     val fixableDF = sparkSession.sql("SELECT 'foo' AS `nested str`")
     val caught = intercept[StructValidationException](Datasets.reshape[NestedRecord](fixableDF))
-    assert(caught.getMessage.contains("nestedStr is missing"))
+    assert(caught.getMessage.contains("nestedstr is missing"))
     val config = ReshapeConfig.default.copy(normalizedNameMatching = true)
     val fixedDS = Datasets.reshape[NestedRecord](fixableDF, config)
     assert(fixedDS.collect() === Seq(NestedRecord("foo")))
@@ -97,6 +97,12 @@ class DatasetsTest extends SparkTestBase {
     val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeConfig.SortOrder.ALPHABETICAL)
     val ds = Datasets.reshape[SeqOfRecord](df, config)
     assert(ds.collect() === Seq(SeqOfRecord(Seq(Record(null, 0, null)))))
+  }
+
+  test("reshape - case insensitive") {
+    val fixableDF = sparkSession.sql("SELECT 'foo' AS STR, 42 AS nUm, null AS nested")
+    val fixedDS = Datasets.reshape[Record](fixableDF)
+    assert(fixedDS.collect() === Seq(Record("foo", 42, null)))
   }
 
   test("reshape - implicits") {

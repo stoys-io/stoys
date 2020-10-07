@@ -69,8 +69,10 @@ object Datasets {
       /**
        * Should names be normalized before matching?
        *
-       * Number of normalizations happen - lowercase, replace non-word characters with underscores, etc. For details
-       * see [[Strings.toSnakeCase]].
+       * Number of normalizations happen - trim, lowercase, replace non-word characters with underscores, etc.
+       * For details see [[Strings.toSnakeCase]].
+       *
+       * Note: Trim (drop leading and trailing spaces) and lower casing happens even when this is disabled!
        */
       normalizedNameMatching: Boolean,
       /**
@@ -155,19 +157,27 @@ object Datasets {
     }
   }
 
-  private def makeFiledPath(path: String, fieldName: String): String = {
+  private def makeFieldPath(path: String, fieldName: String): String = {
     Seq(path, fieldName).filter(_ != null).mkString(".")
   }
 
+  private def normalizeFieldName(field: StructField, config: ReshapeConfig): String = {
+    if (config.normalizedNameMatching) {
+      Strings.toSnakeCase(field.name.trim)
+    } else {
+      field.name.trim.toLowerCase
+    }
+  }
+
   private def reshapeStructField(source: StructField, target: StructField, config: ReshapeConfig,
-      path: String): Either[List[StructValidationError], List[Column]] = {
-    val fieldPath = makeFiledPath(path, target.name)
+      sourcePath: String, normalizedFieldPath: String): Either[List[StructValidationError], List[Column]] = {
+    val sourceFieldPath = makeFieldPath(sourcePath, source.name)
 
     val errors = mutable.Buffer.empty[StructValidationError]
-    var column = col(makeFiledPath(path, source.name))
+    var column = col(sourceFieldPath)
     if (source.nullable && !target.nullable) {
       if (config.failOnIgnoringNullability) {
-        errors += StructValidationError(fieldPath, "is nullable but target column is not")
+        errors += StructValidationError(normalizedFieldPath, "is nullable but target column is not")
       } else if (config.fillDefaultValues) {
         column = coalesce(column, new Column(defaultValueExpression(target.dataType)))
       }
@@ -175,18 +185,18 @@ object Datasets {
     (source.dataType, target.dataType) match {
       case (sourceDataType, targetDataType) if sourceDataType == targetDataType => // pass
       case (sourceStructType: StructType, targetStructType: StructType) =>
-        reshapeStructType(sourceStructType, targetStructType, config, fieldPath) match {
+        reshapeStructType(sourceStructType, targetStructType, config, sourceFieldPath, normalizedFieldPath) match {
           case Right(nestedColumns) => column = struct(nestedColumns: _*)
           case Left(nestedErrors) => errors ++= nestedErrors
         }
       case (_: StructType, targetDataType) =>
-        errors += StructValidationError(fieldPath, s"struct cannot be casted to target type $targetDataType")
+        errors += StructValidationError(normalizedFieldPath, s"struct cannot be casted to target type $targetDataType")
       case (sourceDataType, _: StructType) if !sourceDataType.isInstanceOf[NullType] =>
-        errors += StructValidationError(fieldPath, s"source type $sourceDataType cannot be casted to struct")
+        errors += StructValidationError(normalizedFieldPath, s"source type $sourceDataType cannot be casted to struct")
       case (sourceArrayType: ArrayType, targetArrayType: ArrayType) =>
         val sourceFieldType = StructField(null, sourceArrayType.elementType)
         val targetFieldType = StructField(null, targetArrayType.elementType)
-        reshapeStructField(sourceFieldType, targetFieldType, config, fieldPath) match {
+        reshapeStructField(sourceFieldType, targetFieldType, config, sourceFieldPath, normalizedFieldPath) match {
           case Right(nestedColumns) =>
             assert(nestedColumns.size == 1)
             column = array(nestedColumns: _*)
@@ -194,14 +204,14 @@ object Datasets {
             errors ++= nestedErrors
         }
       case (_: ArrayType, targetDataType) =>
-        errors += StructValidationError(fieldPath, s"array cannot be casted to target type $targetDataType")
+        errors += StructValidationError(normalizedFieldPath, s"array cannot be casted to target type $targetDataType")
       case (sourceDataType, _: ArrayType) if !sourceDataType.isInstanceOf[NullType] =>
-        errors += StructValidationError(fieldPath, s"source type $sourceDataType cannot be casted to array")
+        errors += StructValidationError(normalizedFieldPath, s"source type $sourceDataType cannot be casted to array")
       case (sourceDataType, targetDataType) =>
         if (Cast.canCast(sourceDataType, targetDataType) && config.coerceTypes) {
           column = column.cast(targetDataType)
         } else {
-          errors += StructValidationError(fieldPath,
+          errors += StructValidationError(normalizedFieldPath,
             s"type $sourceDataType cannot be casted to target type $targetDataType")
         }
     }
@@ -214,63 +224,63 @@ object Datasets {
   }
 
   private def reshapeStructType(sourceStruct: StructType, targetStruct: StructType, config: ReshapeConfig,
-      path: String = null): Either[List[StructValidationError], List[Column]] = {
-    def normalizedName(field: StructField): String = {
-      // TODO: normalize even more? (leading and trailing spaces, etc)
-      if (config.normalizedNameMatching) Strings.toSnakeCase(field.name) else field.name
-    }
+      sourcePath: String, normalizedPath: String): Either[List[StructValidationError], List[Column]] = {
+    val sourceFieldsByName = sourceStruct.fields.toList.groupBy(f => normalizeFieldName(f, config))
+    val targetFieldsByName = targetStruct.fields.toList.groupBy(f => normalizeFieldName(f, config))
 
-    val sourceFieldsByName = sourceStruct.fields.toList.groupBy(normalizedName)
-    val targetFieldsByName = targetStruct.fields.toList.groupBy(normalizedName)
-
-    val fieldNames = config.sortOrder match {
+    val normalizedFieldNames = config.sortOrder match {
       case ReshapeConfig.SortOrder.ALPHABETICAL =>
-        (sourceFieldsByName.keys ++ targetFieldsByName.keys).toSeq.sorted
+        (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct.sorted
       case ReshapeConfig.SortOrder.SOURCE =>
-        (sourceStruct.fields ++ targetStruct.fields).map(normalizedName).toSeq.distinct
+        (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct
       case ReshapeConfig.SortOrder.TARGET | ReshapeConfig.SortOrder.UNDEFINED =>
-        (targetStruct.fields ++ sourceStruct.fields).map(normalizedName).toSeq.distinct
+        (targetStruct.fields ++ sourceStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct
     }
 
-    val resultColumns = fieldNames.map { fieldName =>
-      val fieldPath = makeFiledPath(path, fieldName)
-      (sourceFieldsByName.getOrElse(fieldName, List.empty), targetFieldsByName.getOrElse(fieldName, List.empty)) match {
+    val resultColumns = normalizedFieldNames.map { normalizedFieldName =>
+      val normalizedFieldPath = makeFieldPath(normalizedPath, normalizedFieldName)
+      val sourceFields = sourceFieldsByName.getOrElse(normalizedFieldName, List.empty)
+      val targetFields = targetFieldsByName.getOrElse(normalizedFieldName, List.empty)
+      (sourceFields, targetFields) match {
         case (Nil, target :: Nil) =>
           if (target.nullable && config.fillMissingNulls) {
-            Right(List(new Column(nullValueExpression(target.dataType)).name(target.name)))
+            Right(List(new Column(nullValueExpression(target.dataType)).as(target.name)))
           } else if (config.fillDefaultValues) {
             Right(List(new Column(defaultValueExpression(target.dataType)).as(target.name)))
           } else {
-            Left(List(StructValidationError(fieldPath, "is missing")))
+            Left(List(StructValidationError(normalizedFieldPath, "is missing")))
           }
         case (source :: Nil, target :: Nil) =>
-          reshapeStructField(source, target, config, path)
+          reshapeStructField(source, target, config, sourcePath, normalizedFieldPath)
         case (sources, target :: Nil) =>
           // TODO: ConflictResolution is more complicated than this
 //          config.conflictResolution match {
-//            case ConflictResolution.ERROR | ConflictResolution.UNDEFINED =>
-//              Left(List(StructValidationError(fieldPath, s"has ${sources.size} conflicting occurrences")))
-//            case ConflictResolution.FIRST => coarseStructField(sources.head, target, config, path)
-//            case ConflictResolution.LAST => coarseStructField(sources.last, target, config, path)
+//            case ReshapeConfig.ConflictResolution.ERROR | ReshapeConfig.ConflictResolution.UNDEFINED =>
+//              Left(List(StructValidationError(normalizedFieldPath, s"has ${sources.size} conflicting occurrences")))
+//            case ReshapeConfig.ConflictResolution.FIRST =>
+//              reshapeStructField(sources.head, target, config, sourcePath, normalizedFieldPath)
+//            case ReshapeConfig.ConflictResolution.LAST =>
+//              reshapeStructField(sources.last, target, config, sourcePath, normalizedFieldPath)
 //          }
-          Left(List(StructValidationError(fieldPath, s"has ${sources.size} conflicting occurrences")))
+          Left(List(StructValidationError(normalizedFieldPath, s"has ${sources.size} conflicting occurrences")))
         case (sources, Nil) =>
           if (config.failOnExtraColumn) {
-            Left(List(StructValidationError(fieldPath, s"unexpectedly present (${sources.size}x)")))
+            Left(List(StructValidationError(normalizedFieldPath, s"unexpectedly present (${sources.size}x)")))
           } else {
             if (config.dropExtraColumns) {
               Right(List.empty)
             } else {
-              Right(List(col(fieldPath)))
+              // TODO: Do we need ConflictResolution here?
+              Right(sources.map(f => col(makeFieldPath(sourcePath, f.name))))
             }
           }
         case (_, targets) if targets.size > 1 =>
-          Left(List(StructValidationError(fieldPath, s"has ${targets.size} occurrences in target struct")))
+          Left(List(StructValidationError(normalizedFieldPath, s"has ${targets.size} occurrences in target struct")))
       }
     }
 
     resultColumns.toList.partition(_.isLeft) match {
-      case (Nil, columns) => Right(columns.flatMap(_.toOption).flatten)
+      case (Nil, columns) => Right(columns.flatMap(_.right.toOption).flatten)
       case (errors, _) => Left(errors.flatMap(_.left.toOption).flatten)
     }
   }
@@ -296,7 +306,7 @@ object Datasets {
     if (actualSchema == expectedSchema) {
       ds.as[T]
     } else {
-      reshapeStructType(actualSchema, expectedSchema, config) match {
+      reshapeStructType(actualSchema, expectedSchema, config, sourcePath = null, normalizedPath = null) match {
         case Left(errors) => throw new StructValidationException(errors)
         case Right(columns) => ds.select(columns: _*).as[T]
       }
