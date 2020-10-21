@@ -99,7 +99,7 @@ class DbLoader(args: Array[String]) {
   def runDbSqlFile(connection: Connection, fileName: String, params: Map[String, Any] = Map.empty): Unit = {
     if (Strings.trim(fileName).isDefined) {
       logger.info(s"Running sql script $fileName.")
-      val sql = IO.readResource(this.getClass, fileName)
+      val sql = IO.resourceToString(this.getClass, fileName)
       runDbSql(connection, sql, params)
     }
   }

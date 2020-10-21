@@ -24,7 +24,7 @@ object SparkSqlRunner {
    */
   def runSqlDF(sparkSession: SparkSession, clazz: Class[_], sqlFileName: String, tables: Map[String, Dataset[_]],
       params: Option[Product] = None): DataFrame = {
-    val rawSqlText = IO.readResource(clazz, sqlFileName)
+    val rawSqlText = IO.resourceToString(clazz, sqlFileName)
     val sqlText = Strings.replaceParams(rawSqlText, params)
     val sqlStatements = splitSqlStatements(sqlText)
 

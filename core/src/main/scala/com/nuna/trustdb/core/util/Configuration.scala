@@ -46,13 +46,13 @@ case class Configuration(config: ConfigurationConfig) {
     val rootPackageCandidateFileNames = candidateFileNames.filter(_ => allowInRootPackage).map(cfn => "/" + cfn)
     val allCandidateFileNames = candidateFileNames ++ rootPackageCandidateFileNames
     allCandidateFileNames.foreach { fileName =>
-      value = update[T](value, IO.safeReadResource(clazz, fileName), yamlReader, fileName, None)
+      value = update[T](value, IO.resourceToStringOption(clazz, fileName), yamlReader, fileName, None)
     }
 
     // master_config file based overrides
     val masterCandidateFileNames = Seq("/master_config.yaml") ++ config.environments.map(e => s"/master_config.$e.yaml")
     masterCandidateFileNames.foreach { fileName =>
-      value = update[T](value, IO.safeReadResource(clazz, fileName), yamlReader, fileName, Some(baseFileName))
+      value = update[T](value, IO.resourceToStringOption(clazz, fileName), yamlReader, fileName, Some(baseFileName))
     }
 
     // command line overrides

@@ -8,17 +8,16 @@ import org.apache.commons.io.IOUtils
 import scala.util.control.NonFatal
 
 object IO {
-  def safeReadResource(clazz: Class[_], fileName: String): Option[String] = {
+  def resourceToStringOption(clazz: Class[_], fileName: String): Option[String] = {
     val resourceInputStream = Option(clazz.getResourceAsStream(fileName))
-    resourceInputStream.map(ris => using(ris)(ris => IOUtils.toString(ris, StandardCharsets.UTF_8.name())))
+    resourceInputStream.map(ris => using(ris)(ris => IOUtils.toString(ris, StandardCharsets.UTF_8)))
   }
 
-  def readResource(clazz: Class[_], fileName: String): String = {
-    val resourceInputStream = clazz.getResourceAsStream(fileName)
-    if (resourceInputStream == null) {
-      throw new IOException(s"File $fileName not found in package ${clazz.getPackage.getName}!")
+  def resourceToString(clazz: Class[_], fileName: String): String = {
+    resourceToStringOption(clazz, fileName) match {
+      case Some(content) => content
+      case None => throw new IOException(s"File $fileName not found in package ${clazz.getPackage.getName}!")
     }
-    using(resourceInputStream)(ris => IOUtils.toString(ris, StandardCharsets.UTF_8.name()))
   }
 
   def using[R <: AutoCloseable, T](resource: R)(body: R => T): T = {

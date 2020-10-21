@@ -8,10 +8,10 @@ class IOTest extends AnyFunSuite {
   import IOTest._
 
   test("readResource") {
-    val content = IO.readResource(this.getClass, "test_resource.txt")
+    val content = IO.resourceToString(this.getClass, "test_resource.txt")
     assert(content === "test resource content\n")
     assertThrows[IOException] {
-      IO.readResource(this.getClass, "non_existing_resource.txt")
+      IO.resourceToString(this.getClass, "non_existing_resource.txt")
     }
   }
 
