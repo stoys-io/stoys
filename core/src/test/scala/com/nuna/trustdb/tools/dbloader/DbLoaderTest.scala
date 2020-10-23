@@ -4,7 +4,7 @@ import java.sql._
 
 import com.nuna.trustdb.core.SparkTestBase
 import com.nuna.trustdb.core.util.{IO, Jackson}
-import org.apache.commons.lang3.StringEscapeUtils
+import org.apache.commons.text.StringEscapeUtils
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects}
 import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType}
@@ -24,7 +24,7 @@ class DbLoaderTest extends SparkTestBase {
   val tableName = s"${classOf[Item].getSimpleName.toLowerCase}__latest"
 
   test("DbLoader") {
-    val tmpDir = "./target/tmp"
+    val tmpDir = createLocalTempDirectory().toString
     val dbName = this.getClass.getSimpleName
     writeData(s"$tmpDir/$dbName/$tableName", items)
 
