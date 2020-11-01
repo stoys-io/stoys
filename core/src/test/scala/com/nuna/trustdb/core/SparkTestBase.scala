@@ -5,7 +5,10 @@ import java.sql.Date
 import com.github.mrpowers.spark.fast.tests.DataFrameComparer
 import com.nuna.trustdb.core.spark.Dfs
 import com.nuna.trustdb.core.util.TestBase
+import org.apache.hadoop.fs.FileStatus
 import org.apache.spark.sql._
+
+import scala.collection.mutable
 
 class SparkTestBase extends TestBase {
   lazy val sparkSession: SparkSession = SparkSession.builder()
@@ -58,6 +61,22 @@ class SparkTestBase extends TestBase {
 
   def writeData[T: Encoder](path: String, data: Seq[T]): Unit = {
     writeDataset[T](path, sparkSession.createDataset(data))
+  }
+
+  def walkDfsFileStatusesByRelativePath(path: String): Map[String, FileStatus] = {
+    val (fs, basePath) = dfs.asQualifiedPath(path)
+    val fileStatuses = mutable.Buffer.empty[FileStatus]
+    var stack = List(basePath)
+    while (stack.nonEmpty) {
+      val (directories, files) = fs.listStatus(stack.head).partition(_.isDirectory)
+      stack = directories.map(_.getPath).toList ++ stack.tail
+      fileStatuses ++= files
+    }
+    val relativePathsToFileStatuses = fileStatuses.flatMap {
+      case fs if fs.getPath.getName == "_SUCCESS" || fs.getPath.getName.endsWith(".crc") => None
+      case fs => Some(fs.getPath.toString.stripPrefix(s"$basePath/") -> fs)
+    }
+    relativePathsToFileStatuses.toMap
   }
 }
 
