@@ -2,31 +2,31 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.nuna.trustdb</groupId>
-    <artifactId>trustdb</artifactId>
+    <groupId>io.stoys</groupId>
+    <artifactId>stoys</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>nuna</name>
-    <description>NunaCore - mostly scala and spark stuff.</description>
-    <url>https://github.com/NunaHealth/nuna-core</url>
+    <name>stoys</name>
+    <description>SToys - mostly scala and spark stuff.</description>
+    <url>https://github.com/stoys-io/stoys</url>
     <inceptionYear>2019</inceptionYear>
 
     <scm>
-        <url>https://github.com/NunaHealth/nuna-core.git</url>
-        <connection>scm:git:git@github.com:NunaHealth/nuna-core.git</connection>
-        <developerConnection>scm:git:git@github.com:NunaHealth/nuna-core.git</developerConnection>
+        <url>https://github.com/stoys-io/stoys.git</url>
+        <connection>scm:git:git@github.com:stoys-io/stoys.git</connection>
+        <developerConnection>scm:git:git@github.com:stoys-io/stoys.git</developerConnection>
     </scm>
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/NunaHealth/nuna-core/issues/</url>
+        <url>https://github.com/stoys-io/stoys/issues/</url>
     </issueManagement>
 
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
             <distribution>repo</distribution>
         </license>
     </licenses>

@@ -2,11 +2,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.nuna.trustdb</groupId>
-        <artifactId>trustdb</artifactId>
+        <groupId>io.stoys</groupId>
+        <artifactId>stoys</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
-    <artifactId>core</artifactId>
+    <artifactId>stoys-core</artifactId>
 
     <properties>
         <h2.version>1.4.200</h2.version>

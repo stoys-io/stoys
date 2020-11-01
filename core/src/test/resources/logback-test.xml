@@ -2,7 +2,7 @@
 <configuration scan="true" scanPeriod="300 seconds" debug="false">
     <!-- <property file="logback.properties" /> -->
 
-    <contextName>TrustDB TEST</contextName>
+    <contextName>SToys TEST</contextName>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
@@ -11,8 +11,7 @@
         </encoder>
     </appender>
 
-    <!--    <logger name="com.nuna" level="DEBUG" /> -->
-    <!--    <logger name="com.nuna.trustdb" level="DEBUG" /> -->
+    <!--    <logger name="io.stoys" level="DEBUG" /> -->
     <logger name="breeze.optimize" level="WARN"/>
     <logger name="org.apache.hadoop" level="WARN"/>
     <logger name="org.apache.spark" level="WARN"/>
