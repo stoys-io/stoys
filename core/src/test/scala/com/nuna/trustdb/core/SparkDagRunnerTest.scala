@@ -1,6 +1,5 @@
 package com.nuna.trustdb.core
 
-import java.nio.file.Files
 import java.sql.Timestamp
 import java.time.LocalDateTime
 
@@ -15,13 +14,10 @@ class SparkDagRunnerTest extends SparkTestBase {
   import sparkSession.implicits._
 
   test("SparkDagRunner") {
-    val testDir = Files.createTempDirectory(this.getClass.getSimpleName + ".").toFile
-    testDir.deleteOnExit()
-
     val runTimestamp = "2020-02-02T02:22:20"
-    val inputPath = s"$testDir/ingestion"
-    val outputPath = s"$testDir/output"
-    val sharedOutputPath = s"$testDir/shared_output_path"
+    val inputPath = s"${tmpDir.toAbsolutePath}/ingestion"
+    val outputPath = s"${tmpDir.toAbsolutePath}/output"
+    val sharedOutputPath = s"${tmpDir.toAbsolutePath}/shared_output_path"
 
     writeData(s"$inputPath/foo", Seq(Foo(1, 11), Foo(2, 21)))
     writeData(s"$inputPath/bar", Seq(Bar(1, 12), Bar(2, 22)))

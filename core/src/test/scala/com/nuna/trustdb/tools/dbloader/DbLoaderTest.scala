@@ -24,7 +24,6 @@ class DbLoaderTest extends SparkTestBase {
   val tableName = s"${classOf[Item].getSimpleName.toLowerCase}__latest"
 
   test("DbLoader") {
-    val tmpDir = createLocalTempDirectory().toString
     val dbName = this.getClass.getSimpleName
     writeData(s"$tmpDir/$dbName/$tableName", items)
 

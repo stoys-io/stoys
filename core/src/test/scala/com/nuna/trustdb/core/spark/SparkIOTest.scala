@@ -21,8 +21,8 @@ class SparkIOTest extends SparkTestBase {
         === ("dir", Seq("sos-listing_strategy" -> "*~42/@", "foo" -> "foo")))
   }
 
-  test("resolveInputs edge cases") {
-    val tmp = createLocalTempDirectory().toAbsolutePath.toString
+  test("resolveInputs.fails") {
+    val tmp = s"${tmpDir.toAbsolutePath}/resolveInputs.fails"
     val sparkIO = new SparkIO(sparkSession, emptySparkIOConfig)
 
     def interceptException(path: String): String = {
@@ -38,7 +38,7 @@ class SparkIOTest extends SparkTestBase {
   }
 
   test("resolveInputs") {
-    val tmp = createLocalTempDirectory().toAbsolutePath.toString
+    val tmp = s"${tmpDir.toAbsolutePath}/resolveInputs"
 
     writeDagLists(tmp, "aa", Seq.empty, Seq.empty, Seq("aa/aa"))
     writeDagLists(tmp, "a", Seq("aa"), Seq("aa/aa"), Seq("a/a"))
@@ -70,8 +70,8 @@ class SparkIOTest extends SparkTestBase {
         === Set(dagAA, aa, dagA, a, dagB, b, dagDag, bar, foo, nonDagTable))
   }
 
-  test("init and addInputPaths") {
-    val tmp = createLocalTempDirectory().toAbsolutePath.toString
+  test("addInputPaths") {
+    val tmp = s"${tmpDir.toAbsolutePath}/addInputPaths"
 
     writeDagLists(tmp, "dag", Seq.empty, Seq.empty, Seq("dag/foo"))
     writeDummyParquetTables(tmp, "dag/foo")
@@ -103,22 +103,22 @@ class SparkIOTest extends SparkTestBase {
     assert(dfs.exists(s"$tmp/out/.dag"))
   }
 
-  def writeDagLists(tmpDir: String, dagName: String,
+  def writeDagLists(tmp: String, dagName: String,
       inputDags: Seq[String], inputTables: Seq[String], outputTables: Seq[String]): Unit = {
-    dfs.writeString(s"$tmpDir/$dagName/.dag/input_dags.list",
-      inputDags.map(d => s"$tmpDir/$d?sos-listing_strategy=dag").mkString("\n"))
-    dfs.writeString(s"$tmpDir/$dagName/.dag/input_tables.list",
-      inputTables.map(t => s"$tmpDir/$t").sorted.mkString("\n"))
-    dfs.writeString(s"$tmpDir/$dagName/.dag/output_tables.list",
-      outputTables.map(t => s"$tmpDir/$t").sorted.mkString("\n"))
+    dfs.writeString(s"$tmp/$dagName/.dag/input_dags.list",
+      inputDags.map(d => s"$tmp/$d?sos-listing_strategy=dag").mkString("\n"))
+    dfs.writeString(s"$tmp/$dagName/.dag/input_tables.list",
+      inputTables.map(t => s"$tmp/$t").sorted.mkString("\n"))
+    dfs.writeString(s"$tmp/$dagName/.dag/output_tables.list",
+      outputTables.map(t => s"$tmp/$t").sorted.mkString("\n"))
   }
 
-  def writeEmptyDirectories(tmpDir: String, outputTablePaths: String*): Unit = {
-    outputTablePaths.foreach(p => dfs.mkdirs(s"$tmpDir/$p"))
+  def writeEmptyDirectories(tmp: String, outputTablePaths: String*): Unit = {
+    outputTablePaths.foreach(p => dfs.mkdirs(s"$tmp/$p"))
   }
 
-  def writeDummyParquetTables(tmpDir: String, outputTablePaths: String*): Unit = {
+  def writeDummyParquetTables(tmp: String, outputTablePaths: String*): Unit = {
     val dummyDf = sparkSession.range(1).toDF()
-    outputTablePaths.foreach(p => writeDataFrame(s"$tmpDir/$p", dummyDf))
+    outputTablePaths.foreach(p => writeDataFrame(s"$tmp/$p", dummyDf))
   }
 }

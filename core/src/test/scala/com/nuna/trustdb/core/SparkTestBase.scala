@@ -1,20 +1,14 @@
 package com.nuna.trustdb.core
 
-import java.nio.file.{Files, Path, Paths}
 import java.sql.Date
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 import com.github.mrpowers.spark.fast.tests.DataFrameComparer
 import com.nuna.trustdb.core.spark.Dfs
+import com.nuna.trustdb.core.util.TestBase
 import org.apache.spark.sql._
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.funsuite.AnyFunSuite
 
-import scala.collection.mutable
-
-class SparkTestBase extends AnyFunSuite with BeforeAndAfterAll {
-  lazy val sparkSession = SparkSession.builder()
+class SparkTestBase extends TestBase {
+  lazy val sparkSession: SparkSession = SparkSession.builder()
       .master("local[1]")
       .config("spark.ui.enabled", "false")
       .config("spark.master.rest.enabled", "false")
@@ -23,14 +17,7 @@ class SparkTestBase extends AnyFunSuite with BeforeAndAfterAll {
       .appName(this.getClass.getName.stripSuffix("$"))
       .getOrCreate()
 
-  lazy val dfs = new Dfs(sparkSession)
-
-  private[SparkTestBase] val localTempDirectories = mutable.Buffer.empty[Path]
-
-  override def afterAll() {
-//    localTempDirectories.foreach(_.toFile.delete())
-    super.afterAll()
-  }
+  lazy val dfs: Dfs = new Dfs(sparkSession)
 
   def assertDatasetEquality[T](actual: Dataset[T], expected: Dataset[T], ignoreNullable: Boolean = false,
       ignoreColumnNames: Boolean = false, ignoreOrdering: Boolean = true): Unit = {
@@ -47,15 +34,6 @@ class SparkTestBase extends AnyFunSuite with BeforeAndAfterAll {
       SparkTestBase.comparer.assertApproximateDataFrameEquality(actual, expected, precision = precision,
         ignoreNullable = ignoreNullable, ignoreColumnNames = ignoreColumnNames, orderedComparison = !ignoreOrdering)
     }
-  }
-
-  def createLocalTempDirectory(): Path = {
-    val tmpDirectoryPath = Paths.get("target", "tmp")
-    tmpDirectoryPath.toFile.mkdirs()
-    val prefix = s"${this.getClass.getSimpleName}.${SparkTestBase.TIMESTAMP_FORMATTER.format(LocalDateTime.now())}."
-    val directory = Files.createTempDirectory(tmpDirectoryPath, prefix)
-      localTempDirectories += directory
-    directory
   }
 
   def readDataFrame(path: String): DataFrame = {
@@ -84,7 +62,6 @@ class SparkTestBase extends AnyFunSuite with BeforeAndAfterAll {
 }
 
 object SparkTestBase {
-  private[SparkTestBase] val TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS")
   private[SparkTestBase] val comparer = new DataFrameComparer {}
 
   // BEWARE: Dangerous and powerful implicits lives here! Be careful what we add here.
