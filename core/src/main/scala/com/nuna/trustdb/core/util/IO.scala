@@ -20,6 +20,18 @@ object IO {
     }
   }
 
+  def resourceToByteArrayOption(clazz: Class[_], fileName: String): Option[Array[Byte]] = {
+    val resourceInputStream = Option(clazz.getResourceAsStream(fileName))
+    resourceInputStream.map(ris => using(ris)(ris => IOUtils.toByteArray(ris)))
+  }
+
+  def resourceToByteArray(clazz: Class[_], fileName: String): Array[Byte] = {
+    resourceToByteArrayOption(clazz, fileName) match {
+      case Some(content) => content
+      case None => throw new IOException(s"File $fileName not found in package ${clazz.getPackage.getName}!")
+    }
+  }
+
   def using[R <: AutoCloseable, T](resource: R)(body: R => T): T = {
     require(resource != null, "resource is null")
     var exception: Throwable = null
