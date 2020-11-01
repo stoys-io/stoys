@@ -60,7 +60,7 @@ case class Configuration(config: ConfigurationConfig) {
     update[T](value, argsConfigurationString, propertiesReader, "'props' style command line flags", Some(baseFileName))
   }
 
-  private def update[T <: Product : ClassTag : TypeTag](originalValue: T, configurationString: Option[String],
+  private def update[T <: Product : ClassTag : TypeTag](mutableValue: T, configurationString: Option[String],
       objectReader: ObjectReader, logMessage: String, rootFieldName: Option[String]): T = {
     val logMessagePrefix = s"Configuring ${classTag[T].runtimeClass.getName}: $logMessage"
     configurationString match {
@@ -69,17 +69,17 @@ case class Configuration(config: ConfigurationConfig) {
         rootFieldName match {
           case None =>
             logger.info(s"$logMessagePrefix overwritten ${prettyPrintJsonNode[T](jsonTree)}")
-            objectMapper.reader().withValueToUpdate(originalValue).readValue[T](jsonTree)
+            objectMapper.reader().withValueToUpdate(mutableValue).readValue[T](jsonTree)
           case Some(fieldName) if jsonTree.has(fieldName) =>
             logger.info(s"$logMessagePrefix overwritten ${prettyPrintJsonNode[T](jsonTree.get(fieldName))}")
-            objectMapper.reader().withValueToUpdate(originalValue).readValue[T](jsonTree.get(fieldName))
+            objectMapper.reader().withValueToUpdate(mutableValue).readValue[T](jsonTree.get(fieldName))
           case Some(fieldName) =>
             logger.debug(s"$logMessagePrefix have no field $rootFieldName.")
-            originalValue
+            mutableValue
         }
       case None =>
         logger.debug(s"$logMessagePrefix not present.")
-        originalValue
+        mutableValue
     }
   }
 }
@@ -110,8 +110,17 @@ object Configuration {
     ConfigurationConfig(environments ++ DEFAULT_ENVIRONMENTS, remainingArgs)
   }
 
-  private[util] def prettyPrintJsonNode[T <: Product : ClassTag : TypeTag](jsonNode: JsonNode): String = {
+  private[util] def prettyPrintJsonNode[T <: Product : TypeTag](jsonNode: JsonNode): String = {
     val overrides = objectReader.withValueToUpdate(Arbitrary.empty[T]).readValue[T](jsonNode)
     objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(overrides)
+  }
+
+  def updateCaseClassWithConfigMap[T <: Product : TypeTag](originalValue: T, configMap: Map[String, Any]): T = {
+    var value = Arbitrary.empty[T]
+    val originalValueTree = objectMapper.valueToTree[JsonNode](originalValue)
+    value = objectMapper.reader().withValueToUpdate(value).readValue[T](originalValueTree)
+    val configMapTree = objectMapper.readTree(objectMapper.writeValueAsString(configMap))
+    value = objectMapper.reader().withValueToUpdate(value).readValue[T](configMapTree)
+    value
   }
 }

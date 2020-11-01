@@ -43,13 +43,26 @@ class ConfigurationTest extends AnyFunSuite {
 
   test("prettyPrintJsonNode") {
     val node = Jackson.objectMapper.valueToTree[JsonNode](defaultTestConfig.copy(password = "secret"))
-    val expected ="""
+    val expected =
+      """
         |{
         |  "int" : 42,
         |  "seq" : [ ],
         |  "map" : { }
         |}""".stripMargin.trim
     assert(Configuration.prettyPrintJsonNode[TestConfig](node) === expected)
+  }
+
+  test("updateCaseClassWithConfigMap") {
+    assert(emptyTestConfig.string === null)
+    assert(Configuration.updateCaseClassWithConfigMap(emptyTestConfig, null) === emptyTestConfig)
+    assert(Configuration.updateCaseClassWithConfigMap(emptyTestConfig, Map.empty) === emptyTestConfig)
+    val expected = emptyTestConfig.copy(int = 42, string = "foo")
+    val anyConfigMap = Map("int" -> 42, "string" -> "foo")
+    assert(Configuration.updateCaseClassWithConfigMap(emptyTestConfig, anyConfigMap) === expected)
+    val stringConfigMap = Map("int" -> "42", "string" -> "foo")
+    assert(Configuration.updateCaseClassWithConfigMap(emptyTestConfig, stringConfigMap) === expected)
+    assert(emptyTestConfig.string === null)
   }
 }
 
