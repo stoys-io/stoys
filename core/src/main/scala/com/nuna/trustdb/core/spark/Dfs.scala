@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 
 import com.nuna.trustdb.core.util.IO
 import org.apache.commons.io.IOUtils
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
 import org.apache.spark.sql.SparkSession
 
@@ -11,9 +12,7 @@ import org.apache.spark.sql.SparkSession
 //   1) asQualifiedPath is utility function to return concrete filesystem implementation and Path from path string.
 //   2) There are a few utility functions like path, readString and writeString in here.
 //   3) All other functions should have the same api as the underlying FileSystem api but taking path as string.
-class Dfs(sparkSession: SparkSession) {
-  private val hadoopConfiguration = sparkSession.sparkContext.hadoopConfiguration
-
+class Dfs(hadoopConfiguration: Configuration) {
   def path(path: String): Path = {
     new Path(path)
   }
@@ -61,5 +60,15 @@ class Dfs(sparkSession: SparkSession) {
   def open(path: String): FSDataInputStream = {
     val (fs, qualifiedPath) = asQualifiedPath(path)
     fs.open(qualifiedPath)
+  }
+}
+
+object Dfs {
+  def apply(hadoopConfiguration: Configuration): Dfs = {
+    new Dfs(hadoopConfiguration)
+  }
+
+  def apply(sparkSession: SparkSession): Dfs = {
+    new Dfs(sparkSession.sparkContext.hadoopConfiguration)
   }
 }

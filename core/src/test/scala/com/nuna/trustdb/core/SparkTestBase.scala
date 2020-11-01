@@ -20,7 +20,7 @@ class SparkTestBase extends TestBase {
       .appName(this.getClass.getName.stripSuffix("$"))
       .getOrCreate()
 
-  lazy val dfs: Dfs = new Dfs(sparkSession)
+  lazy val dfs: Dfs = Dfs(sparkSession)
 
   def assertDatasetEquality[T](actual: Dataset[T], expected: Dataset[T], ignoreNullable: Boolean = false,
       ignoreColumnNames: Boolean = false, ignoreOrdering: Boolean = true): Unit = {

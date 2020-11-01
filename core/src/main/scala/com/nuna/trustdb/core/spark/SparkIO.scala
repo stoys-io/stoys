@@ -18,7 +18,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
 
   private val logger = org.log4s.getLogger
 
-  val dfs = new Dfs(sparkSession)
+  val dfs = Dfs(sparkSession)
 
   private val inputPaths = mutable.Buffer.empty[String]
   private val inputDags = mutable.Buffer.empty[SosDag]
