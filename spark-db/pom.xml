@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.stoys</groupId>
-        <artifactId>stoys-parent</artifactId>
+        <artifactId>stoys-parent_2.12</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
-    <artifactId>stoys-spark-db</artifactId>
+    <artifactId>stoys-spark-db_2.12</artifactId>
 
     <properties>
         <h2.version>1.4.200</h2.version>
@@ -18,19 +18,19 @@
         <!-- stoys -->
         <dependency>
             <groupId>io.stoys</groupId>
-            <artifactId>stoys-spark</artifactId>
+            <artifactId>stoys-spark_${scala.compat.version}</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>io.stoys</groupId>
-            <artifactId>stoys-scala</artifactId>
+            <artifactId>stoys-scala_${scala.compat.version}</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.stoys</groupId>
-            <artifactId>stoys-spark</artifactId>
+            <artifactId>stoys-spark_${scala.compat.version}</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>

@@ -627,3 +627,6 @@ spark-warehouse
 
 # Allow scripts in subdirectory
 !**/scripts
+
+# Ignore scala-cross-build-maven-plugin backup files.
+pom.xml.bkp

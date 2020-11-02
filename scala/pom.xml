@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.stoys</groupId>
-        <artifactId>stoys-parent</artifactId>
+        <artifactId>stoys-parent_2.12</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
-    <artifactId>stoys-scala</artifactId>
+    <artifactId>stoys-scala_2.12</artifactId>
 
     <properties>
     </properties>
