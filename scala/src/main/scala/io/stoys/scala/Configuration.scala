@@ -49,9 +49,9 @@ case class Configuration(config: ConfigurationConfig) {
       value = update[T](value, IO.resourceToStringOption(clazz, fileName), yamlReader, fileName, None)
     }
 
-    // master_config file based overrides
-    val masterCandidateFileNames = Seq("/master_config.yaml") ++ config.environments.map(e => s"/master_config.$e.yaml")
-    masterCandidateFileNames.foreach { fileName =>
+    // main_config file based overrides
+    val mainCandidateFileNames = Seq("/main_config.yaml") ++ config.environments.map(e => s"/main_config.$e.yaml")
+    mainCandidateFileNames.foreach { fileName =>
       value = update[T](value, IO.resourceToStringOption(clazz, fileName), yamlReader, fileName, Some(baseFileName))
     }
 

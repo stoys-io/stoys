@@ -31,7 +31,7 @@ class ConfigurationTest extends AnyFunSuite {
       "test_config__map__some.key=value", "test_config__date=2020-02-02", "test_config__password=secret")
     assert(envArgs.readConfig[TestConfig]
         === TestConfig(42, "foo", Seq("prop"), Map("some.key" -> "value"), LocalDate.of(2020, 2, 2), "secret"))
-    assert(Configuration("--environments=master").readConfig[TestConfig] === defaultTestConfig.copy(string = "master"))
+    assert(Configuration("--environments=main").readConfig[TestConfig] === defaultTestConfig.copy(string = "main"))
     assert(Configuration("test_config__string=double_underscores__in___values__are_fine").readConfig[TestConfig]
         === defaultTestConfig.copy(string = "double_underscores__in___values__are_fine"))
   }
