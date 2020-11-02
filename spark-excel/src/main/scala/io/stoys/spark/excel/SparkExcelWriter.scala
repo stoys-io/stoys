@@ -59,13 +59,13 @@ object SparkExcelWriter {
     val aliasedDfs = finalDfs.zip(dfsNames).map(dfn => dfn._1.as(dfn._2))
     val (aliasedDfsWithPath, aliasedDfsWithoutPath) = aliasedDfs.splitAt(dfsWithPath.size)
     val joinedDfsWithPath = aliasedDfsWithPath.reduceOption((a, b) => a.join(b, Seq("__path__"), "FULL"))
-    val joinedDfsWithoutPath = aliasedDfsWithoutPath.reduceOption((a, b) => a.join(b, lit(true), "FULL"))
+    val joinedDfsWithoutPath = aliasedDfsWithoutPath.reduceOption((a, b) => a.join(b, lit(true), "CROSS"))
     val joinedDfs = (joinedDfsWithPath, joinedDfsWithoutPath) match {
       // TODO: Is there a way to create empty DataFrame without requiring sparkSession in the api?
       case (None, None) => throw new SparkException("At least one dataset required for this function.")
       case (Some(dfWithPath), None) => dfWithPath
       case (None, Some(dfWithoutPath)) => dfWithoutPath.withColumn("__path__", lit("workbook.xlsx"))
-      case (Some(dfWithPath), Some(dfWithoutPath)) => dfWithPath.join(dfWithoutPath, lit(true), "FULL")
+      case (Some(dfWithPath), Some(dfWithoutPath)) => dfWithPath.join(dfWithoutPath, lit(true), "CROSS")
     }
     val sheetArrayColumn = array(dfsNames.map(n => col(s"$n.__sheet__")): _*).as("__sheet_names__")
     val rowsColumns = dfsNames.zipWithIndex.map(ni => col(s"${ni._1}.__rows__").as(s"__rows_${ni._2}__"))

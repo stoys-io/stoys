@@ -1,6 +1,7 @@
 package io.stoys.spark.datasources
 
 import java.nio.charset.StandardCharsets
+import java.util.Collections
 import java.util.zip.{ZipEntry, ZipFile}
 
 import io.stoys.scala.IO
@@ -33,7 +34,7 @@ class ZipFileFormatTest extends SparkTestBase {
       "foo" -> "foo",
       "dir0/dir00/bar.txt" -> "bar",
       "dir0/dir00/baz.txt" -> "baz",
-      "dir0/dir01/bar.txt" -> "bar",
+      "dir0/dir01/bar.txt" -> "bar"
     )
 
     val binaryFilesZipPath = s"$tmpDir/zip.works/binary"
@@ -49,7 +50,7 @@ class ZipFileFormatTest extends SparkTestBase {
   }
 
   test("compression") {
-    val compressibleContent = "~=[,,_,,]:3".repeat(1024)
+    val compressibleContent = "~=[,,_,,]:3" * 1024
     val ds = Seq(TextFilePerRow("kilo_cat", compressibleContent)).toDS().coalesce(1)
 
     val defaultOptionsZipPath = s"$tmpDir/compression/default"
@@ -66,7 +67,7 @@ class ZipFileFormatTest extends SparkTestBase {
   def readFilesInZipFiles(path: String): Map[String, Map[String, String]] = {
     val filesInZipFiles = walkDfsFileStatusesByRelativePath(path).keys.map { relativePath =>
       relativePath -> IO.using(new ZipFile(s"$path/$relativePath")) { zipFile =>
-        val entries = zipFile.entries().asIterator().asScala.toSeq
+        val entries = Collections.list(zipFile.entries()).asScala
         entries.map(e => e.getName -> IOUtils.toString(zipFile.getInputStream(e), StandardCharsets.UTF_8)).toMap
       }
     }

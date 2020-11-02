@@ -34,7 +34,7 @@ class SparkSqlRunnerTest extends SparkTestBase {
       Metric("count", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "odd")),
       Metric("avg_value", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "odd")),
       Metric("count", 1.0, defaultLabels ++ labels ++ Map("grouped_by" -> "even")),
-      Metric("avg_value", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "even")),
+      Metric("avg_value", 2.0, defaultLabels ++ labels ++ Map("grouped_by" -> "even"))
     )
     assert(actualMetrics.collect() === expectedMetrics)
   }

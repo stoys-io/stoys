@@ -290,6 +290,21 @@
                 <jdk.version>8</jdk.version>
             </properties>
         </profile>
+        <profile>
+            <id>scala-2.11</id>
+            <properties>
+                <scala.version>2.11.12</scala.version>
+                <scala.compat.version>2.11</scala.compat.version>
+                <delta.version>0.6.1</delta.version>
+                <jackson.version>2.9.6</jackson.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>spark-2.4</id>
+            <properties>
+                <spark.version>2.4.7</spark.version>
+            </properties>
+        </profile>
     </profiles>
 
     <repositories>

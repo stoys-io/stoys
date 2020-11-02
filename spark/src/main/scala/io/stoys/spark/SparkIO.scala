@@ -27,7 +27,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
 
   private val reshapeConfig = Datasets.ReshapeConfig.as.copy(
 //    coerceTypes = true,
-    fillMissingNulls = true,
+    fillMissingNulls = true
   )
 
   def init(): Unit = {

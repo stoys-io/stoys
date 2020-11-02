@@ -26,7 +26,7 @@ object ExcelWriter {
 
   case class ComplexStyle(
       cellStyle: CellStyle,
-      conditionalFormatting: Option[ConditionalFormatting],
+      conditionalFormatting: Option[ConditionalFormatting]
   )
 
   case class SheetConfig(
@@ -34,7 +34,7 @@ object ExcelWriter {
       startAddress: Option[CellAddress],
       headerStyle: Option[ComplexStyle],
       cellStyle: Option[ComplexStyle],
-      columnStyles: Map[String, ComplexStyle],
+      columnStyles: Map[String, ComplexStyle]
   )
 
   object SheetConfig {
@@ -46,7 +46,7 @@ object ExcelWriter {
   case class ColumnInfo(
       columnName: String,
       dataFormatString: Option[String],
-      converter: Option[Any => Any] = None,
+      converter: Option[Any => Any] = None
   )
 
   def createWorkbook(config: ExcelWriterConfig): Workbook = {

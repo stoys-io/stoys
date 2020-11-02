@@ -20,7 +20,7 @@ class SparkExcelWriterTest extends SparkTestBase {
     Order(3, "customer X", "item_1", 3, "2020-02-20", 300),
     Order(4, "customer_2", "item_3", 1, "2020-01-10", 42),
     Order(5, "customer_1", "item_1", 3, "2020-01-10", 300),
-    Order(6, "customer_1", "item_2", 6, "2020-02-20", 4200),
+    Order(6, "customer_1", "item_2", 6, "2020-02-20", 4200)
   )
 
   test("datasetsToExcelFilesPerRow.zeroDatasetsUnsupported") {

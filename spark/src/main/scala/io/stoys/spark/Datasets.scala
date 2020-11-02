@@ -80,7 +80,7 @@ object Datasets {
        *
        * Use [[ReshapeConfig.SortOrder.TARGET]] to get the order of target schema.
        */
-      sortOrder: ReshapeConfig.SortOrder.SortOrder,
+      sortOrder: ReshapeConfig.SortOrder.SortOrder
   )
 
   object ReshapeConfig {
@@ -106,28 +106,28 @@ object Datasets {
       fillDefaultValues = false,
       fillMissingNulls = false,
       normalizedNameMatching = false,
-      sortOrder = ReshapeConfig.SortOrder.SOURCE,
+      sortOrder = ReshapeConfig.SortOrder.SOURCE
     )
     val safe = as.copy(
       failOnExtraColumn = true,
-      failOnIgnoringNullability = true,
+      failOnIgnoringNullability = true
     )
     val default = as.copy(
       coerceTypes = true,
       dropExtraColumns = true,
-      sortOrder = ReshapeConfig.SortOrder.TARGET,
+      sortOrder = ReshapeConfig.SortOrder.TARGET
     )
     val dangerous = default.copy(
       conflictResolution = ReshapeConfig.ConflictResolution.LAST,
       fillDefaultValues = true,
       fillMissingNulls = true,
-      normalizedNameMatching = true,
+      normalizedNameMatching = true
     )
   }
 
   case class StructValidationError(
       path: String,
-      msg: String,
+      msg: String
   )
 
   class StructValidationException(val errors: Seq[StructValidationError]) extends Exception {

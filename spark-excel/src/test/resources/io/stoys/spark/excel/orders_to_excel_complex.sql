@@ -34,4 +34,4 @@ SELECT
   ) AS content
 FROM orders_by_customer
 LEFT JOIN spend_per_item_by_customer ON spend_per_item_by_customer.customer = orders_by_customer.customer
-LEFT JOIN all_orders
+CROSS JOIN all_orders
