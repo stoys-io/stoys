@@ -39,6 +39,7 @@
         <module>scala</module>
         <module>spark</module>
         <module>spark-db</module>
+        <module>spark-excel</module>
     </modules>
 
     <properties>
