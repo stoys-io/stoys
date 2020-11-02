@@ -61,7 +61,6 @@
         <scalatest.version>3.2.2</scalatest.version>
         <slf4j.version>1.7.30</slf4j.version>
         <spark.version>3.0.1</spark.version>
-        <spark-fast-tests.version>0.20.0-s_${scala.compat.version}</spark-fast-tests.version>
     </properties>
 
     <dependencyManagement>
@@ -186,12 +185,6 @@
                 <version>${scalatest.version}</version>
                 <scope>test</scope>
             </dependency>
-            <dependency>
-                <groupId>MrPowers</groupId>
-                <artifactId>spark-fast-tests</artifactId>
-                <version>${spark-fast-tests.version}</version>
-                <scope>test</scope>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -303,10 +296,6 @@
         <repository>
             <id>Central</id>
             <url>https://repo.maven.apache.org/maven2</url>
-        </repository>
-        <repository>
-            <id>Spark Packages Repo</id>
-            <url>https://dl.bintray.com/spark-packages/maven</url>
         </repository>
     </repositories>
 </project>

@@ -34,8 +34,8 @@ class SparkDagRunnerTest extends SparkTestBase {
       "pack_insight_params__multiply_multiplier=1000")
     SparkDagRunner.main(Array("--environments=dev") ++ sparkDagRunnerArgs ++ insightArgs)
 
-    val expectedPack = Seq(Pack(1, 1000 * 11 * 12 + 11 + 12), Pack(2, 1000 * 21 * 22 + 21 + 22)).toDS()
-    assertDatasetEquality(readDataset[Pack](s"$outputPath/pack"), expectedPack, ignoreNullable = true)
+    val expectedPack = Seq(Pack(1, 1000 * 11 * 12 + 11 + 12), Pack(2, 1000 * 21 * 22 + 21 + 22))
+    assert(readDataset[Pack](s"$outputPath/pack").collect() === expectedPack)
 
     val sharedMetrics = sparkSession.read.format("delta").load(s"$sharedOutputPath/metric")
     val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp))

@@ -2,7 +2,6 @@ package io.stoys.spark
 
 import java.sql.Date
 
-import com.github.mrpowers.spark.fast.tests.DataFrameComparer
 import io.stoys.scala.TestBase
 import org.apache.hadoop.fs.FileStatus
 import org.apache.spark.sql._
@@ -20,23 +19,6 @@ class SparkTestBase extends TestBase {
       .getOrCreate()
 
   lazy val dfs: Dfs = Dfs(sparkSession)
-
-  def assertDatasetEquality[T](actual: Dataset[T], expected: Dataset[T], ignoreNullable: Boolean = false,
-      ignoreColumnNames: Boolean = false, ignoreOrdering: Boolean = true): Unit = {
-    SparkTestBase.comparer.assertSmallDatasetEquality(actual, expected, ignoreNullable = ignoreNullable,
-      ignoreColumnNames = ignoreColumnNames, orderedComparison = !ignoreOrdering)
-  }
-
-  def assertDataFrameEquality(actual: DataFrame, expected: DataFrame, ignoreNullable: Boolean = false,
-      ignoreColumnNames: Boolean = false, ignoreOrdering: Boolean = true, precision: Double = 0.0): Unit = {
-    if (precision == 0.0) {
-      SparkTestBase.comparer.assertSmallDataFrameEquality(actual, expected, ignoreNullable = ignoreNullable,
-        ignoreColumnNames = ignoreColumnNames, orderedComparison = !ignoreOrdering)
-    } else {
-      SparkTestBase.comparer.assertApproximateDataFrameEquality(actual, expected, precision = precision,
-        ignoreNullable = ignoreNullable, ignoreColumnNames = ignoreColumnNames, orderedComparison = !ignoreOrdering)
-    }
-  }
 
   def readDataFrame(path: String): DataFrame = {
     sparkSession.read.format("parquet").load(path)
@@ -80,8 +62,6 @@ class SparkTestBase extends TestBase {
 }
 
 object SparkTestBase {
-  private[SparkTestBase] val comparer = new DataFrameComparer {}
-
   // BEWARE: Dangerous and powerful implicits lives here! Be careful what we add here.
   // Do NOT copy this to src/main! It does not belong to production code. It is for tests only!
   object implicits {

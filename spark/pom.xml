@@ -47,10 +47,6 @@
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.compat.version}</artifactId>
         </dependency>
-        <dependency>
-            <groupId>MrPowers</groupId>
-            <artifactId>spark-fast-tests</artifactId>
-        </dependency>
     </dependencies>
 
     <build>
