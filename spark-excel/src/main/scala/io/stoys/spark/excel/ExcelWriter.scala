@@ -62,29 +62,36 @@ object ExcelWriter {
     val conditionalFormattingByCellAddress = extractConditionalFormattingByCellAddress(sheet)
     val cellIterator = sheet.rowIterator().asScala.flatMap(_.cellIterator().asScala)
     val stringCells = cellIterator.filter(_.getCellType == CellType.STRING)
-    stringCells.toArray.foldLeft(SheetConfig.fromSheetName(sheet.getSheetName)) {
-      case (sheetConfig, cell) =>
-        cell.getStringCellValue.toUpperCase(Locale.ROOT) match {
-          case CONFIG_CELL_PATTERN(key, params) =>
-            val conditionalFormatting = conditionalFormattingByCellAddress.get(cell.getAddress)
-            conditionalFormatting.foreach(cf => cf.setFormattingRanges(cf.getFormattingRanges.filterNot {
-              fr => fr.getFirstRow == cell.getAddress.getRow && fr.getFirstColumn == cell.getAddress.getColumn
-            }))
-            val complexStyle = ComplexStyle(cell.getCellStyle, conditionalFormatting)
-            val updatedSheetConfig = Try(ConfigCellType.withName(key)).toOption match {
-              case Some(ConfigCellType.TABLE_STARTS_HERE) => sheetConfig.copy(startAddress = Some(cell.getAddress))
-              case Some(ConfigCellType.HEADER_STYLE) => sheetConfig.copy(headerStyle = Some(complexStyle))
-              case Some(ConfigCellType.CELL_STYLE) => sheetConfig.copy(cellStyle = Some(complexStyle))
-              case Some(ConfigCellType.COLUMN_STYLE) =>
-                sheetConfig.copy(columnStyles = sheetConfig.columnStyles.updated(params, complexStyle))
-              case _ =>
-                throw new SparkException(s"Unsupported configuration key '$key' on sheet ${sheet.getSheetName}.")
-            }
-            cell.getRow.removeCell(cell)
-            updatedSheetConfig
-          case _ => sheetConfig
-        }
+    var sheetConfig = SheetConfig.fromSheetName(sheet.getSheetName)
+    stringCells.toArray.foreach { cell =>
+      cell.getStringCellValue.toUpperCase(Locale.ROOT) match {
+        case CONFIG_CELL_PATTERN(key, params) =>
+          val cellAddress = cell.getAddress
+          val conditionalFormatting = conditionalFormattingByCellAddress.get(cellAddress)
+          conditionalFormatting.foreach(cf => cf.setFormattingRanges(cf.getFormattingRanges.filterNot {
+            fr => fr.getFirstRow == cellAddress.getRow && fr.getFirstColumn == cellAddress.getColumn
+          }))
+          val complexStyle = ComplexStyle(cell.getCellStyle, conditionalFormatting)
+          Try(ConfigCellType.withName(key)).toOption match {
+            case Some(ConfigCellType.TABLE_STARTS_HERE) =>
+              sheetConfig = sheetConfig.copy(startAddress = Some(cellAddress))
+              cell.setBlank()
+            case Some(ConfigCellType.HEADER_STYLE) =>
+              sheetConfig = sheetConfig.copy(headerStyle = Some(complexStyle))
+              cell.getRow.removeCell(cell)
+            case Some(ConfigCellType.CELL_STYLE) =>
+              sheetConfig = sheetConfig.copy(cellStyle = Some(complexStyle))
+              cell.getRow.removeCell(cell)
+            case Some(ConfigCellType.COLUMN_STYLE) =>
+              sheetConfig = sheetConfig.copy(columnStyles = sheetConfig.columnStyles.updated(params, complexStyle))
+              cell.getRow.removeCell(cell)
+            case _ =>
+              throw new SparkException(s"Unsupported configuration key '$key' on sheet ${sheet.getSheetName}.")
+          }
+        case _ =>
+      }
     }
+    sheetConfig
   }
 
   private def extractConditionalFormattingByCellAddress(sheet: Sheet): Map[CellAddress, ConditionalFormatting] = {
