@@ -10,6 +10,11 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Row}
 
 object SparkExcelWriter {
+  def datasetToExcelFilesPerRow(
+      dataset: Dataset[_], config: ExcelWriterConfig = ExcelWriterConfig.default): Dataset[BinaryFilePerRow] = {
+    datasetsToExcelFilesPerRow(Seq(dataset), config)
+  }
+
   def datasetsToExcelFilesPerRow(
       datasets: Seq[Dataset[_]], config: ExcelWriterConfig = ExcelWriterConfig.default): Dataset[BinaryFilePerRow] = {
     implicit val binaryFilePerRowEncoder: Encoder[BinaryFilePerRow] = ExpressionEncoder[BinaryFilePerRow]()

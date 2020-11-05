@@ -23,15 +23,10 @@ class SparkExcelWriterTest extends SparkTestBase {
     Order(6, "customer_1", "item_2", 6, "2020-02-20", 4200)
   )
 
-  test("datasetsToExcelFilesPerRow.zeroDatasetsUnsupported") {
-    val intercepted = intercept[SparkException](SparkExcelWriter.datasetsToExcelFilesPerRow(Seq.empty))
-    assert(intercepted.getMessage.contains("At least one dataset required"))
-  }
-
-  test("datasetsToExcelFilesPerRow.trivial") {
-    val excelFilesPerRowDf = SparkExcelWriter.datasetsToExcelFilesPerRow(Seq(orders.toDF()))
+  test("datasetToExcelFilesPerRow") {
+    val excelFilesPerRowDf = SparkExcelWriter.datasetToExcelFilesPerRow(orders.toDF())
     excelFilesPerRowDf.cache()
-    excelFilesPerRowDf.write.format("file_per_row").save(s"$tmpDir/datasetsToExcelFilesPerRow.trivial")
+    excelFilesPerRowDf.write.format("file_per_row").save(s"$tmpDir/datasetToExcelFilesPerRow")
     val excelFilesPerRow = excelFilesPerRowDf.as[BinaryFilePerRow].collect()
     excelFilesPerRowDf.unpersist()
 
@@ -45,7 +40,12 @@ class SparkExcelWriterTest extends SparkTestBase {
     assert(cellsByAddress.get("F2").map(_.getNumericCellValue) === Some(1.0))
   }
 
-  test("datasetsToExcelFilesPerRow.complex") {
+  test("datasetsToExcelFilesPerRow.zeroDatasetsUnsupported") {
+    val intercepted = intercept[SparkException](SparkExcelWriter.datasetsToExcelFilesPerRow(Seq.empty))
+    assert(intercepted.getMessage.contains("At least one dataset required"))
+  }
+
+  test("datasetsToExcelFilesPerRow") {
     orders.toDS().createOrReplaceTempView("order")
 
     val allOrdersDf = orders.toDF().withColumn("__sheet__", lit("Orders"))
@@ -72,10 +72,10 @@ class SparkExcelWriterTest extends SparkTestBase {
     val dfs = Seq(allOrdersDf, ordersByCustomerDf, spendByCustomerDf)
     val excelFilesPerRowDf = SparkExcelWriter.datasetsToExcelFilesPerRow(dfs, ordersConfig)
     excelFilesPerRowDf.cache()
-    excelFilesPerRowDf.write.format("file_per_row").save(s"$tmpDir/datasetsToExcelFilesPerRow.complex")
+    excelFilesPerRowDf.write.format("file_per_row").save(s"$tmpDir/datasetsToExcelFilesPerRow")
     excelFilesPerRowDf.coalesce(1).write.format("zip")
         .option("zip_method", "STORED").option("zip_file_name", "orders.zip")
-        .save(s"$tmpDir/datasetsToExcelFilesPerRow.complex.zip")
+        .save(s"$tmpDir/datasetsToExcelFilesPerRow.zip")
     val excelFilesPerRow = excelFilesPerRowDf.as[BinaryFilePerRow].collect()
     excelFilesPerRowDf.unpersist()
 
@@ -96,6 +96,9 @@ class SparkExcelWriterTest extends SparkTestBase {
          |FROM order
          |GROUP BY true
          |""".stripMargin.trim)
+
+    val outputFileStatuses = walkDfsFileStatusesByRelativePath(s"$tmpDir/to_excel")
+    assert(outputFileStatuses.keySet === Set("orders.xlsx"))
   }
 
   test("to_excel.complex") {
@@ -106,7 +109,7 @@ class SparkExcelWriterTest extends SparkTestBase {
     ordersTemplateXlsxDs.createOrReplaceTempView("orders_template_xlsx")
 
     val excelFilesPerRowDf = sparkSession.sql(IO.resourceToString(this.getClass, "orders_to_excel_complex.sql"))
-    excelFilesPerRowDf.persist()
+    excelFilesPerRowDf.cache()
     excelFilesPerRowDf.write.format("file_per_row").save(s"$tmpDir/to_excel.complex")
     val excelFilesPerRow = excelFilesPerRowDf.as[BinaryFilePerRow].collect()
     excelFilesPerRowDf.unpersist()
