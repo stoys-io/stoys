@@ -1,10 +1,13 @@
 package io.stoys.scala
 
 import scala.reflect.api
+import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
 object Reflection {
-  private val mirror = scala.reflect.runtime.currentMirror
+  private def mirror: universe.Mirror = {
+    universe.runtimeMirror(Thread.currentThread().getContextClassLoader)
+  }
 
   def dealiasedTypeOf[T: TypeTag]: Type = {
     typeOf[T].dealias
