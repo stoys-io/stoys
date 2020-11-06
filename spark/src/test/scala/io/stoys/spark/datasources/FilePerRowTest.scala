@@ -1,10 +1,10 @@
 package io.stoys.spark.datasources
 
-import io.stoys.scala.TestBase
+import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.SparkException
 import org.apache.spark.sql.types._
 
-class FilePerRowTest extends TestBase {
+class FilePerRowTest extends SparkTestBase {
   import FilePerRow._
 
   test("findFieldIndexes") {

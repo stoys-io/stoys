@@ -2,13 +2,16 @@ package io.stoys.spark.datasources
 
 import java.nio.charset.StandardCharsets
 
-import io.stoys.spark.SparkTestBase
+import io.stoys.spark.Dfs
+import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.io.IOUtils
 import org.apache.spark.SparkException
 import org.apache.spark.sql._
 
 class FilePerRowFileFormatTest extends SparkTestBase {
   import sparkSession.implicits._
+
+  private lazy val dfs = Dfs(sparkSession)
 
   test("file_per_row.works") {
     val fileContents = Map(

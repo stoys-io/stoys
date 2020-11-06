@@ -5,7 +5,7 @@ import java.util.Collections
 import java.util.zip.{ZipEntry, ZipFile}
 
 import io.stoys.scala.IO
-import io.stoys.spark.SparkTestBase
+import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.io.IOUtils
 import org.apache.spark.SparkException
 

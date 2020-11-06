@@ -6,33 +6,12 @@
         <artifactId>stoys-parent_2.12</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
-    <artifactId>stoys-spark-excel_2.12</artifactId>
+    <artifactId>stoys-spark-test_2.12</artifactId>
 
     <properties>
-        <poi.version>4.1.2</poi.version>
     </properties>
 
     <dependencies>
-        <!-- stoys -->
-        <dependency>
-            <groupId>io.stoys</groupId>
-            <artifactId>stoys-spark_${scala.compat.version}</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.stoys</groupId>
-            <artifactId>stoys-spark-test_${scala.compat.version}</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- excel -->
-        <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi-ooxml</artifactId>
-            <version>${poi.version}</version>
-        </dependency>
-
         <!-- spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -43,10 +22,29 @@
             <artifactId>spark-sql_${scala.compat.version}</artifactId>
         </dependency>
 
+        <!-- logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+        </dependency>
+
         <!-- test -->
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.compat.version}</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

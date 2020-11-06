@@ -3,9 +3,12 @@ package io.stoys.spark
 import java.io.IOException
 
 import io.stoys.scala.{Arbitrary, IO}
+import io.stoys.spark.test.SparkTestBase
 
 class SparkIOTest extends SparkTestBase {
   import SparkIO._
+
+  private lazy val dfs = Dfs(sparkSession)
 
   val emptySparkIOConfig = Arbitrary.empty[SparkIOConfig]
   val emptySosTable = Arbitrary.empty[SosTable]

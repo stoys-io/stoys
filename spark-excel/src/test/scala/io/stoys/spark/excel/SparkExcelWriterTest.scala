@@ -3,15 +3,15 @@ package io.stoys.spark.excel
 import java.sql.Date
 
 import io.stoys.scala.IO
-import io.stoys.spark.SparkTestBase
 import io.stoys.spark.datasources.BinaryFilePerRow
+import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.SparkException
 import org.apache.spark.sql.functions._
 
 class SparkExcelWriterTest extends SparkTestBase {
   import ExcelWriterTest._
   import SparkExcelWriterTest._
-  import SparkTestBase.implicits._
+  import io.stoys.spark.test.implicits._
   import sparkSession.implicits._
 
   val orders = Seq(

@@ -3,7 +3,7 @@ package io.stoys.spark.db
 import java.sql._
 
 import io.stoys.scala.{IO, Jackson}
-import io.stoys.spark.SparkTestBase
+import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.text.StringEscapeUtils
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects}

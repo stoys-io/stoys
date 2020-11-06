@@ -40,6 +40,7 @@
         <module>spark</module>
         <module>spark-db</module>
         <module>spark-excel</module>
+        <module>spark-test</module>
     </modules>
 
     <properties>
@@ -273,11 +274,6 @@
                             </goals>
                         </execution>
                     </executions>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.2.0</version>
                 </plugin>
                 <plugin>
                     <groupId>com.github.wajda</groupId>

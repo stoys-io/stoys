@@ -1,6 +1,7 @@
 package io.stoys.spark
 
 import io.stoys.spark.Datasets.{ReshapeConfig, StructValidationException}
+import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.types.{StructField, StructType}
 
 class DatasetsTest extends SparkTestBase {

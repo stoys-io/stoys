@@ -1,5 +1,6 @@
 package io.stoys.spark
 
+import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.Dataset
 
 class SparkSqlRunnerTest extends SparkTestBase {

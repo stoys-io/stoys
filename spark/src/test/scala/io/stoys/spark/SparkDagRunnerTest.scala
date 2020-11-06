@@ -4,6 +4,7 @@ import java.sql.Timestamp
 import java.time.LocalDateTime
 
 import io.stoys.scala.Configuration
+import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
 import scala.io.Source
