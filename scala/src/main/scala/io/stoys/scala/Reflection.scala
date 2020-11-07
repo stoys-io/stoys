@@ -107,30 +107,30 @@ object Reflection {
   }
 
   def getAnnotationParams(annotation: Annotation): Seq[(String, Any)] = {
-    // TODO: add support and test for annotation value
-    def getValue(tree: Tree): Any = {
-      tree match {
-        // enum
-        case Literal(Constant(value: TermSymbol)) =>
-          val clazz = mirror.runtimeClass(value.owner.asClass)
-          val valueName = value.name.toString
-          clazz.getMethod("valueOf", classOf[String]).invoke(null, valueName)
-        // classOf[...]
-        case Literal(Constant(value: TypeRef)) =>
-          mirror.runtimeClass(value)
-        // (boxed) primitive and string
-        case Literal(Constant(value)) =>
-          value
-        // array
-        case Apply(Ident(TermName("Array")), valueTrees) =>
-          valueTrees.map(getValue)
-      }
+    def getAnnotationParams(tree: Tree): Seq[(String, Any)] = tree match {
+      case Apply(Select(New(TypeTree()), termNames.CONSTRUCTOR), valueTrees) =>
+        valueTrees.map {
+          case AssignOrNamedArg(Ident(TermName(key)), valueTree) => key -> getValue(valueTree)
+        }
     }
 
-    annotation.tree.children.tail.collect {
-      case AssignOrNamedArg(Ident(name), valueTree) =>
-        name.decodedName.toString -> getValue(valueTree)
+    def getValue(tree: Tree): Any = tree match {
+      // enum
+      case Literal(Constant(value: TermSymbol)) =>
+        val clazz = mirror.runtimeClass(value.owner.asClass)
+        val valueName = value.name.toString
+        clazz.getMethod("valueOf", classOf[String]).invoke(null, valueName)
+      // classOf[...]
+      case Literal(Constant(value: TypeRef)) => mirror.runtimeClass(value)
+      // (boxed) primitive and string
+      case Literal(Constant(value)) => value
+      // array
+      case Apply(Ident(TermName("Array")), valueTrees) => valueTrees.map(getValue)
+      // annotation
+      case tree @ Apply(Select(New(TypeTree()), termNames.CONSTRUCTOR), _) => getAnnotationParams(tree)
     }
+
+    getAnnotationParams(annotation.tree)
   }
 
   def getAnnotationParams[A: TypeTag](symbol: Symbol): Option[Seq[(String, Any)]] = {

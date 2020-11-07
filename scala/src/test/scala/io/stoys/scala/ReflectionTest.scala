@@ -127,17 +127,24 @@ class ReflectionTest extends AnyFunSuite {
 
     assert(getAnnotationParams[TestAnnotation](symbolOf[NotAnnotated]) === None)
     assert(getAnnotationParams[TestAnnotation](symbolOf[AnnotatedNoParams]) === Some(Seq.empty))
-    assert(getAnnotationParams[TestAnnotation](symbolOf[AnnotatedExplicitParams])
-        === Some(Seq("stringValue" -> "overridden", "arrayValue" -> Seq(4, 2), "enumValue" -> TestEnum.BAR,
-      "classValue" -> classOf[Record])))
+    assert(getAnnotationParams[TestAnnotation](symbolOf[AnnotatedExplicitParams]) === Some(Seq(
+      "stringValue" -> "overridden",
+      "arrayValue" -> Seq(4, 2),
+      "enumValue" -> TestEnum.BAR,
+      "classValue" -> classOf[Record],
+      "annotationValue" -> Seq("value" -> "foo"))))
   }
 
   test("renderAnnotatedSymbol") {
     assert(renderAnnotatedSymbol(symbolOf[NotAnnotated]) === "NotAnnotated")
     assert(renderAnnotatedSymbol(symbolOf[AnnotatedNoParams]) === "@TestAnnotation() AnnotatedNoParams")
-    assert(renderAnnotatedSymbol(symbolOf[AnnotatedExplicitParams])
-        === "@TestAnnotation(stringValue = \"overridden\", arrayValue = List(4, 2), enumValue = BAR,"
-        + " classValue = class io.stoys.scala.ReflectionTest$Record) AnnotatedExplicitParams")
+    assert(renderAnnotatedSymbol(symbolOf[AnnotatedExplicitParams]) === "@TestAnnotation(" +
+        "stringValue = \"overridden\"," +
+        " arrayValue = List(4, 2)," +
+        " enumValue = BAR," +
+        " classValue = class io.stoys.scala.ReflectionTest$Record," +
+        " annotationValue = List((value,foo))" +
+        ") AnnotatedExplicitParams")
   }
 
   test("classNameToTypeTag") {
@@ -167,8 +174,11 @@ object ReflectionTest {
   @TestAnnotation
   case class AnnotatedNoParams(value: String)
 
-  // TODO: What si correct scala syntax for: annotationValue = @TestAnnotationValue(value = "foo")
-  @TestAnnotation(stringValue = "overridden", arrayValue = Array(4, 2), enumValue = TestEnum.BAR,
-    classValue = classOf[Record])
+  @TestAnnotation(
+    stringValue = "overridden",
+    arrayValue = Array(4, 2),
+    enumValue = TestEnum.BAR,
+    classValue = classOf[Record],
+    annotationValue = new TestAnnotationValue(value = "foo"))
   case class AnnotatedExplicitParams(value: String)
 }
