@@ -8,8 +8,8 @@ class DatasetsTest extends SparkTestBase {
   import DatasetsTest._
   import sparkSession.implicits._
 
-  val records = Seq(Record("foo", 42, NestedRecord("nested")))
-  lazy val recordsDF = records.toDF()
+  private val records = Seq(Record("foo", 42, NestedRecord("nested")))
+  private lazy val recordsDF = records.toDF()
 
   test("reshape - coerceTypes") {
     val fixableDF = recordsDF.selectExpr("42 AS str", "CAST(num AS byte) AS num", "nested")
@@ -22,7 +22,7 @@ class DatasetsTest extends SparkTestBase {
   }
 
   ignore("reshape - conflictResolution") {
-    ??? // TODO: implement conflict resolution
+    // TODO: implement conflict resolution
   }
 
   test("reshape - dropExtraColumns") {

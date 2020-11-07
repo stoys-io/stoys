@@ -47,8 +47,9 @@ case class ExcelWriterConfig(
     template_xlsx: Array[Byte],
     /**
      * Should we use Apache POI implementation of column auto sizing?
+     *
+     * Note: Avoid this! POI internal resizing is nice idea. But it is exceptionally slow. Nobody should really use it.
      */
-    @deprecated("POI internal resizing is nice idea. But it is exceptionally slow. Nobody should really use it.")
     poi_based_auto_size_columns: Boolean,
     /**
      * Apache POI library used to generate excel files is very memory hungry (and slow). Streaming should help with

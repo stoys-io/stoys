@@ -97,7 +97,7 @@ object Datasets {
     /**
      * [[ReshapeConfig.as]] behaves the same way as Spark's own [[Dataset.as]].
      */
-    val as = ReshapeConfig(
+    val as: ReshapeConfig = ReshapeConfig(
       coerceTypes = false,
       conflictResolution = ReshapeConfig.ConflictResolution.ERROR,
       dropExtraColumns = false,
@@ -108,16 +108,16 @@ object Datasets {
       normalizedNameMatching = false,
       sortOrder = ReshapeConfig.SortOrder.SOURCE
     )
-    val safe = as.copy(
+    val safe: ReshapeConfig = as.copy(
       failOnExtraColumn = true,
       failOnIgnoringNullability = true
     )
-    val default = as.copy(
+    val default: ReshapeConfig = as.copy(
       coerceTypes = true,
       dropExtraColumns = true,
       sortOrder = ReshapeConfig.SortOrder.TARGET
     )
-    val dangerous = default.copy(
+    val dangerous: ReshapeConfig = default.copy(
       conflictResolution = ReshapeConfig.ConflictResolution.LAST,
       fillDefaultValues = true,
       fillMissingNulls = true,
@@ -252,7 +252,7 @@ object Datasets {
           }
         case (source :: Nil, target :: Nil) =>
           reshapeStructField(source, target, config, sourcePath, normalizedFieldPath)
-        case (sources, target :: Nil) =>
+        case (sources, _ :: Nil) =>
           // TODO: ConflictResolution is more complicated than this
 //          config.conflictResolution match {
 //            case ReshapeConfig.ConflictResolution.ERROR | ReshapeConfig.ConflictResolution.UNDEFINED =>

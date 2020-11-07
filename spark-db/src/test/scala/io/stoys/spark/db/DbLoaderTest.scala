@@ -5,23 +5,21 @@ import java.sql._
 import io.stoys.scala.{IO, Jackson}
 import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.text.StringEscapeUtils
-import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects}
 import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType}
 
 class DbLoaderTest extends SparkTestBase {
   import DbLoaderTest._
-  import sparkSession.implicits._
 
   JdbcDialects.registerDialect(SparkH2DialectWithJsonSupport)
 
-  val items = Seq(
+  private val items = Seq(
     Item(1, 11, "name1", 100, "note1", Some("optionalNote1"), "longNameField1", "customTypeField1",
       Date.valueOf("2001-01-01"), Seq("repeatedFiled11", "repeatedFiled12"), SubItem("nestedField1")),
     Item(2, 22, "name2", 200, "note2", Some("optionalNote2"), "longNameField2", "customTypeField2",
       Date.valueOf("2001-01-02"), Seq("repeatedFiled12", "repeatedFiled22"), SubItem("nestedField2")))
-  val caseClassName = classOf[Item].getName
-  val tableName = s"${classOf[Item].getSimpleName.toLowerCase}__latest"
+  private val caseClassName = classOf[Item].getName
+  private val tableName = s"${classOf[Item].getSimpleName.toLowerCase}__latest"
 
   test("DbLoader") {
     val dbName = this.getClass.getSimpleName
@@ -54,10 +52,11 @@ class DbLoaderTest extends SparkTestBase {
     assert(readIndexNamesFromDb(connection, latestSchema, tableName).map(_.toLowerCase).contains("item_by_name"))
   }
 
-  private def printQueryResult(jdbcUrl: String, query: String): Unit = {
-    sparkSession.read.format("jdbc")
-        .option(JDBCOptions.JDBC_URL, jdbcUrl).option(JDBCOptions.JDBC_QUERY_STRING, query).load().show()
-  }
+//  private def printQueryResult(jdbcUrl: String, query: String): Unit = {
+//    import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
+//    sparkSession.read.format("jdbc")
+//        .option(JDBCOptions.JDBC_URL, jdbcUrl).option(JDBCOptions.JDBC_QUERY_STRING, query).load().show()
+//  }
 
   private def getLatestDataSchemaName(connection: Connection): String = {
     //    val schemaNames = mapResultSet(connection.getMetaData.getSchemas)(_.getString("SCHEMA_NAME"))

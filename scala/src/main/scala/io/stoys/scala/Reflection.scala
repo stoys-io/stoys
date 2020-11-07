@@ -54,25 +54,25 @@ object Reflection {
     dealiasedTypeSymbolOf[T].annotations.exists(_.tree.tpe =:= typeOf[A])
   }
 
-  def assertCaseClass[T: TypeTag]: Unit = {
+  def assertCaseClass[T: TypeTag](): Unit = {
     if (!isCaseClass[T]) {
       throw new IllegalArgumentException(s"${symbolOf[T].fullName} is not a case class!")
     }
   }
 
-  def assertAnnotated[T: TypeTag, A: TypeTag]: Unit = {
+  def assertAnnotated[T: TypeTag, A: TypeTag](): Unit = {
     if (!isAnnotated[T, A]) {
       throw new IllegalArgumentException(s"${symbolOf[T].fullName} is not annotated with ${symbolOf[A].fullName}!")
     }
   }
 
-  def assertAnnotatedCaseClass[T: TypeTag, A: TypeTag]: Unit = {
-    assertCaseClass[T]
-    assertAnnotated[T, A]
+  def assertAnnotatedCaseClass[T: TypeTag, A: TypeTag](): Unit = {
+    assertCaseClass[T]()
+    assertAnnotated[T, A]()
   }
 
   def getCaseClassFields[T: TypeTag]: Seq[Symbol] = {
-    assertCaseClass[T]
+    assertCaseClass[T]()
     dealiasedTypeSymbolOf[T].asClass.primaryConstructor.typeSignature.paramLists.head
   }
 

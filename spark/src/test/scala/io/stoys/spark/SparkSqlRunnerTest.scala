@@ -47,7 +47,7 @@ object SparkSqlRunnerTest {
   case class Square(value: Int, squared_value: Int)
   case class SimpleRow(str_value: String)
 
-  val databricksNotebookTextTemplate =
+  private val dataBricksNotebookTextTemplate =
     """
       |%s
       |
@@ -59,7 +59,7 @@ object SparkSqlRunnerTest {
       |*/
     """.stripMargin
 
-  def createNotebookText(sqlText: String): String = {
-    databricksNotebookTextTemplate.format(sqlText)
+  private def createNotebookText(sqlText: String): String = {
+    dataBricksNotebookTextTemplate.format(sqlText)
   }
 }

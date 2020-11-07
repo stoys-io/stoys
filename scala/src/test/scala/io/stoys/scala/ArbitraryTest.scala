@@ -4,6 +4,7 @@ import java.time.{Instant, LocalDate, LocalDateTime, LocalTime}
 
 import org.scalatest.funsuite.AnyFunSuite
 
+//noinspection NameBooleanParameters
 class ArbitraryTest extends AnyFunSuite {
   import Arbitrary._
   import ArbitraryTest._

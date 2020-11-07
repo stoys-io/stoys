@@ -10,8 +10,8 @@ class SparkIOTest extends SparkTestBase {
 
   private lazy val dfs = Dfs(sparkSession)
 
-  val emptySparkIOConfig = Arbitrary.empty[SparkIOConfig]
-  val emptySosTable = Arbitrary.empty[SosTable]
+  private val emptySparkIOConfig = Arbitrary.empty[SparkIOConfig]
+  private val emptySosTable = Arbitrary.empty[SosTable]
 
   test("parsePathParams") {
     assert(parsePathParams("dir") === ("dir", Seq.empty))

@@ -9,9 +9,9 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 
 object Jackson {
-  val objectMapper = createObjectMapper()
-  val yamlObjectMapper = createObjectMapper(new YAMLFactory())
-  val propertiesObjectMapper = createObjectMapper(new JavaPropsFactory())
+  val objectMapper: ObjectMapperWithScalaMixin = createObjectMapper()
+  val yamlObjectMapper: ObjectMapperWithScalaMixin = createObjectMapper(new YAMLFactory())
+  val propertiesObjectMapper: ObjectMapperWithScalaMixin = createObjectMapper(new JavaPropsFactory())
 
   class ObjectMapperWithScalaMixin(jsonFactory: JsonFactory) extends ObjectMapper(jsonFactory) with ScalaObjectMapper
 

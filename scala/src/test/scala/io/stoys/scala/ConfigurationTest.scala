@@ -11,9 +11,9 @@ import org.scalatest.funsuite.AnyFunSuite
 class ConfigurationTest extends AnyFunSuite {
   import ConfigurationTest._
 
-  val emptyTestConfig = Arbitrary.empty[TestConfig]
-  val defaultTestConfig = emptyTestConfig.copy(int = 42)
-  val fooTestConfig = defaultTestConfig.copy(string = "foo", seq = Seq("foo"), map = Map("foo" -> "foo"))
+  private val emptyTestConfig = Arbitrary.empty[TestConfig]
+  private val defaultTestConfig = emptyTestConfig.copy(int = 42)
+  private val fooTestConfig = defaultTestConfig.copy(string = "foo", seq = Seq("foo"), map = Map("foo" -> "foo"))
 
   test("parseConfigurationConfig") {
     assert(Configuration.parseConfigurationConfig(Array("environments=foo"))

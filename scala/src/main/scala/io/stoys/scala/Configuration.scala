@@ -73,7 +73,7 @@ case class Configuration(config: ConfigurationConfig) {
           case Some(fieldName) if jsonTree.has(fieldName) =>
             logger.info(s"$logMessagePrefix overwritten ${prettyPrintJsonNode[T](jsonTree.get(fieldName))}")
             objectMapper.reader().withValueToUpdate(mutableValue).readValue[T](jsonTree.get(fieldName))
-          case Some(fieldName) =>
+          case Some(_) =>
             logger.debug(s"$logMessagePrefix have no field $rootFieldName.")
             mutableValue
         }

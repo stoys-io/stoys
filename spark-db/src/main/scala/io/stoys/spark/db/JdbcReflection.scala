@@ -3,10 +3,12 @@ package io.stoys.spark.db
 import io.stoys.scala.{Reflection, Strings}
 import io.stoys.spark.TableName
 
+import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
 object JdbcReflection {
-  val DEFAULT_COLUMN_LENGTH = classOf[javax.persistence.Column].getDeclaredMethod("length").getDefaultValue
+  val DEFAULT_COLUMN_LENGTH: Int =
+    classOf[javax.persistence.Column].getDeclaredMethod("length").getDefaultValue.asInstanceOf[java.lang.Integer]
 
   def getColumnName(symbol: Symbol): String = {
     Strings.toSnakeCase(Reflection.termNameOf(symbol))
@@ -18,16 +20,16 @@ object JdbcReflection {
   }
 
   def getCreateTableStatement[T <: Product](tableName: TableName[T], schemaName: String): String = {
-    implicit val typeTagT = tableName.typeTag
-    Reflection.assertAnnotatedCaseClass[T, javax.persistence.Entity]
+    implicit val typeTagT: universe.TypeTag[T] = tableName.typeTag
+    Reflection.assertAnnotatedCaseClass[T, javax.persistence.Entity]()
     val qualifiedTableName = getQualifiedTableName[T](tableName, schemaName)
     val sqlTypes = Reflection.getCaseClassFields[T].map(getSqlTypeName)
     sqlTypes.mkString(s"CREATE TABLE $qualifiedTableName (\n  ", ",\n  ", "\n);")
   }
 
   def getAddConstraintStatements[T <: Product](tableName: TableName[T], schemaName: String): Seq[String] = {
-    implicit val typeTagT = tableName.typeTag
-    Reflection.assertAnnotatedCaseClass[T, javax.persistence.Entity]
+    implicit val typeTagT: universe.TypeTag[T] = tableName.typeTag
+    Reflection.assertAnnotatedCaseClass[T, javax.persistence.Entity]()
     val fields = Reflection.getCaseClassFields[T]
     val fullTableName = tableName.fullTableName()
     val qualifiedTableName = getQualifiedTableName[T](tableName, schemaName)
@@ -68,7 +70,7 @@ object JdbcReflection {
         case t if t =:= typeOf[Long] => "BIGINT"
         case t if t =:= typeOf[Float] => "FLOAT"
         case t if t =:= typeOf[Double] => "DOUBLE"
-        case t if t =:= typeOf[String] => s"VARCHAR(${column.get("length").getOrElse(DEFAULT_COLUMN_LENGTH)})"
+        case t if t =:= typeOf[String] => s"VARCHAR(${column.getOrElse("length", DEFAULT_COLUMN_LENGTH)})"
         case t if t =:= typeOf[java.sql.Date] => "DATE"
         case t if t <:< typeOf[Iterable[_]] => "JSON"
         case t if Reflection.isCaseClass(t) => "JSON"

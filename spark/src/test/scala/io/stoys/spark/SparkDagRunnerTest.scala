@@ -1,5 +1,7 @@
 package io.stoys.spark
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
 import java.sql.Timestamp
 import java.time.LocalDateTime
 
@@ -7,11 +9,10 @@ import io.stoys.scala.Configuration
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
-import scala.io.Source
+import scala.collection.JavaConverters._
 
 class SparkDagRunnerTest extends SparkTestBase {
   import SparkDagRunnerTest._
-  import sparkSession.implicits._
 
   test("SparkDagRunner") {
     val runTimestamp = "2020-02-02T02:22:20"
@@ -42,13 +43,17 @@ class SparkDagRunnerTest extends SparkTestBase {
     val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp))
     assert(sharedMetrics.collect() === Array(Row("add_metric", 42.0, Map("foo" -> "bar"), ts)))
 
-    assert(Source.fromFile(s"$outputPath/.dag/input_tables.list").getLines.toSet
+    assert(readListLines(s"$outputPath/.dag/input_tables.list")
         === Set(s"file:$inputPath/bar?sos-table_name=bar", s"file:$inputPath/foo?sos-table_name=foo"))
-    assert(Source.fromFile(s"$outputPath/.dag/output_tables.list").getLines.toSet === Set(
+    assert(readListLines(s"$outputPath/.dag/output_tables.list") === Set(
       s"$outputPath/pack?sos-format=parquet&sos-table_name=pack",
       s"$outputPath/metric?sos-format=parquet&sos-table_name=metric"))
-    assert(Source.fromFile(s"$sharedOutputPath/latest.list").getLines.toSet
+    assert(readListLines(s"$sharedOutputPath/latest.list")
       === Set(s"$outputPath?sos-listing_strategy=dag"))
+  }
+
+  private def readListLines(path: String): Set[String] = {
+    Files.readAllLines(Paths.get(path), StandardCharsets.UTF_8).asScala.toSet
   }
 }
 
@@ -66,7 +71,7 @@ object SparkDagRunnerTest {
       SparkSqlRunner.runSql(sparkSession, this.getClass, "add.sql", Map("foo" -> foo, "bar" -> bar))
     }
 
-    def metrics(add: Dataset[Add]): Dataset[Metric] = {
+    def metrics(): Dataset[Metric] = {
       Seq(Metric("add_metric", 42.0, Map("foo" -> "bar"))).toDS()
     }
   }
@@ -105,7 +110,7 @@ object SparkDagRunnerTest {
     def pack(foo: Dataset[Foo], bar: Dataset[Bar]): Dataset[Pack] = {
       val addInsight = new AddInsight(session)
       val add = runner.wrap(addInsight.add(foo, bar))
-      runner.wrapMetrics(addInsight.metrics(add))
+      runner.wrapMetrics(addInsight.metrics())
       val multiplyInsight = new MultiplyInsight(session)
       val multiply = runner.wrap(multiplyInsight.multiply(foo, bar))
       new PackInsight(session, configuration.readConfig[PackInsightParams]).pack(add, multiply)

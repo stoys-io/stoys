@@ -18,27 +18,27 @@ import scala.util.{Failure, Success}
 class DbLoader(args: Array[String]) {
   private val logger = org.log4s.getLogger
 
-  val configuration = Configuration(args)
-  val sparkConfig = configuration.readConfig[SparkConfig]
-  val sparkIOConfig = configuration.readConfig[SparkIOConfig]
-  val config = configuration.readConfig[DbLoaderConfig]
+  private val configuration = Configuration(args)
+  private val sparkConfig = configuration.readConfig[SparkConfig]
+  private val sparkIOConfig = configuration.readConfig[SparkIOConfig]
+  private val config = configuration.readConfig[DbLoaderConfig]
 
-  val explicitTimestamp = Strings.trim(config.timestamp).map(DbLoader.TIMESTAMP_FORMATTER.parse)
-  val timestampInEpochS = explicitTimestamp.getOrElse(Instant.now())
-  val timestamp = DbLoader.TIMESTAMP_FORMATTER.format(timestampInEpochS)
-  val timestampParam = Map("timestamp" -> timestamp)
+  private val explicitTimestamp = Strings.trim(config.timestamp).map(DbLoader.TIMESTAMP_FORMATTER.parse)
+  private val timestampInEpochS = explicitTimestamp.getOrElse(Instant.now())
+  private val timestamp = DbLoader.TIMESTAMP_FORMATTER.format(timestampInEpochS)
+  private val timestampParam = Map("timestamp" -> timestamp)
   assert(Strings.trim(config.schemaName).isDefined, "Please specify schema_name!")
-  val schemaName = Strings.replaceParams(config.schemaName, params = timestampParam)
-  val params = timestampParam ++ Map("schema_name" -> schemaName)
+  private val schemaName = Strings.replaceParams(config.schemaName, params = timestampParam)
+  private val params = timestampParam ++ Map("schema_name" -> schemaName)
 
-  val jdbcOptions = replaceParams(config.jdbcOptions, JDBCOptions.JDBC_SESSION_INIT_STATEMENT)
-  val writeOptions = replaceParams(config.sparkWriteOptions, JDBCOptions.JDBC_SESSION_INIT_STATEMENT)
-  val jdbcProperties = new java.util.Properties()
+  private val jdbcOptions = replaceParams(config.jdbcOptions, JDBCOptions.JDBC_SESSION_INIT_STATEMENT)
+  private val writeOptions = replaceParams(config.sparkWriteOptions, JDBCOptions.JDBC_SESSION_INIT_STATEMENT)
+  private val jdbcProperties = new java.util.Properties()
   jdbcOptions.foreach(kv => jdbcProperties.put(kv._1, kv._2))
   config.jdbcUser.map(v => jdbcProperties.put("user", v))
   config.jdbcPassword.map(v => jdbcProperties.put("password", v))
 
-  val executedSqlStatements = Seq.newBuilder[String]
+  private val executedSqlStatements = Seq.newBuilder[String]
 
   def run(): Unit = {
     val sparkSession = SparkUtils.createSparkSession(sparkConfig)
@@ -142,7 +142,7 @@ class DbLoader(args: Array[String]) {
 }
 
 object DbLoader {
-  val TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneId.of("UTC"))
+  val TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneId.of("UTC"))
 
   def main(args: Array[String]): Unit = {
     val dbLoader = new DbLoader(args)

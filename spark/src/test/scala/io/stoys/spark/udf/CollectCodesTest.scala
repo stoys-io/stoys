@@ -7,8 +7,8 @@ class CollectCodesTest extends SparkTestBase {
   import CollectCodesTest._
   import sparkSession.implicits._
 
-  val collect_codes = sparkSession.udf.register("collect_codes", new CollectCodes())
-  val cleanup_codes = sparkSession.udf.register("cleanup_codes", CollectCodes.cleanupCodes _)
+  sparkSession.udf.register("collect_codes", new CollectCodes())
+  sparkSession.udf.register("cleanup_codes", CollectCodes.cleanupCodes _)
 
   def selectSingleStringSeq(query: String): Seq[String] = {
     sparkSession.sql(query).collect().toList.head.getAs[Seq[String]](0)

@@ -3,7 +3,6 @@ package io.stoys.spark
 import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 import org.apache.http.client.utils.{URIBuilder, URLEncodedUtils}
@@ -11,6 +10,8 @@ import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.reflect.runtime.universe
+import scala.util.matching.Regex
 
 // Note: Do not forget to call init() first to register config.inputPaths!
 class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoCloseable {
@@ -18,7 +19,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
 
   private val logger = org.log4s.getLogger
 
-  val dfs = Dfs(sparkSession)
+  private val dfs = Dfs(sparkSession)
 
   private val inputPaths = mutable.Buffer.empty[String]
   private val inputDags = mutable.Buffer.empty[SosDag]
@@ -63,7 +64,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   def ds[T <: Product : Encoder](tableName: TableName[T]): Dataset[T] = {
-    implicit val typeTagT = tableName.typeTag
+    implicit val typeTagT: universe.TypeTag[T] = tableName.typeTag
     Datasets.reshape[T](df(tableName), reshapeConfig)
   }
 
@@ -122,7 +123,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
 
   private def resolveDagInputs(path: String, sosOptions: SosOptions, options: Map[String, String]): Seq[SosInput] = {
     def resolveDagList(path: String): Seq[SosInput] = {
-      resolveInputs(SosTable(null, path, sosOptions.format, options).toUrlString())
+      resolveInputs(SosTable(null, path, sosOptions.format, options).toUrlString)
     }
 
     lazy val inputTables = resolveDagList(s"$path/$DAG_DIR/input_tables.list")
@@ -155,10 +156,10 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   override def close(): Unit = {
     config.outputPath.foreach { outputPath =>
       dfs.writeString(s"$outputPath/$DAG_DIR/input_paths.list", inputPaths.mkString("\n"))
-      dfs.writeString(s"$outputPath/$DAG_DIR/input_dags.list", inputDags.map(_.toUrlString()).mkString("\n"))
-      val inputTablesContent = inputTables.map(_._2.toUrlString()).toSeq.sorted.mkString("\n")
+      dfs.writeString(s"$outputPath/$DAG_DIR/input_dags.list", inputDags.map(_.toUrlString).mkString("\n"))
+      val inputTablesContent = inputTables.map(_._2.toUrlString).toSeq.sorted.mkString("\n")
       dfs.writeString(s"$outputPath/$DAG_DIR/input_tables.list", inputTablesContent)
-      val outputTablesContent = outputTables.map(_._2.toUrlString()).toSeq.sorted.mkString("\n")
+      val outputTablesContent = outputTables.map(_._2.toUrlString).toSeq.sorted.mkString("\n")
       dfs.writeString(s"$outputPath/$DAG_DIR/output_tables.list", outputTablesContent)
     }
   }
@@ -168,25 +169,24 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   def writeSymLink(path: String): Unit = {
-    config.outputPath.foreach(outputPath => dfs.writeString(path, SosDag(outputPath).toUrlString()))
+    config.outputPath.foreach(outputPath => dfs.writeString(path, SosDag(outputPath).toUrlString))
   }
 }
 
 object SparkIO {
-  val DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
   val DAG_DIR = ".dag"
   val SOS_PREFIX = "sos-"
-  val SOS_LIST_PATTERN = "(?i)(.*)\\.list".r
+  val SOS_LIST_PATTERN: Regex = "(?i)(.*)\\.list".r
 
   case class SosOptions(format: Option[String], tableName: Option[String], listingStrategy: Option[String])
 
   sealed trait SosInput {
-    def toUrlString(): String
+    def toUrlString: String
   }
 
   case class SosTable(name: String, path: String, format: Option[String],
       options: Map[String, String]) extends SosInput {
-    override def toUrlString(): String = {
+    override def toUrlString: String = {
       val uriBuilder = new URIBuilder(path)
       format.foreach(f => uriBuilder.addParameter(s"${SOS_PREFIX}format", f))
       Option(name).foreach(n => uriBuilder.addParameter(s"${SOS_PREFIX}table_name", n))
@@ -196,7 +196,7 @@ object SparkIO {
   }
 
   case class SosDag(path: String) extends SosInput {
-    override def toUrlString(): String = {
+    override def toUrlString: String = {
       s"$path?sos-listing_strategy=dag"
     }
   }

@@ -68,21 +68,21 @@ class ReflectionTest extends AnyFunSuite {
   }
 
   test("assertAnnotatedCaseClass") {
-    assertCaseClass[Record]
-    assertAnnotated[Record, TestAnnotation]
-    assertAnnotatedCaseClass[Record, TestAnnotation]
+    assertCaseClass[Record]()
+    assertAnnotated[Record, TestAnnotation]()
+    assertAnnotatedCaseClass[Record, TestAnnotation]()
 
-    assertCaseClass[NestedRecord]
-    assertThrows[IllegalArgumentException](assertAnnotated[NestedRecord, TestAnnotation])
-    assertThrows[IllegalArgumentException](assertAnnotatedCaseClass[NestedRecord, TestAnnotation])
+    assertCaseClass[NestedRecord]()
+    assertThrows[IllegalArgumentException](assertAnnotated[NestedRecord, TestAnnotation]())
+    assertThrows[IllegalArgumentException](assertAnnotatedCaseClass[NestedRecord, TestAnnotation]())
 
-    assertThrows[IllegalArgumentException](assertCaseClass[RegularClass])
-    assertAnnotated[RegularClass, TestAnnotation]
-    assertThrows[IllegalArgumentException](assertAnnotatedCaseClass[NestedRecord, TestAnnotation])
+    assertThrows[IllegalArgumentException](assertCaseClass[RegularClass]())
+    assertAnnotated[RegularClass, TestAnnotation]()
+    assertThrows[IllegalArgumentException](assertAnnotatedCaseClass[NestedRecord, TestAnnotation]())
 
-    assertCaseClass[RecordAlias]
-    assertAnnotated[RecordAlias, TestAnnotation]
-    assertAnnotatedCaseClass[RecordAlias, TestAnnotation]
+    assertCaseClass[RecordAlias]()
+    assertAnnotated[RecordAlias, TestAnnotation]()
+    assertAnnotatedCaseClass[RecordAlias, TestAnnotation]()
   }
 
   test("getCaseClassFields") {
