@@ -8,13 +8,25 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
 import org.apache.spark.sql.SparkSession
 
-// Philosophy:
-//   1) asQualifiedPath is utility function to return concrete filesystem implementation and Path from path string.
-//   2) There are a few utility functions like path, readString and writeString in here.
-//   3) All other functions should have the same api as the underlying FileSystem api but taking path as string.
+/**
+ * [[Dfs]] is utility wrapper around hadoop [[FileSystem]] library. There are following types of functions:
+ *   1) [[asQualifiedPath]] returns concrete [[FileSystem]] implementation and [[Path]] from [[String]] path
+ *   2) Utility functions like [[path]], [[fs]], [[readString]] and [[writeString]]
+ *   3) All other functions should have the same api as the underlying FileSystem api but taking path as string
+ *
+ * @param hadoopConfiguration hadoop configuration (can come from [[SparkSession]] using [[Dfs]].apply)
+ */
 class Dfs(hadoopConfiguration: Configuration) {
   def path(path: String): Path = {
     new Path(path)
+  }
+
+  def fs(path: String): FileSystem = {
+    fs(new Path(path))
+  }
+
+  def fs(path: Path): FileSystem = {
+    path.getFileSystem(hadoopConfiguration)
   }
 
   def asQualifiedPath(path: String): (FileSystem, Path) = {
@@ -32,6 +44,8 @@ class Dfs(hadoopConfiguration: Configuration) {
     IO.using(create(path))(_.write(content.getBytes(StandardCharsets.UTF_8)))
   }
 
+  // Proxy methods from String path to hdfs library...
+
   def create(path: String): FSDataOutputStream = {
     val (fs, qualifiedPath) = asQualifiedPath(path)
     fs.create(qualifiedPath)
@@ -45,6 +59,31 @@ class Dfs(hadoopConfiguration: Configuration) {
   def exists(path: String): Boolean = {
     val (fs, qualifiedPath) = asQualifiedPath(path)
     fs.exists(qualifiedPath)
+  }
+
+  def getContentSummary(path: String): ContentSummary = {
+    val (fs, qualifiedPath) = asQualifiedPath(path)
+    fs.getContentSummary(qualifiedPath)
+  }
+
+  def getFileChecksum(path: String): FileChecksum = {
+    val (fs, qualifiedPath) = asQualifiedPath(path)
+    fs.getFileChecksum(qualifiedPath)
+  }
+
+  def globStatus(path: String): Array[FileStatus] = {
+    val (fs, qualifiedPath) = asQualifiedPath(path)
+    fs.globStatus(qualifiedPath)
+  }
+
+  def isDirectory(path: String): Boolean = {
+    val (fs, qualifiedPath) = asQualifiedPath(path)
+    fs.isDirectory(qualifiedPath)
+  }
+
+  def isFile(path: String): Boolean = {
+    val (fs, qualifiedPath) = asQualifiedPath(path)
+    fs.isFile(qualifiedPath)
   }
 
   def listStatus(path: String): Array[FileStatus] = {
