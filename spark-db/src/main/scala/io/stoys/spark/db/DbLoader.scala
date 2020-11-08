@@ -27,7 +27,7 @@ class DbLoader(args: Array[String]) {
   private val timestampInEpochS = explicitTimestamp.getOrElse(Instant.now())
   private val timestamp = DbLoader.TIMESTAMP_FORMATTER.format(timestampInEpochS)
   private val timestampParam = Map("timestamp" -> timestamp)
-  assert(Strings.trim(config.schemaName).isDefined, "Please specify schema_name!")
+  require(Strings.trim(config.schemaName).isDefined, "Please specify schema_name!")
   private val schemaName = Strings.replaceParams(config.schemaName, params = timestampParam)
   private val params = timestampParam ++ Map("schema_name" -> schemaName)
 

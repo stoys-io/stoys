@@ -1,7 +1,5 @@
 package io.stoys.spark
 
-import java.io.IOException
-
 import io.stoys.scala.{Arbitrary, IO}
 import io.stoys.spark.test.SparkTestBase
 
@@ -27,16 +25,15 @@ class SparkIOTest extends SparkTestBase {
     val tmp = s"${tmpDir.toAbsolutePath}/resolveInputs.fails"
     val sparkIO = new SparkIO(sparkSession, emptySparkIOConfig)
 
-    def interceptException(path: String): String = {
-      intercept[IllegalArgumentException](sparkIO.resolveInputs(s"$tmp/$path")).getMessage
+    def im(path: String): String = {
+      intercept[SToysException](sparkIO.resolveInputs(s"$tmp/$path")).getMessage
     }
 
-    assert(interceptException("foo.list?sos-table_name=bar").contains("not supported on *.list"))
-    assert(interceptException("foo?sos-listing_strategy=tables&sos-table_name=bar")
-        .contains("at the same time are not supported"))
-    assert(interceptException("foo?sos-listing_strategy=unsupported").contains("Unsupported listing strategy"))
-    assert(interceptException("foo?sos-listing_strategy=dag_unsupported").contains("Unsupported dag listing strategy"))
-    assert(interceptException(".foo").contains("Unsupported path starting with dot"))
+    assert(im("foo.list?sos-table_name=bar").contains("not supported on *.list"))
+    assert(im("foo?sos-listing_strategy=tables&sos-table_name=bar").contains("at the same time are not supported"))
+    assert(im("foo?sos-listing_strategy=unsupported").contains("Unsupported listing strategy"))
+    assert(im("foo?sos-listing_strategy=dag_unsupported").contains("Unsupported dag listing strategy"))
+    assert(im(".foo").contains("Unsupported path starting with dot"))
   }
 
   test("resolveInputs") {
@@ -93,7 +90,7 @@ class SparkIOTest extends SparkTestBase {
       sparkIO.addInputPaths(s"$tmp/non_dag_table?sos-table_name=bar")
       assert(sparkIO.getInputTable("bar").isDefined)
 
-      val conflictingException = intercept[IOException](sparkIO.addInputPaths(s"$tmp/dag/foo?sos-table_name=bar"))
+      val conflictingException = intercept[SToysException](sparkIO.addInputPaths(s"$tmp/dag/foo?sos-table_name=bar"))
       assert(conflictingException.getMessage.contains("conflicting tables"))
 
       // It is fine to add path that will resolve to the same table (including all options).

@@ -17,7 +17,7 @@ class SparkTestBaseTest extends SparkTestBase {
     assert(readDataset[Record](s"$tmpDir/writeData").collect() === records)
     val statuses = walkDfsFileStatusesByRelativePath(tmpDir.toString)
     assert(statuses.size === 3)
-    assert(statuses.keySet.filterNot(_.endsWith(".parquet")) === Set.empty)
+    assert(statuses.keySet.filterNot(_.matches("writeData.*parquet")) === Set.empty)
   }
 }
 

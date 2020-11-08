@@ -1,6 +1,5 @@
 package io.stoys.spark
 
-import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.Locale
@@ -42,7 +41,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
       case Some(existingTable) =>
         val msg = s"Resolved conflicting tables for table_name ${table.name} ($existingTable and $table)!"
         logger.error(msg)
-        throw new IOException(msg)
+        throw new SToysException(msg)
       case None =>
         inputTables.put(table.name, table)
         registerInputTable(table)
@@ -74,7 +73,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     if (outputTables.contains(table.name)) {
       val msg = s"Writing table with the same table_name ${table.name} multiple times!"
       logger.error(msg)
-      throw new IOException(msg)
+      throw new SToysException(msg)
     } else {
       logger.info(s"Writing $fullTableName to $path.")
       var writer = df.write
@@ -100,23 +99,23 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     val tnAndLsMsg = s"${SOS_PREFIX}table_name and ${SOS_PREFIX}listing_strategy"
     val inputs = (dfs.path(path).getName, sosOptions.tableName, sosOptions.listingStrategy) match {
       case (_, Some(_), Some(_)) =>
-        throw new IllegalArgumentException(s"Having both $tnAndLsMsg at the same time are not supported ($inputPath).")
+        throw new SToysException(s"Having both $tnAndLsMsg at the same time are not supported ($inputPath).")
       case (SOS_LIST_PATTERN(_), Some(_), _) | (SOS_LIST_PATTERN(_), _, Some(_)) =>
-        throw new IllegalArgumentException(s"Parameters $tnAndLsMsg are not supported on *.list files ($inputPath).")
+        throw new SToysException(s"Parameters $tnAndLsMsg are not supported on *.list files ($inputPath).")
       case (SOS_LIST_PATTERN(_), None, None) =>
         dfs.readString(path).split('\n').filterNot(_.startsWith("#")).filterNot(_.isEmpty).flatMap(resolveInputs).toSeq
       case (_, None, Some("tables")) =>
         val fileStatuses = dfs.listStatus(path).filter(s => s.isDirectory && !s.getPath.getName.startsWith("."))
         fileStatuses.map(s => defaultTable.copy(name = s.getPath.getName, path = s.getPath.toString)).toSeq
       case (_, None, Some(strategy)) if strategy.startsWith("dag") => resolveDagInputs(path, sosOptions, options)
-      case (_, None, Some(strategy)) => throw new IllegalArgumentException(s"Unsupported listing strategy '$strategy'.")
+      case (_, None, Some(strategy)) => throw new SToysException(s"Unsupported listing strategy '$strategy'.")
       case (DAG_DIR, None, None) =>
         resolveDagInputs(dfs.path(path).getParent.toString, sosOptions.copy(listingStrategy = Some("dag")), options)
       case (lastPathSegment, None, None) if !lastPathSegment.startsWith(".") =>
         Seq(defaultTable.copy(name = lastPathSegment))
       case (_, Some(tableName), None) => Seq(defaultTable.copy(name = tableName))
       case (lastPathSegment, None, None) if lastPathSegment.startsWith(".") =>
-        throw new IllegalArgumentException(s"Unsupported path starting with dot '$lastPathSegment'.")
+        throw new SToysException(s"Unsupported path starting with dot '$lastPathSegment'.")
     }
     inputs
   }
@@ -138,7 +137,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
           case dag: SosDag => resolveDagInputs(dag.path, sosOptions, options)
         }
         outputTables ++ inputTables ++ upstreamInputs.flatten
-      case strategy => throw new IllegalArgumentException(s"Unsupported dag listing strategy '$strategy'.")
+      case strategy => throw new SToysException(s"Unsupported dag listing strategy '$strategy'.")
     }
     Seq(SosDag(path)) ++ inputs
   }

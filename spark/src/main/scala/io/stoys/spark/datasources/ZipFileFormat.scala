@@ -3,10 +3,10 @@ package io.stoys.spark.datasources
 import java.util.Locale
 import java.util.zip.{CRC32, ZipEntry, ZipOutputStream}
 
+import io.stoys.spark.SToysException
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.mapreduce.{Job, TaskAttemptContext}
-import org.apache.spark.SparkException
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources.{FileFormat, OutputWriter, OutputWriterFactory}
@@ -43,12 +43,12 @@ object ZipFileFormat {
     val method = options.get("zip_method").map {
       case m if m.toUpperCase(Locale.ROOT) == "STORED" => ZipEntry.STORED
       case m if m.toUpperCase(Locale.ROOT) == "DEFLATED" => ZipEntry.DEFLATED
-      case m => throw new SparkException(s"Unsupported zip_method '$m'.")
+      case m => throw new SToysException(s"Unsupported zip_method '$m'.")
     }
     val level = options.get("zip_level").map { zipLevel =>
       Try(zipLevel.toInt).toOption match {
         case Some(level) if level >= 0 && level <= 9 => level
-        case _ => throw new SparkException(s"Unsupported zip_level '$zipLevel'. It has to be number 0-9.")
+        case _ => throw new SToysException(s"Unsupported zip_level '$zipLevel'. It has to be number 0-9.")
       }
     }
     val fileName = options.get("zip_file_name")

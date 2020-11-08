@@ -1,9 +1,9 @@
 package io.stoys.spark.excel
 
 import io.stoys.scala.Configuration
+import io.stoys.spark.SToysException
 import io.stoys.spark.datasources.BinaryFilePerRow
 import io.stoys.spark.excel.ExcelWriter.ColumnInfo
-import org.apache.spark.SparkException
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
@@ -38,7 +38,7 @@ object SparkExcelWriter {
         val rows = row.getSeq[Row](index).map(_.toSeq)
         ExcelWriter.writeTableDataIntoWorkbook(workbook, sheetName, columnInfo, rows, config)
       case (sf, _) if ExcelWriter.SPECIAL_COLUMN_NAME_PATTERN.findFirstIn(sf.name).isDefined => // ignore
-      case (sf, _) => throw new SparkException(s"Struct field '$sf' is not supported. " +
+      case (sf, _) => throw new SToysException(s"Struct field '$sf' is not supported. " +
           s"All columns types given to_excel have to be array of flat structs.")
     }
     ExcelWriter.serializeWorkbookToByteArray(workbook)
@@ -67,7 +67,7 @@ object SparkExcelWriter {
     val joinedDfsWithoutPath = aliasedDfsWithoutPath.reduceOption((a, b) => a.join(b, lit(true), "CROSS"))
     val joinedDfs = (joinedDfsWithPath, joinedDfsWithoutPath) match {
       // TODO: Is there a way to create empty DataFrame without requiring sparkSession in the api?
-      case (None, None) => throw new SparkException("At least one dataset required for this function.")
+      case (None, None) => throw new SToysException("At least one dataset required for this function.")
       case (Some(dfWithPath), None) => dfWithPath
       case (None, Some(dfWithoutPath)) => dfWithoutPath.withColumn("__path__", lit("workbook.xlsx"))
       case (Some(dfWithPath), Some(dfWithoutPath)) => dfWithPath.join(dfWithoutPath, lit(true), "CROSS")
@@ -88,7 +88,7 @@ object SparkExcelWriter {
           case (rows, ArrayType(StructType(fields), _)) =>
             val columnInfo = getColumnInfo(fields, config)
             ExcelWriter.writeTableDataIntoWorkbook(workbook, sheetName, columnInfo, rows.map(_.toSeq), config)
-          case (_, dt) => throw new SparkException(s"Unsupported __rows__ field data type '$dt'.")
+          case (_, dt) => throw new SToysException(s"Unsupported __rows__ field data type '$dt'.")
         }
     }
     ExcelWriter.serializeWorkbookToByteArray(workbook)
@@ -106,7 +106,7 @@ object SparkExcelWriter {
           ColumnInfo(field.name, None)
         case _ if config.convert_unsupported_types_to_string =>
           ColumnInfo(field.name, None, converter = Some(_.toString))
-        case dt => throw new SparkException(s"Column type '$dt' is not supported. " +
+        case dt => throw new SToysException(s"Column type '$dt' is not supported. " +
             s"${this.getClass.getSimpleName} does not support nested, unusual nor custom column types.")
       }
     }

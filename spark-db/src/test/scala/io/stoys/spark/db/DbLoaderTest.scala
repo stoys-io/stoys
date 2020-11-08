@@ -123,7 +123,8 @@ object DbLoaderTest {
       customTypeField: String,
       date: Date,
       repeatedField: Seq[String],
-      nestedField: SubItem)
+      nestedField: SubItem
+  )
 
   // Spark JdbcUtils throw exception when H2 (correctly) returns java.sql.Types.OTHER as column type for json.
   // Spark allows to overwrite catalyst types per jdbc dialect and that is what we do at SparkH2DialectWithJsonSupport.

@@ -1,7 +1,7 @@
 package io.stoys.spark.datasources
 
+import io.stoys.spark.SToysException
 import org.apache.hadoop.fs.Path
-import org.apache.spark.SparkException
 import org.apache.spark.sql.types._
 
 case class BinaryFilePerRow(path: String, content: Array[Byte])
@@ -26,7 +26,7 @@ object FilePerRow {
     findFieldIndexesOption(schema) match {
       case None =>
         val msg = "The table has to have column 'path' (of StringType) and 'content' (of StringType or BinaryType)."
-        throw new SparkException(s"Unsupported schema! $msg Not '$schema'.'")
+        throw new SToysException(s"Unsupported schema! $msg Not '$schema'.'")
       case Some(fieldIndexes) => fieldIndexes
     }
   }
@@ -41,7 +41,7 @@ object FilePerRow {
     val parentDfsPath = new Path(basePath).getParent
     val dfsPath = new Path(parentDfsPath, relativePath)
     if (!dfsPath.toUri.normalize().toString.startsWith(parentDfsPath.toUri.normalize().toString)) {
-      throw new SparkException(s"File path '$dfsPath' has to stay in output directory '$parentDfsPath'.")
+      throw new SToysException(s"File path '$dfsPath' has to stay in output directory '$parentDfsPath'.")
     }
     dfsPath
   }

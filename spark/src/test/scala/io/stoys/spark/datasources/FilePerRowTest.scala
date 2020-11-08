@@ -1,7 +1,7 @@
 package io.stoys.spark.datasources
 
+import io.stoys.spark.SToysException
 import io.stoys.spark.test.SparkTestBase
-import org.apache.spark.SparkException
 import org.apache.spark.sql.types._
 
 class FilePerRowTest extends SparkTestBase {
@@ -34,7 +34,7 @@ class FilePerRowTest extends SparkTestBase {
     assert(getCustomFilePath(basePath, "dir/filename.ext").toString === "root/dir/filename.ext")
     assert(getCustomFilePath(basePath, "dir0/dir00/filename.ext").toString === "root/dir0/dir00/filename.ext")
 
-    val intercepted = intercept[SparkException](getCustomFilePath(basePath, "../escaping_base_directory_is_dangerous"))
+    val intercepted = intercept[SToysException](getCustomFilePath(basePath, "../escaping_base_directory_is_dangerous"))
     assert(intercepted.getMessage.contains("has to stay in output directory"))
   }
 }

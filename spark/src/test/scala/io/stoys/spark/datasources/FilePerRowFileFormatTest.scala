@@ -2,7 +2,7 @@ package io.stoys.spark.datasources
 
 import java.nio.charset.StandardCharsets
 
-import io.stoys.spark.Dfs
+import io.stoys.spark.{Dfs, SToysException}
 import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.io.IOUtils
 import org.apache.spark.SparkException
@@ -38,10 +38,10 @@ class FilePerRowFileFormatTest extends SparkTestBase {
     }
 
     val integerDf = Seq(("dir/file.ext", 42)).toDF("path", "content")
-    val integerMessage = intercept[SparkException](write(integerDf)).getMessage
+    val integerMessage = intercept[SToysException](write(integerDf)).getMessage
     assert(integerMessage.contains("Unsupported schema!"))
     val incorrectNameDf = Seq(("dir/file.ext", 42)).toDF("path", "incorrectName")
-    val incorrectNameMessage = intercept[SparkException](write(incorrectNameDf)).getMessage
+    val incorrectNameMessage = intercept[SToysException](write(incorrectNameDf)).getMessage
     assert(incorrectNameMessage.contains("Unsupported schema!"))
     val escapingDf = Seq(("../escaping_is_dangerous", "content")).toDF("path", "content")
     val escapingMessage = intercept[SparkException](write(escapingDf)).getCause.getCause.getCause.getMessage

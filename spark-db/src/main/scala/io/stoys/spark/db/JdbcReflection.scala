@@ -1,7 +1,7 @@
 package io.stoys.spark.db
 
 import io.stoys.scala.{Reflection, Strings}
-import io.stoys.spark.TableName
+import io.stoys.spark.{SToysException, TableName}
 
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
@@ -74,8 +74,7 @@ object JdbcReflection {
         case t if t =:= typeOf[java.sql.Date] => "DATE"
         case t if t <:< typeOf[Iterable[_]] => "JSON"
         case t if Reflection.isCaseClass(t) => "JSON"
-        case _ =>
-          throw new IllegalArgumentException(s"Unsupported type ${Reflection.renderAnnotatedSymbol(param)}!")
+        case _ => throw new SToysException(s"Unsupported type ${Reflection.renderAnnotatedSymbol(param)}!")
       }
       s"$sqlType$maybeNotNullSuffix"
     }

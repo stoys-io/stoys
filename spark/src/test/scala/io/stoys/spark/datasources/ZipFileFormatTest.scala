@@ -5,9 +5,9 @@ import java.util.Collections
 import java.util.zip.{ZipEntry, ZipFile}
 
 import io.stoys.scala.IO
+import io.stoys.spark.SToysException
 import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.io.IOUtils
-import org.apache.spark.SparkException
 
 import scala.collection.JavaConverters._
 
@@ -23,10 +23,8 @@ class ZipFileFormatTest extends SparkTestBase {
     assert(parseZipOptions(Map("zip_level" -> "1")) === ZipOptions(None, Some(1), None))
     assert(parseZipOptions(Map("zip_file_name" -> "foo.zip")) === ZipOptions(None, None, Some("foo.zip")))
 
-    val wrongMethodMessage = intercept[SparkException](parseZipOptions(Map("zip_method" -> "foo"))).getMessage
-    assert(wrongMethodMessage.contains("Unsupported"))
-    val wrongLevelMessage = intercept[SparkException](parseZipOptions(Map("zip_level" -> "42"))).getMessage
-    assert(wrongLevelMessage.contains("Unsupported"))
+    assert(intercept[SToysException](parseZipOptions(Map("zip_method" -> "foo"))).getMessage.contains("Unsupported"))
+    assert(intercept[SToysException](parseZipOptions(Map("zip_level" -> "42"))).getMessage.contains("Unsupported"))
   }
 
   test("zip.works") {

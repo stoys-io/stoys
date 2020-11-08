@@ -4,11 +4,11 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.Locale
 
 import io.stoys.scala.IO
+import io.stoys.spark.SToysException
 import org.apache.poi.ss.usermodel._
 import org.apache.poi.ss.util.{CellAddress, CellRangeAddress}
 import org.apache.poi.xssf.streaming.{SXSSFSheet, SXSSFWorkbook}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import org.apache.spark.SparkException
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -85,8 +85,7 @@ object ExcelWriter {
             case Some(ConfigCellType.COLUMN_STYLE) =>
               sheetConfig = sheetConfig.copy(columnStyles = sheetConfig.columnStyles.updated(params, complexStyle))
               cell.getRow.removeCell(cell)
-            case _ =>
-              throw new SparkException(s"Unsupported configuration key '$key' on sheet ${sheet.getSheetName}.")
+            case _ => throw new SToysException(s"Unsupported configuration key '$key' on sheet ${sheet.getSheetName}.")
           }
         case _ =>
       }
@@ -210,7 +209,7 @@ object ExcelWriter {
       case v: java.time.Instant => cell.setCellValue(java.sql.Timestamp.from(v))
       // https://spark.apache.org/docs/latest/sql-reference.html#data-types
       // TODO: Does it make sense to somehow support Array[Byte], Seq, Map, Row?
-      case v => throw new SparkException(s"Unsupported data type ${v.getClass.getName}.")
+      case v => throw new SToysException(s"Unsupported data type ${v.getClass.getName}.")
     }
   }
 

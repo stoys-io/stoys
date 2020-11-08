@@ -1,7 +1,6 @@
 package io.stoys.spark
 
 import io.stoys.scala.Strings
-import org.apache.spark.SparkException
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.catalyst.expressions.{Cast, CreateArray, CreateMap, Expression, Literal}
 import org.apache.spark.sql.functions.{array, coalesce, col, struct}
@@ -39,10 +38,10 @@ object Reshape {
       case targetSchema: StructType if sourceSchema == targetSchema => ds.toDF()
       case targetSchema: StructType =>
         reshapeStructType(sourceSchema, targetSchema, config, sourcePath = null, normalizedPath = null) match {
-          case Left(errors) => throw ReshapeException(errors)
+          case Left(errors) => throw new ReshapeException(errors)
           case Right(columns) => ds.select(columns: _*)
         }
-      case dt => throw new SparkException(s"Unsupported target schema '$dt'. Only StructType is supported.")
+      case dt => throw new SToysException(s"Unsupported target schema '$dt'. Only StructType is supported.")
     }
   }
 

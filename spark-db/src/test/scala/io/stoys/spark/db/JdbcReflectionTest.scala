@@ -2,7 +2,7 @@ package io.stoys.spark.db
 
 import java.sql.Date
 
-import io.stoys.spark.TableName
+import io.stoys.spark.{SToysException, TableName}
 import org.scalatest.funsuite.AnyFunSuite
 
 class JdbcReflectionTest extends AnyFunSuite {
@@ -64,7 +64,7 @@ class JdbcReflectionTest extends AnyFunSuite {
           |  nested JSON NOT NULL
           |);""".stripMargin)
     val caughtUnsupportedType =
-      intercept[IllegalArgumentException](getCreateTableStatement(TableName[RecordWithUnsupportedType], null))
+      intercept[SToysException](getCreateTableStatement(TableName[RecordWithUnsupportedType], null))
     assert(caughtUnsupportedType.getMessage.contains("Unsupported type IOException!"))
 
     assert(getCreateTableStatement(TableName[RecordWithNoId], "schema_name") ===
