@@ -103,14 +103,6 @@ class ReshapeTest extends SparkTestBase {
     val fixedDS = Reshape.reshape[Record](fixableDF)
     assert(fixedDS.collect() === Seq(Record("foo", 42, null)))
   }
-
-  test("implicits") {
-    import io.stoys.spark.implicits._
-    val df = recordsDF.selectExpr("str", "struct('foo', 'nested str') AS nested", "'foo' AS extra_column")
-    val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeConfig.SortOrder.ALPHABETICAL)
-    val ds = df.reshape[Record](config)
-    assert(ds.columns === Seq("nested", "num", "str"))
-  }
 }
 
 object ReshapeTest {
