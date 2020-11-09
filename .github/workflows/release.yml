@@ -1,0 +1,57 @@
+name: release
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  release_default:
+    runs-on: ubuntu-latest
+
+    name: default
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache ~/.m2/repository
+        uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-default-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-default-maven-
+
+      - name: Set up jdk 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: mvn clean deploy
+        run: mvn -B clean deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release_legacy:
+    runs-on: ubuntu-latest
+
+    name: legacy
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache ~/.m2/repository
+        uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-legacy-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-legacy-maven-
+
+      - name: Set up jdk 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+
+      - name: mvn clean deploy
+        run: mvn scala-cross-build:change-version -Pscala-2.11 && mvn -B clean deploy -Pjava-8,scala-2.11,spark-2.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
