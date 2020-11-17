@@ -296,6 +296,37 @@
                     </configuration>
                 </plugin>
 
+                <!-- shade -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.2.2</version>
+                    <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>shade</goal>
+                            </goals>
+                            <configuration>
+                                <shadedArtifactAttached>true</shadedArtifactAttached>
+                                <shadedClassifierName>spark-shaded</shadedClassifierName>
+                                <createDependencyReducedPom>true</createDependencyReducedPom>
+                                <dependencyReducedPomLocation>
+                                    ${project.basedir}/target/dependency-reduced-pom.xml
+                                </dependencyReducedPomLocation>
+                                <transformers combine.children="append">
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                        <mainClass>${main.class}</mainClass>
+                                    </transformer>
+                                </transformers>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+
                 <!-- release -->
                 <plugin>
                     <groupId>org.sonatype.plugins</groupId>

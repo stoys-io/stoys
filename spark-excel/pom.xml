@@ -72,6 +72,48 @@
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <configuration>
+                    <artifactSet combine.children="append">
+                        <includes>
+                            <include>org.apache.commons:commons-compress</include>
+                            <include>org.apache.poi:*</include>
+                        </includes>
+                    </artifactSet>
+                    <relocations combine.children="append">
+                        <relocation>
+                            <pattern>org.apache.commons.compress</pattern>
+                            <shadedPattern>io.stoys.shaded.org.apache.commons.compress</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.apache.poi</pattern>
+                            <shadedPattern>io.stoys.shaded.org.apache.poi</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.openxmlformats.schemas</pattern>
+                            <shadedPattern>io.stoys.shaded.org.openxmlformats.schemas</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.microsoft.schemas</pattern>
+                            <shadedPattern>io.stoys.shaded.com.microsoft.schemas</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.etsi.uri.x01903</pattern>
+                            <shadedPattern>io.stoys.shaded.org.etsi.uri.x01903</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.w3.x2000</pattern>
+                            <shadedPattern>io.stoys.shaded.org.w3.x2000</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>schemaorg_apache_xmlbeans</pattern>
+                            <shadedPattern>io.stoys.shaded.schemaorg_apache_xmlbeans</shadedPattern>
+                        </relocation>
+                    </relocations>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

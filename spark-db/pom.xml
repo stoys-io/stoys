@@ -94,6 +94,29 @@
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <configuration>
+                    <artifactSet combine.children="append">
+                        <includes>
+                            <include>javax.persistence:*</include>
+<!--                            <include>mysql:*</include>-->
+<!--                            <include>org.postgresql:*</include>-->
+                        </includes>
+                    </artifactSet>
+                    <relocations combine.children="append">
+                        <relocation>
+                            <pattern>mysql</pattern>
+                            <shadedPattern>io.stoys.shaded.mysql</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.postgresql</pattern>
+                            <shadedPattern>io.stoys.shaded.org.postgresql</shadedPattern>
+                        </relocation>
+                    </relocations>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
