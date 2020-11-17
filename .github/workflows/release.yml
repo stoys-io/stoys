@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - release
+#  release:
+#    types:
+#      - created
+
+# Should we set release version from github (in run)?
+#          mvn --batch-mode org.codehaus.mojo:versions-maven-plugin:2.8.1:set -DnewVersion=${GITHUB_REF##*/}
 
 jobs:
-  release_default:
+  publish_default:
     runs-on: ubuntu-latest
 
     name: default
@@ -21,15 +27,32 @@ jobs:
           key: ${{ runner.os }}-default-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-default-maven-
 
-      - name: Set up jdk 11
+      - name: Set up Java 11 for publishing to Maven Central Repository
         uses: actions/setup-java@v1
         with:
           java-version: 11
+          server-id: ossrh
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
 
-      - name: mvn clean deploy
-        run: mvn -B clean deploy
+      - name: Publish to the Maven Central Repository
+        run: |
+          echo "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | gpg --batch --import
+          mvn --no-transfer-progress --batch-mode clean deploy -Dgpg.passphrase=${{ secrets.OSSRH_GPG_PASSPHRASE }} -Possrh-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+
+#      - name: Set up Java 11 for publishing to GitHub Packages
+#        uses: actions/setup-java@v1
+#        with:
+#          java-version: 11
+#
+#      - name: Publish to GitHub Packages
+#        run: |
+#          mvn --batch-mode clean deploy -Pgithub-release
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release_legacy:
     runs-on: ubuntu-latest
@@ -46,12 +69,31 @@ jobs:
           key: ${{ runner.os }}-legacy-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-legacy-maven-
 
-      - name: Set up jdk 8
+      - name: Set up Java 8 for publishing to Maven Central Repository
         uses: actions/setup-java@v1
         with:
           java-version: 8
+          server-id: ossrh
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
 
-      - name: mvn clean deploy
-        run: mvn scala-cross-build:change-version -Pscala-2.11 && mvn -B clean deploy -Pjava-8,scala-2.11,spark-2.4
+      - name: Publish to the Maven Central Repository
+        run: |
+          mvn scala-cross-build:change-version -Pscala-2.11
+          echo "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | gpg --batch --import
+          mvn --no-transfer-progress --batch-mode clean deploy -Dgpg.passphrase=${{ secrets.OSSRH_GPG_PASSPHRASE }} -Pjava-8,scala-2.11,spark-2.4,ossrh-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+
+#      - name: Set up jdk 8 for publishing to GitHub Packages
+#        uses: actions/setup-java@v1
+#        with:
+#          java-version: 8
+#
+#      - name: Publish to GitHub Packages
+#        run: |
+#          mvn scala-cross-build:change-version -Pscala-2.11
+#          mvn --batch-mode clean deploy -Pjava-8,scala-2.11,spark-2.4,github-release
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
