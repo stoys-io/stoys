@@ -168,4 +168,14 @@ object Reflection {
     val cleanFullClassName = fullClassName.replace('$', '.')
     typeToTypeTag(appliedType(mirror.staticClass(cleanFullClassName)))
   }
+
+  def copyCaseClass[T <: Product](originalValue: T, map: Map[String, Any]): T = {
+    val clazz = originalValue.getClass
+    val fields = clazz.getDeclaredFields
+    val copyMethod = clazz.getMethod("copy", fields.map(_.getType): _*)
+    val args = fields.zip(originalValue.productIterator.toArray.asInstanceOf[Array[AnyRef]]).map {
+      case (field, originalValue) => map.getOrElse(field.getName, originalValue).asInstanceOf[AnyRef]
+    }
+    copyMethod.invoke(originalValue, args: _*).asInstanceOf[T]
+  }
 }

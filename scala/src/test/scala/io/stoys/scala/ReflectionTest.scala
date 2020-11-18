@@ -151,6 +151,15 @@ class ReflectionTest extends AnyFunSuite {
     assert(classNameToTypeTag(classOf[Record].getName).tpe =:= typeTag[Record].tpe)
     assert(getCaseClassFields(classNameToTypeTag(classOf[Record].getName)) === getCaseClassFields(typeTag[Record]))
   }
+
+  test("copyCaseClass") {
+    assert(copyCaseClass(NestedRecord(42.0), Map("d" -> Double.box(1234.0))) === NestedRecord(1234.0))
+    assertThrows[Exception](copyCaseClass(NestedRecord(42.0), Map("d" -> "1234")))
+
+    val record = Record("foo", 42, NestedRecord(42.0))
+    val overrides = Map("s" -> "bar", "nested" -> NestedRecord(1234.0))
+    assert(copyCaseClass(record, overrides) === Record("bar", 42, NestedRecord(1234.0)))
+  }
 }
 
 object ReflectionTest {
