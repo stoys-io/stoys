@@ -218,19 +218,25 @@
                         <encoding>${character.encoding}</encoding>
                         <showDeprecation>true</showDeprecation>
                         <showWarnings>true</showWarnings>
-<!--                        <skip>true</skip>-->
-<!--                        <skipMain>true</skipMain>-->
                     </configuration>
                 </plugin>
                 <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
                     <version>4.4.0</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>add-source</goal>
+                                <goal>compile</goal>
+                                <goal>testCompile</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                     <configuration>
                         <charset>${character.encoding}</charset>
                         <scalaVersion>${scala.version}</scalaVersion>
                         <recompileMode>incremental</recompileMode>
-<!--                        <useZincServer>true</useZincServer>-->
                         <args>
                             <arg>-deprecation</arg>
                             <arg>-explaintypes</arg>
@@ -244,15 +250,6 @@
                         <source>${jdk.version}</source>
                         <target>${jdk.version}</target>
                     </configuration>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>add-source</goal>
-                                <goal>compile</goal>
-                                <goal>testCompile</goal>
-                            </goals>
-                        </execution>
-                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

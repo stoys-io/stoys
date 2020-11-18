@@ -215,9 +215,9 @@ ij_scala_wrap_first_method_in_call_chain = false
 ij_scala_wrap_long_lines = false
 
 [{*.jhm,*.xslt,*.xul,*.tagx,*.rng,*.xsl,*.xsd,*.jspx,*.ant,*.qrc,*.tld,*.fxml,*.wsdl,*.jrxml,*.xml,*.jnlp,*.pom}]
-ij_xml_block_comment_at_first_column = true
+ij_xml_block_comment_at_first_column = false
 ij_xml_keep_indents_on_empty_lines = false
-ij_xml_line_comment_at_first_column = true
+ij_xml_line_comment_at_first_column = false
 ij_xml_use_custom_settings = false
 
 [{*.yml,*.yaml}]
