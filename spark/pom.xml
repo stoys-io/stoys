@@ -35,7 +35,7 @@
             <artifactId>spark-sql_${scala.compat.version}</artifactId>
         </dependency>
 
-        <!-- delta lake -->
+        <!-- spark libraries -->
         <dependency>
             <groupId>io.delta</groupId>
             <artifactId>delta-core_${scala.compat.version}</artifactId>
@@ -73,24 +73,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <configuration>
-                    <artifactSet combine.children="append">
-                        <includes>
-                            <include>com.fasterxml.jackson.*:*</include>
-                            <include>org.log4s:*</include>
-                        </includes>
-                    </artifactSet>
-                    <relocations combine.children="append">
-                        <relocation>
-                            <pattern>com.fasterxml.jackson</pattern>
-                            <shadedPattern>io.stoys.shaded.com.fasterxml.jackson</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.log4s</pattern>
-                            <shadedPattern>io.stoys.shaded.org.log4s</shadedPattern>
-                        </relocation>
-                    </relocations>
-                </configuration>
             </plugin>
         </plugins>
     </build>

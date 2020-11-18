@@ -44,15 +44,6 @@
             <version>${postgresql.version}</version>
         </dependency>
 
-        <!-- spark -->
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_${scala.compat.version}</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_${scala.compat.version}</artifactId>
-        </dependency>
 
         <!-- test -->
         <dependency>
@@ -101,8 +92,8 @@
                     <artifactSet combine.children="append">
                         <includes>
                             <include>javax.persistence:*</include>
-<!--                            <include>mysql:*</include>-->
-<!--                            <include>org.postgresql:*</include>-->
+                            <!--<include>mysql:*</include>-->
+                            <!--<include>org.postgresql:*</include>-->
                         </includes>
                     </artifactSet>
                     <relocations combine.children="append">

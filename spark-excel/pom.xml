@@ -33,16 +33,6 @@
             <version>${poi.version}</version>
         </dependency>
 
-        <!-- spark -->
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_${scala.compat.version}</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_${scala.compat.version}</artifactId>
-        </dependency>
-
         <!-- test -->
         <dependency>
             <groupId>org.scalatest</groupId>
@@ -78,39 +68,72 @@
                 <configuration>
                     <artifactSet combine.children="append">
                         <includes>
-                            <include>org.apache.commons:commons-compress</include>
                             <include>org.apache.poi:*</include>
+                            <!--<include>org.apache.commons:commons-codec</include>-->
+                            <include>org.apache.commons:commons-collections4</include>
+                            <include>org.apache.commons:commons-compress</include>
+                            <!--<include>org.apache.commons:commons-math3</include>-->
+                            <include>org.apache.xmlbeans:xmlbeans</include>
+                            <include>com.github.virtuald:curvesapi</include>
+                            <include>com.zaxxer:SparseBitSet</include>
                         </includes>
                     </artifactSet>
                     <relocations combine.children="append">
                         <relocation>
-                            <pattern>org.apache.commons.compress</pattern>
-                            <shadedPattern>io.stoys.shaded.org.apache.commons.compress</shadedPattern>
-                        </relocation>
-                        <relocation>
                             <pattern>org.apache.poi</pattern>
                             <shadedPattern>io.stoys.shaded.org.apache.poi</shadedPattern>
                         </relocation>
+
+                        <!--<relocation>-->
+                        <!--    <pattern>org.apache.commons.codec</pattern>-->
+                        <!--    <shadedPattern>io.stoys.shaded.org.apache.commons.codec</shadedPattern>-->
+                        <!--</relocation>-->
                         <relocation>
-                            <pattern>org.openxmlformats.schemas</pattern>
-                            <shadedPattern>io.stoys.shaded.org.openxmlformats.schemas</shadedPattern>
+                            <pattern>org.apache.commons.collections4</pattern>
+                            <shadedPattern>io.stoys.shaded.org.apache.commons.collections4</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.apache.commons.compress</pattern>
+                            <shadedPattern>io.stoys.shaded.org.apache.commons.compress</shadedPattern>
+                        </relocation>
+                        <!--<relocation>-->
+                        <!--    <pattern>org.apache.commons.math3</pattern>-->
+                        <!--    <shadedPattern>io.stoys.shaded.org.apache.commons.math3</shadedPattern>-->
+                        <!--</relocation>-->
+                        <!--<relocation>-->
+                        <!--    <pattern>org.apache.xmlbeans</pattern>-->
+                        <!--    <shadedPattern>io.stoys.shaded.org.apache.xmlbeans</shadedPattern>-->
+                        <!--</relocation>-->
+
+                        <relocation>
+                            <pattern>com.graphbuilder</pattern>
+                            <shadedPattern>io.stoys.shaded.com.graphbuilder</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>com.microsoft.schemas</pattern>
                             <shadedPattern>io.stoys.shaded.com.microsoft.schemas</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>org.etsi.uri.x01903</pattern>
-                            <shadedPattern>io.stoys.shaded.org.etsi.uri.x01903</shadedPattern>
+                            <pattern>com.zaxxer.sparsebits</pattern>
+                            <shadedPattern>io.stoys.shaded.com.zaxxer.sparsebits</shadedPattern>
                         </relocation>
-                        <relocation>
-                            <pattern>org.w3.x2000</pattern>
-                            <shadedPattern>io.stoys.shaded.org.w3.x2000</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>schemaorg_apache_xmlbeans</pattern>
-                            <shadedPattern>io.stoys.shaded.schemaorg_apache_xmlbeans</shadedPattern>
-                        </relocation>
+
+                        <!--<relocation>-->
+                        <!--    <pattern>org.etsi.uri.x01903</pattern>-->
+                        <!--    <shadedPattern>io.stoys.shaded.org.etsi.uri.x01903</shadedPattern>-->
+                        <!--</relocation>-->
+                        <!--<relocation>-->
+                        <!--    <pattern>org.openxmlformats.schemas</pattern>-->
+                        <!--    <shadedPattern>io.stoys.shaded.org.openxmlformats.schemas</shadedPattern>-->
+                        <!--</relocation>-->
+                        <!--<relocation>-->
+                        <!--    <pattern>org.w3.x2000</pattern>-->
+                        <!--    <shadedPattern>io.stoys.shaded.org.w3.x2000</shadedPattern>-->
+                        <!--</relocation>-->
+                        <!--<relocation>-->
+                        <!--    <pattern>schemaorg_apache_xmlbeans</pattern>-->
+                        <!--    <shadedPattern>io.stoys.shaded.schemaorg_apache_xmlbeans</shadedPattern>-->
+                        <!--</relocation>-->
                     </relocations>
                 </configuration>
             </plugin>

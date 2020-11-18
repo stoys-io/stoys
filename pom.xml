@@ -155,28 +155,24 @@
                         <artifactId>slf4j-log4j12</artifactId>
                     </exclusion>
                 </exclusions>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-sql_${scala.compat.version}</artifactId>
                 <version>${spark.version}</version>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-mllib_${scala.compat.version}</artifactId>
                 <version>${spark.version}</version>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-avro_${scala.compat.version}</artifactId>
                 <version>${spark.version}</version>
-                <scope>provided</scope>
             </dependency>
 
-            <!-- delta lake -->
+            <!-- spark libraries -->
             <dependency>
                 <groupId>io.delta</groupId>
                 <artifactId>delta-core_${scala.compat.version}</artifactId>
@@ -307,24 +303,29 @@
                             <goals>
                                 <goal>shade</goal>
                             </goals>
-                            <configuration>
-                                <shadedArtifactAttached>true</shadedArtifactAttached>
-                                <shadedClassifierName>spark-shaded</shadedClassifierName>
-                                <createDependencyReducedPom>true</createDependencyReducedPom>
-                                <dependencyReducedPomLocation>
-                                    ${project.basedir}/target/dependency-reduced-pom.xml
-                                </dependencyReducedPomLocation>
-                                <transformers combine.children="append">
-                                    <transformer
-                                            implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                    <transformer
-                                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                        <mainClass>${main.class}</mainClass>
-                                    </transformer>
-                                </transformers>
-                            </configuration>
                         </execution>
                     </executions>
+                    <configuration>
+                        <shadedArtifactAttached>true</shadedArtifactAttached>
+                        <shadedClassifierName>spark-shaded</shadedClassifierName>
+                        <createDependencyReducedPom>true</createDependencyReducedPom>
+                        <dependencyReducedPomLocation>
+                            ${project.basedir}/target/dependency-reduced-pom.xml
+                        </dependencyReducedPomLocation>
+                        <artifactSet combine.children="append">
+                            <includes>
+                                <include>non-existent-dependency:forcing-shade-plugin-to-run</include>
+                            </includes>
+                        </artifactSet>
+                        <transformers combine.children="append">
+                            <transformer
+                                    implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            <transformer
+                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <mainClass>${main.class}</mainClass>
+                            </transformer>
+                        </transformers>
+                    </configuration>
                 </plugin>
 
                 <!-- release -->
