@@ -139,9 +139,9 @@ object Reshape {
     val normalizedFieldNames = config.sortOrder match {
       case ReshapeConfig.SortOrder.ALPHABETICAL =>
         (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct.sorted
-      case ReshapeConfig.SortOrder.SOURCE =>
+      case ReshapeConfig.SortOrder.SOURCE | ReshapeConfig.SortOrder.UNDEFINED =>
         (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct
-      case ReshapeConfig.SortOrder.TARGET | ReshapeConfig.SortOrder.UNDEFINED =>
+      case ReshapeConfig.SortOrder.TARGET =>
         (targetStruct.fields ++ sourceStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct
     }
 

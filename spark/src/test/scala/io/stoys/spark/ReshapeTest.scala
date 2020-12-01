@@ -1,5 +1,6 @@
 package io.stoys.spark
 
+import io.stoys.scala.Arbitrary
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.types.{StructField, StructType}
 
@@ -102,6 +103,20 @@ class ReshapeTest extends SparkTestBase {
     val fixableDF = sparkSession.sql("SELECT 'foo' AS STR, 42 AS nUm, null AS nested")
     val fixedDS = Reshape.reshape[Record](fixableDF)
     assert(fixedDS.collect() === Seq(Record("foo", 42, null)))
+  }
+
+  test("ReshapeConfig.as behaves like Arbitrary.empty[ReshapeConfig]") {
+    val reshapeConfig = Arbitrary.empty[ReshapeConfig].copy(
+      conflictResolution = ReshapeConfig.ConflictResolution.ERROR,
+      sortOrder = ReshapeConfig.SortOrder.SOURCE
+    )
+    assert(reshapeConfig === ReshapeConfig.as)
+
+    val fixableDF = recordsDF.selectExpr("num", "nested", "str")
+    val sourceOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeConfig.SortOrder.SOURCE)
+    val undefinedOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeConfig.SortOrder.UNDEFINED)
+    assert(Reshape.reshape[Record](fixableDF, undefinedOrderConfig).columns
+        === Reshape.reshape[Record](fixableDF, sourceOrderConfig).columns)
   }
 }
 
