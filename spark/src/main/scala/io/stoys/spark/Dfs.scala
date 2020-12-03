@@ -71,6 +71,11 @@ class Dfs(hadoopConfiguration: Configuration) {
     fs.getFileChecksum(qualifiedPath)
   }
 
+  def getFileStatus(path: String): FileStatus = {
+    val (fs, qualifiedPath) = asQualifiedPath(path)
+    fs.getFileStatus(qualifiedPath)
+  }
+
   def globStatus(path: String): Array[FileStatus] = {
     val (fs, qualifiedPath) = asQualifiedPath(path)
     fs.globStatus(qualifiedPath)
