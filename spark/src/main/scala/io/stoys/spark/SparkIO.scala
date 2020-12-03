@@ -91,9 +91,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
 
   // TODO: Add listing strategies based on timestamp, checking success, etc.
   private[spark] def resolveInputs(inputPath: String): Seq[SosInput] = {
-    val (path, params) = parsePathParams(inputPath)
-    val (rawSosOptions, options) = params.toMap.partition(_._1.toLowerCase(Locale.ROOT).startsWith(SOS_PREFIX))
-    val sosOptions = toSosOptions(rawSosOptions)
+    val ParsedInputPath(path, sosOptions, options) = parseInputPath(inputPath)
     val defaultTable = SosTable(null, path, sosOptions.format, options)
 
     val tnAndLsMsg = s"${SOS_PREFIX}table_name and ${SOS_PREFIX}listing_strategy"
@@ -200,12 +198,16 @@ object SparkIO {
     }
   }
 
-  private[spark] def parsePathParams(pathParamsString: String): (String, Seq[(String, String)]) = {
-    val pathParamsUri = new URI(pathParamsString)
+  case class ParsedInputPath(path: String, sosOptions: SosOptions, options: Map[String, String])
+
+  private[stoys] def parseInputPath(inputPath: String): ParsedInputPath = {
+    val pathParamsUri = new URI(inputPath)
     val path = new URIBuilder(pathParamsUri).removeQuery().build().toString
     val nameValuePairs = URLEncodedUtils.parse(pathParamsUri, StandardCharsets.UTF_8.name())
     val params = nameValuePairs.asScala.map(kv => kv.getName -> kv.getValue)
-    (path, params)
+    val (rawSosOptions, options) = params.toMap.partition(_._1.toLowerCase(Locale.ROOT).startsWith(SOS_PREFIX))
+    val sosOptions = toSosOptions(rawSosOptions)
+    ParsedInputPath(path, sosOptions, options)
   }
 
   private def toSosOptions(params: Map[String, String]): SosOptions = {

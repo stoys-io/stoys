@@ -11,14 +11,15 @@ class SparkIOTest extends SparkTestBase {
   private val emptySparkIOConfig = Arbitrary.empty[SparkIOConfig]
   private val emptySosTable = Arbitrary.empty[SosTable]
 
-  test("parsePathParams") {
-    assert(parsePathParams("dir") === ("dir", Seq.empty))
-    assert(parsePathParams("dir/file") === ("dir/file", Seq.empty))
-    assert(parsePathParams("?param=value") === ("", Seq("param" -> "value")))
-    assert(parsePathParams("dir/file?param1=value1&param2=&param3=value3&param3")
-        === ("dir/file", Seq("param1" -> "value1", "param2" -> "", "param3" -> "value3", "param3" -> null)))
-    assert(parsePathParams("dir?sos-listing_strategy=*~42/@&foo=foo")
-        === ("dir", Seq("sos-listing_strategy" -> "*~42/@", "foo" -> "foo")))
+  test("parseInputPath") {
+    val emptySosOptions = Arbitrary.empty[SosOptions]
+    assert(parseInputPath("dir") === ParsedInputPath("dir", emptySosOptions, Map.empty))
+    assert(parseInputPath("dir/file") === ParsedInputPath("dir/file", emptySosOptions, Map.empty))
+    assert(parseInputPath("?param=value") === ParsedInputPath("", emptySosOptions, Map("param" -> "value")))
+    assert(parseInputPath("dir/file?param1=value1&param2=&param3=value3&param3")
+        === ParsedInputPath("dir/file", emptySosOptions, Map("param1" -> "value1", "param2" -> "", "param3" -> null)))
+    assert(parseInputPath("dir?sos-listing_strategy=*~42/@&foo=foo")
+        === ParsedInputPath("dir", emptySosOptions.copy(listingStrategy = Some("*~42/@")), Map("foo" -> "foo")))
   }
 
   test("resolveInputs.fails") {
