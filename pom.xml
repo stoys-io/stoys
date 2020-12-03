@@ -48,6 +48,7 @@
         <module>scala</module>
         <module>spark</module>
         <module>spark-db</module>
+        <module>spark-du</module>
         <module>spark-excel</module>
         <module>spark-test</module>
     </modules>
