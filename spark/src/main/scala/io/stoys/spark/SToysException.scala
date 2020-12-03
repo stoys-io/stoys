@@ -1,4 +1,4 @@
 package io.stoys.spark
 
-class SToysException(message: String) extends Exception(message) {
+class SToysException(message: String, cause: Throwable = null) extends Exception(message, cause) {
 }
