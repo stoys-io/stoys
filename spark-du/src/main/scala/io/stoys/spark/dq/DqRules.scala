@@ -41,11 +41,21 @@ object DqRules {
     }
   }
 
-  def field(name: String, typ: String, nullable: Boolean = true, regex: String = null): DqField = {
-    DqField(name, typ, nullable, Option(regex))
+  def field(name: String, typ: String, nullable: Boolean = true, enumValues: Seq[String] = Seq.empty,
+      regex: String = null): DqField = {
+    DqField(name, typ, nullable, enumValues, Option(regex))
   }
 
   // common rules
+
+  def enumValuesRule(fieldName: String, enumValues: Seq[String], caseInsensitive: Boolean = false): DqRule = {
+    val expression = if (caseInsensitive) {
+      s"UPPER(CAST($fieldName AS STRING)) IN ${enumValues.map(_.toUpperCase()).mkString("('", "', '", "')")}"
+    } else {
+      s"CAST($fieldName AS STRING) IN ${enumValues.mkString("('", "', '", "')")}"
+    }
+    namedRule(fieldName, "enum_values", expression)
+  }
 
   def notNullRule(fieldName: String): DqRule = {
     namedRule(fieldName, "not_null", s"$fieldName IS NOT NULL")

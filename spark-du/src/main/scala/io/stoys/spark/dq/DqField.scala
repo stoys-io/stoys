@@ -4,5 +4,6 @@ case class DqField(
     name: String,
     typ: String,
     nullable: Boolean,
+    enum_values: Seq[String],
     regex: Option[String]
 )
