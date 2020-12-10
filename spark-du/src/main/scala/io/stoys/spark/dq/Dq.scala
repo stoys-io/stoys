@@ -13,7 +13,9 @@ class Dq(sparkSession: SparkSession) {
 
   def dqDataset[T](ds: Dataset[T], rules: Seq[DqRule], config: DqConfig = DqConfig.default,
       metadata: Map[String, String] = Map.empty): Dataset[DqResult] = {
-    computeDqResult(computeWideDf(ds, rules), rules, config, metadata)
+    val ruleInfo = getRuleInfo(ds.columns, rules)
+    val wideDqDf = computeWideDqDf(ds, ruleInfo)
+    computeDqResult(wideDqDf, ds.columns, ruleInfo, config, metadata)
   }
 
   def dqTable(tableName: String, rules: Seq[DqRule], config: DqConfig = DqConfig.default,
@@ -21,7 +23,7 @@ class Dq(sparkSession: SparkSession) {
     if (!sparkSession.catalog.tableExists(tableName)) {
       throw new SToysException(s"Table '$tableName' does not exist in current spark session.")
     }
-    dqDataset(sparkSession.table(tableName), rules, config, metadata)
+    dqDataset(sparkSession.table(tableName), rules, config, metadata ++ Map("table_name" -> tableName))
   }
 
   def dqSql(dqSql: String, config: DqConfig = DqConfig.default,
@@ -31,7 +33,10 @@ class Dq(sparkSession: SparkSession) {
     if (missingReferencedTableNames.nonEmpty) {
       throw new SToysException(s"Dq sql reference missing tables: ${missingReferencedTableNames.toList}")
     }
-    computeDqResult(sparkSession.sql(dqSql), parsedDqSql.rules, config, metadata)
+    val wideDqDf = sparkSession.sql(dqSql)
+    val columnNames = wideDqDf.columns.dropRight(parsedDqSql.rules.size)
+    val ruleInfo = getRuleInfo(columnNames, parsedDqSql.rules)
+    computeDqResult(wideDqDf, columnNames, ruleInfo, config, metadata)
   }
 
   def dqFile(inputPath: String, rules: Seq[DqRule], fields: Seq[DqField], primaryKeyFieldNames: Seq[String],
@@ -41,26 +46,35 @@ class Dq(sparkSession: SparkSession) {
     dqDataset(fileInput.df, rules ++ schemaRules ++ fileInput.rules, config, metadata ++ fileInput.metadata)
   }
 
-  private def getRuleReferences(columnNames: Seq[String], rules: Seq[DqRule]): Seq[RuleReferences] = {
+  private def getRuleInfo(columnNames: Seq[String], rules: Seq[DqRule]): Seq[RuleInfo] = {
     val normalizedColumnNames = columnNames.map(_.toLowerCase(Locale.ROOT))
     rules.map { rule =>
       val parsedReferencedColumnNames = DqSql.parseReferencedColumnNames(sparkSession, rule.expression)
-      val allReferencedColumnNames = rule.referenced_column_names ++ parsedReferencedColumnNames
-      // TODO: Solve table aliases correctly. (sne field name normalization)
-      val normalizedReferencedColumnNames = allReferencedColumnNames
+      // TODO: Solve table aliases correctly. (field name normalization)
+      val allReferencedColumnNames = (rule.referenced_column_names ++ parsedReferencedColumnNames)
           .map(_.replace("`", "").split('.').last.toLowerCase(Locale.ROOT))
           .distinct.sorted
-      val columnIndexes = normalizedReferencedColumnNames.map(normalizedColumnNames.indexOf)
-      RuleReferences(rule, normalizedReferencedColumnNames, columnIndexes.filter(_ != -1), !columnIndexes.contains(-1))
+      val existingReferencedColumnNames = allReferencedColumnNames.filter(normalizedColumnNames.contains)
+      RuleInfo(
+        rule = rule,
+        allReferencedColumnNames = allReferencedColumnNames,
+        allReferencedColumnNamesExist = allReferencedColumnNames.size == existingReferencedColumnNames.size,
+        existingReferencedColumnNames = existingReferencedColumnNames,
+        existingReferencedColumnIndexes = existingReferencedColumnNames.map(normalizedColumnNames.indexOf)
+      )
     }
   }
 
-  private def computeDqResult(wideDf: DataFrame, rules: Seq[DqRule],
-      config: DqConfig, metadata: Map[String, String]): Dataset[DqResult] = {
-    val wideDfFields = wideDf.schema.fields.toSeq
-    val (dataFields, ruleFields) = wideDfFields.splitAt(wideDfFields.size - rules.size)
-    val columnNames = dataFields.map(_.name)
-    val ruleNames = ruleFields.map(_.name)
+  private def computeWideDqDf[T](ds: Dataset[T], ruleInfo: Seq[RuleInfo]): DataFrame = {
+    val rulesExprs = ruleInfo.map {
+      case ri if !ri.allReferencedColumnNamesExist => s"false AS ${ri.rule.name}"
+      case ri => s"${ri.rule.expression} AS ${ri.rule.name}"
+    }
+    ds.selectExpr("*" +: rulesExprs: _*)
+  }
+
+  private def checkRuleColumnsSanity(wideDqDf: DataFrame, ruleInfo: Seq[RuleInfo]): Unit = {
+    val ruleFields = wideDqDf.schema.fields.takeRight(ruleInfo.size).toSeq
 
     val nonBooleanRuleFields = ruleFields.filter(_.dataType != BooleanType)
     if (nonBooleanRuleFields.nonEmpty) {
@@ -73,31 +87,38 @@ class Dq(sparkSession: SparkSession) {
       val nonUniqueRulesMsg = nonUniqueRuleFields.toSeq.sorted.map(kv => s"${kv._1}: ${kv._2}x").mkString(", ")
       throw new SToysException(s"Dq rules have to have unique names! Not true for: $nonUniqueRulesMsg.")
     }
+  }
 
-    val ruleReferences = getRuleReferences(columnNames, rules)
-    val ruleHashesExprs = ruleReferences.map {
-      case rr if !rr.allColumnsExist => expr(s"42 AS ${rr.rule.name}")
-      case rr if rr.columnNames.isEmpty => expr(s"IF(${rr.rule.name}, -1, 42) AS ${rr.rule.name}")
-      case rr => expr(s"IF(${rr.rule.name}, -1, ABS(HASH(${rr.columnNames.mkString(", ")}, 42))) AS ${rr.rule.name}")
+  private def computeDqResult(wideDqDf: DataFrame, columnNames: Seq[String], ruleInfo: Seq[RuleInfo],
+      config: DqConfig, metadata: Map[String, String]): Dataset[DqResult] = {
+    checkRuleColumnsSanity(wideDqDf, ruleInfo)
+
+    val ruleHashesExprs = ruleInfo.map {
+      case ri if !ri.allReferencedColumnNamesExist => expr(s"42 AS ${ri.rule.name}")
+      case ri if ri.allReferencedColumnNames.isEmpty => expr(s"IF(${ri.rule.name}, -1, 42) AS ${ri.rule.name}")
+      case ri =>
+        val hashExpr = s"HASH(${ri.allReferencedColumnNames.mkString(", ")}, 42)"
+        expr(s"IF(${ri.rule.name}, -1, ABS($hashExpr)) AS ${ri.rule.name}")
     }
-    val dqAggInputRowDf = wideDf.select(
+    val dqAggInputRowDf = wideDqDf.select(
 //      col("*"),
 //      struct(columnNames.map(col): _*).as("row"),
       array(columnNames.map(cn => col(cn).cast(StringType)): _*).as("rowSample"),
       monotonically_increasing_id().as("rowId"),
       array(ruleHashesExprs: _*).as("ruleHashes")
     )
-    val referencedColumnIndexes = ruleReferences.map(_.validColumnIndexes)
-    val aggregator = new DqAggregator(columnNames.size, ruleNames.size, referencedColumnIndexes, config)
+    val existingReferencedColumnIndexes = ruleInfo.map(_.existingReferencedColumnIndexes)
+    val aggregator = new DqAggregator(columnNames.size, existingReferencedColumnIndexes, config)
     val dqAggOutputRowDs = dqAggInputRowDf.as[DqAggregator.DqAggInputRow].select(aggregator.toColumn)
 
     dqAggOutputRowDs.map { aggOutputRow =>
+      val ruleNames = ruleInfo.map(_.rule.name)
       val resultColumns = columnNames.map(cn => DqColumn(cn))
-      val resultRules = ruleReferences.map(rr => rr.rule.copy(referenced_column_names = rr.columnNames))
+      val resultRules = ruleInfo.map(ri => ri.rule.copy(referenced_column_names = ri.allReferencedColumnNames))
       val statistics = DqStatistics(
         DqTableStatistic(aggOutputRow.rows, aggOutputRow.rowViolations),
-        columnNames.zip(aggOutputRow.columnViolations).map(ca => DqColumnStatistics(ca._1, ca._2)),
-        ruleNames.zip(aggOutputRow.ruleViolations).map(ra => DqRuleStatistics(ra._1, ra._2))
+        columnNames.zip(aggOutputRow.columnViolations).map(DqColumnStatistics.tupled),
+        ruleNames.zip(aggOutputRow.ruleViolations).map(DqRuleStatistics.tupled)
       )
       val rowSample = aggOutputRow.rowSample.zip(aggOutputRow.violatedRuleIndexes).map {
         case (rowSample, violatedRuleIndexes) => DqRowSample(rowSample, violatedRuleIndexes.map(ruleNames))
@@ -105,18 +126,14 @@ class Dq(sparkSession: SparkSession) {
       DqResult(resultColumns, resultRules, statistics, rowSample, metadata)
     }
   }
-
-  private def computeWideDf[T](ds: Dataset[T], rules: Seq[DqRule]): DataFrame = {
-    val ruleReferences = getRuleReferences(ds.columns, rules)
-    val rulesExprs = ruleReferences.map {
-      case ruleReference if !ruleReference.allColumnsExist => s"false AS ${ruleReference.rule.name}"
-      case ruleReference => s"${ruleReference.rule.expression} AS ${ruleReference.rule.name}"
-    }
-    ds.selectExpr(Seq("*") ++ rulesExprs: _*)
-  }
 }
 
 object Dq {
-  private case class RuleReferences(
-      rule: DqRule, columnNames: Seq[String], validColumnIndexes: Seq[Int], allColumnsExist: Boolean)
+  private case class RuleInfo(
+      rule: DqRule,
+      allReferencedColumnNames: Seq[String],
+      allReferencedColumnNamesExist: Boolean,
+      existingReferencedColumnNames: Seq[String],
+      existingReferencedColumnIndexes: Seq[Int]
+  )
 }

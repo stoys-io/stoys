@@ -6,10 +6,11 @@ import org.apache.spark.sql.expressions.Aggregator
 
 import scala.collection.mutable
 
-class DqAggregator(columnCount: Int, ruleCount: Int, referencedColumnIndexes: Seq[Seq[Int]], config: DqConfig)
+class DqAggregator(columnCount: Int, existingReferencedColumnIndexes: Seq[Seq[Int]], config: DqConfig)
     extends Aggregator[DqAggregator.DqAggInputRow, DqAggregator.DqAgg, DqAggregator.DqAggOutputRow] {
   import DqAggregator._
 
+  private val ruleCount = existingReferencedColumnIndexes.size
   private val rowsPerRule = if (config.sample_rows) config.max_rows_per_rule else 0
 
   override def zero: DqAgg = {
@@ -29,7 +30,7 @@ class DqAggregator(columnCount: Int, ruleCount: Int, referencedColumnIndexes: Se
       val ruleHash = row.ruleHashes(ruleIndex)
       if (ruleHash >= 0) {
         ruleViolationsPerRow += 1
-        referencedColumnIndexes(ruleIndex).foreach(columnsViolated.add)
+        existingReferencedColumnIndexes(ruleIndex).foreach(columnsViolated.add)
         val aggPerRule = agg.aggPerRule(ruleIndex)
         aggPerRule.violations += 1
         var i = 0

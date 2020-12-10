@@ -14,9 +14,8 @@ class DqAggregatorTest extends SparkTestBase {
       DqAggInputRow(3, Array("3", "invalid", "extra"), Array(-1, 32, 33)),
       DqAggInputRow(4, Array("4", null, "extra"), Array(-1, -1, 43))
     )
-    val columnCount = 3
-    val ruleCount = 3
-    val referencedColumnIndexes = Seq(Seq(0), Seq(0), Seq(1))
+    val columnCount = input.headOption.map(_.rowSample.length).getOrElse(0)
+    val existingReferencedColumnIndexes = Seq(Seq(0), Seq(0), Seq(1))
 
     val expected = Array(DqAggOutputRow(
       rows = 4,
@@ -28,16 +27,16 @@ class DqAggregatorTest extends SparkTestBase {
       violatedRuleIndexes = Array(Array(1), Array(1, 2), Array(2))
     ))
 
-    val aggregator = new DqAggregator(columnCount, ruleCount, referencedColumnIndexes, DqConfig.default)
+    val aggregator = new DqAggregator(columnCount, existingReferencedColumnIndexes, DqConfig.default)
     val actual = input.toDS().select(aggregator.toColumn).collect()
     assert(actual.length === 1)
     assert(Jackson.objectMapper.writeValueAsString(actual) === Jackson.objectMapper.writeValueAsString(expected))
 
     val emptyDqConfigAggregator =
-      new DqAggregator(columnCount, ruleCount, referencedColumnIndexes, Arbitrary.empty[DqConfig])
+      new DqAggregator(columnCount, existingReferencedColumnIndexes, Arbitrary.empty[DqConfig])
     assert(input.toDS().select(emptyDqConfigAggregator.toColumn).collect().head.rowSample.length === 0)
     val singleRowSamplingAggregator =
-      new DqAggregator(columnCount, ruleCount, referencedColumnIndexes, DqConfig.default.copy(max_rows_per_rule = 1))
+      new DqAggregator(columnCount, existingReferencedColumnIndexes, DqConfig.default.copy(max_rows_per_rule = 1))
     assert(input.toDS().select(singleRowSamplingAggregator.toColumn).collect().head.rowSample.length === 2)
   }
 }
