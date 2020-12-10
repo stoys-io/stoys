@@ -630,3 +630,6 @@ spark-warehouse
 
 # Ignore scala-cross-build-maven-plugin backup files.
 pom.xml.bkp
+
+# Ignore data_cache
+*/data_cache
