@@ -43,20 +43,27 @@ class DqTest extends SparkTestBase {
     assert(dqResult.statistics.rule.map(_.violations) === Seq(0, 2, 2))
   }
 
-  test("dqFile") {
+  test("dqFile*") {
     val recordsCsvBasePath = s"$tmpDir/dqFile/record.csv"
     records.toDS().write.format("csv").option("header", "true").option("delimiter", "|").save(recordsCsvBasePath)
     val recordsCsvRelativePath = walkDfsFileStatusesByRelativePath(recordsCsvBasePath).keys.head
     val recordsCsvInputPath = s"$recordsCsvBasePath/$recordsCsvRelativePath?sos-format=csv&header=true&delimiter=%7C"
 
-    val rules = Seq(namedRule("id", "odd", "id IS NOT NULL AND (id % 2 = 0)"))
-    // TODO: fix double escaping in regex?
+    val rules = Seq(namedRule("id", "even", "id IS NOT NULL AND (id % 2 = 0)"))
+    // TODO: Can we fix double escaping in regex?
     val fields = Seq(field("id", "integer", nullable = false, regex = "\\\\d+"))
     val primaryKeyFieldNames = Seq("id")
+
     val dqResult = dq.dqFile(recordsCsvInputPath, rules, fields, primaryKeyFieldNames).collect().head
     assert(dqResult.statistics.table.violations === 2)
     assert(dqResult.metadata.get("size") === Some("66"))
     assert(Duration.between(Instant.parse(dqResult.metadata("modification_timestamp")), Instant.now()).getSeconds < 60)
+
+    val dqViolationPerRowDs = dq.dqFileViolationPerRow(recordsCsvInputPath, rules, fields, primaryKeyFieldNames)
+    assert(dqViolationPerRowDs.collect() === Seq(
+      DqViolationPerRow(Seq("1"), Seq("id"), Seq("1"), "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
+      DqViolationPerRow(Seq("3"), Seq("id"), Seq("3"), "id__even", "id IS NOT NULL AND (id % 2 = 0)")
+    ))
   }
 
   // TODO: test non boolean rules, non unique rules, dqTable, dqDataset

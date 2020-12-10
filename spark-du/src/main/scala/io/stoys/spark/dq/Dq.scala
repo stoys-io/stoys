@@ -46,6 +46,15 @@ class Dq(sparkSession: SparkSession) {
     dqDataset(fileInput.df, rules ++ schemaRules ++ fileInput.rules, config, metadata ++ fileInput.metadata)
   }
 
+  def dqFileViolationPerRow(inputPath: String, rules: Seq[DqRule], fields: Seq[DqField],
+      primaryKeyFieldNames: Seq[String], config: DqConfig = DqConfig.default): Dataset[DqViolationPerRow] = {
+    val fileInput = DqFile.openFileInputPath(sparkSession, inputPath)
+    val schemaRules = DqSchema.generateSchemaRules(fileInput.df.schema, fields, primaryKeyFieldNames, config)
+    val ruleInfo = getRuleInfo(fileInput.df.columns, rules ++ schemaRules ++ fileInput.rules)
+    val wideDqDf = computeWideDqDf(fileInput.df, ruleInfo)
+    computeDqViolationPerRow(wideDqDf, ruleInfo, primaryKeyFieldNames)
+  }
+
   private def getRuleInfo(columnNames: Seq[String], rules: Seq[DqRule]): Seq[RuleInfo] = {
     val normalizedColumnNames = columnNames.map(_.toLowerCase(Locale.ROOT))
     rules.map { rule =>
@@ -92,7 +101,6 @@ class Dq(sparkSession: SparkSession) {
   private def computeDqResult(wideDqDf: DataFrame, columnNames: Seq[String], ruleInfo: Seq[RuleInfo],
       config: DqConfig, metadata: Map[String, String]): Dataset[DqResult] = {
     checkRuleColumnsSanity(wideDqDf, ruleInfo)
-
     val ruleHashesExprs = ruleInfo.map {
       case ri if !ri.allReferencedColumnNamesExist => expr(s"42 AS ${ri.rule.name}")
       case ri if ri.allReferencedColumnNames.isEmpty => expr(s"IF(${ri.rule.name}, -1, 42) AS ${ri.rule.name}")
@@ -125,6 +133,23 @@ class Dq(sparkSession: SparkSession) {
       }
       DqResult(resultColumns, resultRules, statistics, rowSample, metadata)
     }
+  }
+
+  private def computeDqViolationPerRow(wideDqDf: DataFrame, ruleInfo: Seq[RuleInfo],
+      primaryKeyFieldNames: Seq[String]): Dataset[DqViolationPerRow] = {
+    checkRuleColumnsSanity(wideDqDf, ruleInfo)
+    val stackExprs = ruleInfo.map { ri =>
+      val column = array(ri.existingReferencedColumnNames.map(lit): _*)
+      val value = array(ri.existingReferencedColumnNames.map(cn => col(cn).cast(StringType)): _*)
+      Seq(col(ri.rule.name), column, value, lit(ri.rule.name), lit(ri.rule.expression))
+    }
+    val stackExpr = stackExprs.flatten.map(_.expr.sql).mkString(", ")
+    val stackedDf = wideDqDf.select(
+      array(primaryKeyFieldNames.map(col): _*).as("primary_key"),
+      expr(s"STACK(${stackExprs.size}, $stackExpr) AS (result, column_names, values, rule_name, rule_expression)")
+    )
+    val filteredDf = stackedDf.where(not(col("result"))).drop("result")
+    filteredDf.as[DqViolationPerRow]
   }
 }
 
