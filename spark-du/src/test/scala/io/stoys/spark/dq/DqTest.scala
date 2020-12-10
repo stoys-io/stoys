@@ -44,8 +44,9 @@ class DqTest extends SparkTestBase {
   }
 
   test("dqFile") {
-    val recordsCsvBasePath = writeTmpData("records.csv", records, "csv", Map("header" -> "true", "delimiter" -> "|"))
-    val recordsCsvRelativePath = walkFileStatuses(recordsCsvBasePath.toString).keys.head
+    val recordsCsvBasePath = s"$tmpDir/dqFile/record.csv"
+    records.toDS().write.format("csv").option("header", "true").option("delimiter", "|").save(recordsCsvBasePath)
+    val recordsCsvRelativePath = walkDfsFileStatusesByRelativePath(recordsCsvBasePath).keys.head
     val recordsCsvInputPath = s"$recordsCsvBasePath/$recordsCsvRelativePath?sos-format=csv&header=true&delimiter=%7C"
 
     val rules = Seq(namedRule("id", "odd", "id IS NOT NULL AND (id % 2 = 0)"))
