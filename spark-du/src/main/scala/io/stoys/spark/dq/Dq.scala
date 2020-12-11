@@ -128,8 +128,8 @@ class Dq(sparkSession: SparkSession) {
         columnNames.zip(aggOutputRow.columnViolations).map(DqColumnStatistics.tupled),
         ruleNames.zip(aggOutputRow.ruleViolations).map(DqRuleStatistics.tupled)
       )
-      val rowSample = aggOutputRow.rowSample.zip(aggOutputRow.violatedRuleIndexes).map {
-        case (rowSample, violatedRuleIndexes) => DqRowSample(rowSample, violatedRuleIndexes.map(ruleNames))
+      val rowSample = aggOutputRow.rowSample.zip(aggOutputRow.ruleHashes).map {
+        case (rowSample, ruleHashes) => DqRowSample(rowSample, ruleHashes.zip(ruleNames).filter(_._1 >= 0).map(_._2))
       }
       DqResult(resultColumns, resultRules, statistics, rowSample, metadata)
     }

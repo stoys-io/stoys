@@ -24,12 +24,11 @@ class DqAggregatorTest extends SparkTestBase {
       ruleViolations = Array(0, 2, 2),
       rowIds = Array(1, 3, 4),
       rowSample = Array(0, 2, 3).map(i => input(i).rowSample),
-      violatedRuleIndexes = Array(Array(1), Array(1, 2), Array(2))
+      ruleHashes = Array(Array(-1, 12, -1), Array(-1, 32, 33), Array(-1, -1, 43))
     ))
 
     val aggregator = new DqAggregator(columnCount, existingReferencedColumnIndexes, DqConfig.default)
     val actual = input.toDS().select(aggregator.toColumn).collect()
-    assert(actual.length === 1)
     assert(Jackson.objectMapper.writeValueAsString(actual) === Jackson.objectMapper.writeValueAsString(expected))
 
     val emptyDqConfigAggregator =
