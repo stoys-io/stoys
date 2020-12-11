@@ -2,7 +2,7 @@ package io.stoys.spark.dq
 
 import io.stoys.spark.SToysException
 import org.apache.spark.sql.Column
-import org.apache.spark.sql.catalyst.expressions.{Cast, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Cast}
 import org.apache.spark.sql.types.DataType
 
 object DqRules {
@@ -22,12 +22,12 @@ object DqRules {
     DqRule(name, expression, Option(description), Seq.empty)
   }
 
-  def rule(namedExpression: NamedExpression): DqRule = {
-    rule(namedExpression, null)
+  def rule(alias: Alias): DqRule = {
+    rule(alias, null)
   }
 
-  def rule(namedExpression: NamedExpression, description: String): DqRule = {
-    rule(namedExpression.name, namedExpression.sql, description)
+  def rule(alias: Alias, description: String): DqRule = {
+    rule(alias.name, alias.child.sql, description)
   }
 
   def rule(column: Column): DqRule = {
@@ -36,7 +36,7 @@ object DqRules {
 
   def rule(column: Column, description: String): DqRule = {
     column.expr match {
-      case ne: NamedExpression => rule(ne.name, ne.sql, description)
+      case a: Alias => rule(a, description)
       case _ => throw new SToysException("Column is missing name. Add it with '.as(...)' function.`")
     }
   }
@@ -78,7 +78,7 @@ object DqRules {
     uniqueRule(fieldName, Seq(fieldName))
   }
 
-  // composite an multi field rules
+  // composite and multi field rules
 
   def all(ruleName: String, rules: Seq[DqRule], description: String = null): DqRule = {
     rule(ruleName, rules.map(_.expression).mkString(" AND "), description)
