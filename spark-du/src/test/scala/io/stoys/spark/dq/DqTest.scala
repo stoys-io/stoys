@@ -10,6 +10,14 @@ class DqTest extends SparkTestBase {
 
   lazy val dq = new Dq(sparkSession)
 
+  test("getRuleInfo") {
+    val rule = notNullRule("Foo")
+    assert(dq.getRuleInfo(Seq("foo"), Seq(rule)) === Seq(Dq.RuleInfo(rule, Seq.empty, Seq("foo"), Seq(0))))
+    assert(dq.getRuleInfo(Seq("FOO"), Seq(rule)) === Seq(Dq.RuleInfo(rule, Seq.empty, Seq("FOO"), Seq(0))))
+    assert(dq.getRuleInfo(Seq("bar"), Seq(rule)) === Seq(Dq.RuleInfo(rule, Seq("Foo"), Seq.empty, Seq.empty)))
+    assert(dq.getRuleInfo(Seq("bar"), Seq(rule)) === Seq(Dq.RuleInfo(rule, Seq("Foo"), Seq.empty, Seq.empty)))
+  }
+
   test("dqSql") {
     records.toDS().createOrReplaceTempView(recordsTableName)
     val dqResult = dq.dqSql(recordsDqSql).collect().head
