@@ -3,7 +3,7 @@ package io.stoys.spark.dq
 import io.stoys.spark.SToysException
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.expressions.{Alias, Cast}
-import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.types.{DataType, DateType, TimestampType}
 
 object DqRules {
   private val LOGICAL_NAME_SEPARATOR = "__"
@@ -42,8 +42,8 @@ object DqRules {
   }
 
   def field(name: String, typ: String, nullable: Boolean = true, enumValues: Seq[String] = Seq.empty,
-      regex: String = null): DqField = {
-    DqField(name, typ, nullable, enumValues, Option(regex))
+      format: String = null, regexp: String = null): DqField = {
+    DqField(name, typ, nullable, enumValues, Option(format), Option(regexp))
   }
 
   // common rules
@@ -65,9 +65,14 @@ object DqRules {
     namedRule(fieldName, "regexp", s"CAST($fieldName AS STRING) RLIKE '$regexp'")
   }
 
-  def typeRule(fieldName: String, sourceType: DataType, targetType: DataType): DqRule = {
+  def typeRule(fieldName: String, sourceType: DataType, targetType: DataType, format: String = null): DqRule = {
     if (Cast.canCast(sourceType, targetType)) {
-      namedRule(fieldName, "type", s"$fieldName IS NULL OR CAST($fieldName AS ${targetType.sql}) IS NOT NULL")
+      val expression = (targetType, Option(format)) match {
+        case (DateType, Some(format)) => s"$fieldName IS NULL OR TO_DATE($fieldName, '$format') IS NOT NULL"
+        case (TimestampType, Some(format)) => s"$fieldName IS NULL OR TO_TIMESTAMP($fieldName, '$format') IS NOT NULL"
+        case (dataType, _) => s"$fieldName IS NULL OR CAST($fieldName AS ${dataType.sql}) IS NOT NULL"
+      }
+      namedRule(fieldName, "type", expression)
     } else {
       val description = s"Field '$fieldName' type '$sourceType' has to be castable to type '$targetType'."
       namedRule(fieldName, "type", "false", description)

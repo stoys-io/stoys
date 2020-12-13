@@ -3,7 +3,7 @@ package io.stoys.spark.dq
 import io.stoys.spark.SToysException
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.types.{DataType, IntegerType, StringType}
+import org.apache.spark.sql.types.{DateType, IntegerType, StringType}
 
 import scala.reflect.runtime.universe._
 
@@ -68,16 +68,22 @@ class DqRulesTest extends SparkTestBase {
   }
 
   test("typeRule") {
-    val rule = typeRule("dt", StringType, DataType.fromJson("\"date\""))
-    assert(eval(rule, "dt", null) === true)
-    assert(eval(rule, "dt", "foo") === false)
-    assert(eval(rule, "dt", "2020-02-20") === true)
-    assert(eval(rule, "dt", "2020") === true)
-    assert(eval(rule, "dt", "42") === false)
-    assert(eval(rule, "dt", "02/20/2020") === false)
+    val dateRule = typeRule("dt", StringType, DateType)
+    assert(eval(dateRule, "dt", null) === true)
+    assert(eval(dateRule, "dt", "foo") === false)
+    assert(eval(dateRule, "dt", "2020-02-20") === true)
+    assert(eval(dateRule, "dt", "2020") === true)
+    assert(eval(dateRule, "dt", "42") === false)
+    assert(eval(dateRule, "dt", "02/20/2020") === false)
 
-    val integerToDateRule = typeRule("dt", IntegerType, DataType.fromJson("\"date\""))
+    val customFormatRule = typeRule("dt", StringType, DateType, format = "MM/dd/yyyy")
+    assert(eval(customFormatRule, "dt", "02/20/2020") === true)
+
+    val integerToDateRule = typeRule("dt", IntegerType, DateType)
     assert(eval(integerToDateRule, "dt", null) === false)
+
+    val customFormatIntegerRule = typeRule("i", StringType, IntegerType, format = "ignored")
+    assert(eval(customFormatIntegerRule, "i", "42") === true)
   }
 
   test("uniqueRule") {

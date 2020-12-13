@@ -34,7 +34,7 @@ object DqSchema {
       existingFieldsByName.get(expectedField.name.toLowerCase(Locale.ROOT)).foreach { existingField =>
         val fieldName = expectedField.name
         val expectedType = DataType.fromJson('"' + expectedField.typ + '"')
-        rules += typeRule(fieldName, existingField.dataType, expectedType)
+        rules += typeRule(fieldName, existingField.dataType, expectedType, format = expectedField.format.orNull)
         if (!expectedField.nullable) {
           rules += notNullRule(fieldName)
         }
