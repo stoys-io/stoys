@@ -15,9 +15,9 @@ class DbLoaderTest extends SparkTestBase {
 
   private val items = Seq(
     Item(1, 11, "name1", 100, "note1", Some("optionalNote1"), "longNameField1", "customTypeField1",
-      Date.valueOf("2001-01-01"), Seq("repeatedFiled11", "repeatedFiled12"), SubItem("nestedField1")),
+      Date.valueOf("2001-01-01"), Seq("repeatedField11", "repeatedField12"), SubItem("nestedField1")),
     Item(2, 22, "name2", 200, "note2", Some("optionalNote2"), "longNameField2", "customTypeField2",
-      Date.valueOf("2001-01-02"), Seq("repeatedFiled12", "repeatedFiled22"), SubItem("nestedField2")))
+      Date.valueOf("2001-01-02"), Seq("repeatedField12", "repeatedField22"), SubItem("nestedField2")))
   private val caseClassName = classOf[Item].getName
   private val tableName = s"${classOf[Item].getSimpleName.toLowerCase}__latest"
 

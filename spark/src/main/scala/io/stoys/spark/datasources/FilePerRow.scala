@@ -12,9 +12,9 @@ object FilePerRow {
   private[datasources] case class FieldIndexes(path: Int, content: Int)
 
   private[datasources] def findFieldIndexesOption(schema: StructType): Option[FieldIndexes] = {
-    val pathFieldIndexes = collectFiledIndexes(schema, "path", StringType)
-    val binaryContentFieldIndexes = collectFiledIndexes(schema, "content", BinaryType)
-    val stringContentFieldIndexes = collectFiledIndexes(schema, "content", StringType)
+    val pathFieldIndexes = collectFieldIndexes(schema, "path", StringType)
+    val binaryContentFieldIndexes = collectFieldIndexes(schema, "content", BinaryType)
+    val stringContentFieldIndexes = collectFieldIndexes(schema, "content", StringType)
     val contentFieldIndexes = binaryContentFieldIndexes ++ stringContentFieldIndexes
     (pathFieldIndexes, contentFieldIndexes) match {
       case (Seq(pathFieldIndex), Seq(contentFieldIndex)) => Some(FieldIndexes(pathFieldIndex, contentFieldIndex))
@@ -31,7 +31,7 @@ object FilePerRow {
     }
   }
 
-  private def collectFiledIndexes(schema: StructType, fieldName: String, dataType: DataType): Seq[Int] = {
+  private def collectFieldIndexes(schema: StructType, fieldName: String, dataType: DataType): Seq[Int] = {
     schema.fields.zipWithIndex.collect {
       case (StructField(name, dt, _, _), index) if name.equalsIgnoreCase(fieldName) && dt == dataType => index
     }

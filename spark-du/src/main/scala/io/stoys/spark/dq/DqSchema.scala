@@ -11,16 +11,16 @@ object DqSchema {
   def generateSchemaRules(existingSchema: StructType, expectedFields: Seq[DqField], primaryKeyFieldNames: Seq[String],
       config: DqConfig): Seq[DqRule] = {
     val rules = mutable.Buffer.empty[DqRule]
-    val existingFiledNames = existingSchema.map(_.name.toLowerCase(Locale.ROOT))
-    val expectedFiledNames = expectedFields.map(_.name.toLowerCase(Locale.ROOT))
-    val missingFieldNames = expectedFiledNames.filterNot(existingFiledNames.toSet)
+    val existingFieldNames = existingSchema.map(_.name.toLowerCase(Locale.ROOT))
+    val expectedFieldNames = expectedFields.map(_.name.toLowerCase(Locale.ROOT))
+    val missingFieldNames = expectedFieldNames.filterNot(existingFieldNames.toSet)
     if (missingFieldNames.nonEmpty) {
       val description = s"Expected fields should: ${missingFieldNames.mkString(", ")}"
       val rule = namedRule("_expected_fields", "exist", "false", description)
       rules += rule.copy(referenced_column_names = missingFieldNames)
     }
     if (config.report_extra_columns) {
-      val extraFieldNames = existingFiledNames.filterNot(expectedFiledNames.toSet)
+      val extraFieldNames = existingFieldNames.filterNot(expectedFieldNames.toSet)
       val description = s"Extra fields should not exist: ${extraFieldNames.mkString(", ")}"
       rules += namedRule("_extra_fields", "not_exist", "false", description)
     }
