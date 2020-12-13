@@ -61,8 +61,8 @@ object DqRules {
     namedRule(fieldName, "not_null", s"$fieldName IS NOT NULL")
   }
 
-  def regexRule(fieldName: String, regex: String): DqRule = {
-    namedRule(fieldName, "regex", s"CAST($fieldName AS STRING) RLIKE '$regex'")
+  def regexpRule(fieldName: String, regexp: String): DqRule = {
+    namedRule(fieldName, "regexp", s"CAST($fieldName AS STRING) RLIKE '$regexp'")
   }
 
   def typeRule(fieldName: String, sourceType: DataType, targetType: DataType): DqRule = {

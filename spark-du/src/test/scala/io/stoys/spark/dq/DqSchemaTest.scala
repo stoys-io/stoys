@@ -14,8 +14,8 @@ class DqSchemaTest extends SparkTestBase {
     val existingSchema = ScalaReflection.schemaFor[Record].dataType.asInstanceOf[StructType]
     val expectedFields = Seq(
       field("i", "integer"),
-      field("s", "string", nullable = false, enumValues = Seq("foo", "bar", "baz"), regex = "(foo|bar|baz)"),
-      field("d", "date", regex = "\\\\d\\\\d\\\\d\\\\d-\\\\d\\\\d-\\\\d\\\\d"),
+      field("s", "string", nullable = false, enumValues = Seq("foo", "bar", "baz"), regexp = "(foo|bar|baz)"),
+      field("d", "date", regexp = "\\\\d\\\\d\\\\d\\\\d-\\\\d\\\\d-\\\\d\\\\d"),
       field("missing", "string")
     )
     val primaryKeyFieldNames = Seq("i", "s")
@@ -28,9 +28,9 @@ class DqSchemaTest extends SparkTestBase {
       DqRule("s__type", "s IS NULL OR CAST(s AS STRING) IS NOT NULL", None, Seq.empty),
       DqRule("s__not_null", "s IS NOT NULL", None, Seq.empty),
       DqRule("s__enum_values", "CAST(s AS STRING) IN ('foo', 'bar', 'baz')", None, Seq.empty),
-      DqRule("s__regex", "CAST(s AS STRING) RLIKE '(foo|bar|baz)'", None, Seq.empty),
+      DqRule("s__regexp", "CAST(s AS STRING) RLIKE '(foo|bar|baz)'", None, Seq.empty),
       DqRule("d__type", "d IS NULL OR CAST(d AS DATE) IS NOT NULL", None, Seq.empty),
-      DqRule("d__regex", "CAST(d AS STRING) RLIKE '\\\\d\\\\d\\\\d\\\\d-\\\\d\\\\d-\\\\d\\\\d'", None, Seq.empty)
+      DqRule("d__regexp", "CAST(d AS STRING) RLIKE '\\\\d\\\\d\\\\d\\\\d-\\\\d\\\\d-\\\\d\\\\d'", None, Seq.empty)
     )
     val rules = generateSchemaRules(existingSchema, expectedFields, primaryKeyFieldNames, DqConfig.default)
     assert(rules === expectedRules)

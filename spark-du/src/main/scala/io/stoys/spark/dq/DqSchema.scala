@@ -41,8 +41,8 @@ object DqSchema {
         if (expectedField.enum_values.nonEmpty) {
           rules += enumValuesRule(fieldName, expectedField.enum_values)
         }
-        expectedField.regex.foreach { regex =>
-          rules += regexRule(fieldName, regex)
+        expectedField.regexp.foreach { regexp =>
+          rules += regexpRule(fieldName, regexp)
         }
       }
     }

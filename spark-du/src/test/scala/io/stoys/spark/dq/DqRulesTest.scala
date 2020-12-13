@@ -58,8 +58,8 @@ class DqRulesTest extends SparkTestBase {
     assert(eval(rule, "id", "42") === true)
   }
 
-  test("regexRule") {
-    val rule = regexRule("value", "(foo|\\\\d+)")
+  test("regexpRule") {
+    val rule = regexpRule("value", "(foo|\\\\d+)")
     assert(eval(rule, "value", null) === false)
     assert(eval(rule, "value", "foo") === true)
     assert(eval(rule, "value", "bar") === false)
