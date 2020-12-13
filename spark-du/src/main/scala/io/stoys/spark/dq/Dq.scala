@@ -4,7 +4,7 @@ import java.util.Locale
 
 import io.stoys.spark.SToysException
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{BooleanType, StringType}
+import org.apache.spark.sql.types.{BooleanType, StringType, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
 import scala.collection.mutable
@@ -93,8 +93,8 @@ class Dq(sparkSession: SparkSession) {
     ds.selectExpr("*" +: rulesExprs: _*)
   }
 
-  private def checkRuleColumnsSanity(wideDqDf: DataFrame, ruleInfo: Seq[RuleInfo]): Unit = {
-    val ruleFields = wideDqDf.schema.fields.takeRight(ruleInfo.size).toSeq
+  private[dq] def checkWideDqColumnsSanity(wideDqSchema: StructType, ruleCount: Int): Boolean = {
+    val ruleFields = wideDqSchema.fields.takeRight(ruleCount)
 
     val nonBooleanRuleFields = ruleFields.filter(_.dataType != BooleanType)
     if (nonBooleanRuleFields.nonEmpty) {
@@ -102,16 +102,18 @@ class Dq(sparkSession: SparkSession) {
       throw new SToysException(s"Dq rules have to return boolean values! Not true for: $nonBooleanRulesMsg.")
     }
 
-    val nonUniqueRuleFields = ruleFields.map(_.name).groupBy(identity).mapValues(_.size).filter(_._2 > 1)
-    if (nonUniqueRuleFields.nonEmpty) {
-      val nonUniqueRulesMsg = nonUniqueRuleFields.toSeq.sorted.map(kv => s"${kv._1}: ${kv._2}x").mkString(", ")
-      throw new SToysException(s"Dq rules have to have unique names! Not true for: $nonUniqueRulesMsg.")
+    val nonUniqueFields = wideDqSchema.fields.map(_.name).groupBy(_.toLowerCase(Locale.ROOT)).filter(_._2.length > 1)
+    if (nonUniqueFields.nonEmpty) {
+      val nonUniqueRulesMsg = nonUniqueFields.toSeq.map(kv => s"${kv._1}: ${kv._2.length}x").sorted.mkString(", ")
+      throw new SToysException(s"Dq rules and fields have to have unique names! Not true for: $nonUniqueRulesMsg.")
     }
+
+    true
   }
 
   private def computeDqResult(wideDqDf: DataFrame, columnNames: Seq[String], ruleInfo: Seq[RuleInfo],
       config: DqConfig, metadata: Map[String, String]): Dataset[DqResult] = {
-    checkRuleColumnsSanity(wideDqDf, ruleInfo)
+    checkWideDqColumnsSanity(wideDqDf.schema, ruleInfo.size)
     val ruleHashesExprs = ruleInfo.map {
       case ri if ri.missingReferencedColumnNames.nonEmpty => expr(s"42 AS ${ri.rule.name}")
       case ri if ri.existingReferencedColumnNames.isEmpty => expr(s"IF(${ri.rule.name}, -1, 42) AS ${ri.rule.name}")
@@ -150,7 +152,7 @@ class Dq(sparkSession: SparkSession) {
 
   private def computeDqViolationPerRow(wideDqDf: DataFrame, ruleInfo: Seq[RuleInfo],
       primaryKeyFieldNames: Seq[String]): Dataset[DqViolationPerRow] = {
-    checkRuleColumnsSanity(wideDqDf, ruleInfo)
+    checkWideDqColumnsSanity(wideDqDf.schema, ruleInfo.size)
     val stackExprs = ruleInfo.map { ri =>
       val result = if (ri.missingReferencedColumnNames.isEmpty) col(ri.rule.name) else lit(false)
       val column = array(ri.existingReferencedColumnNames.map(lit): _*)
