@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.{DataType, StructType}
 
 import scala.collection.mutable
 
-object DqSchema {
+private[dq] object DqSchema {
   def generateSchemaRules(existingSchema: StructType, expectedFields: Seq[DqField], primaryKeyFieldNames: Seq[String],
       config: DqConfig): Seq[DqRule] = {
     val rules = mutable.Buffer.empty[DqRule]

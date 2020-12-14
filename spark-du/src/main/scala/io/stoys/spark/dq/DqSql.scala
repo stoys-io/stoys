@@ -8,7 +8,7 @@ import org.apache.spark.sql.catalyst.plans.logical._
 
 import scala.util.matching.Regex
 
-object DqSql {
+private[dq] object DqSql {
   case class ParsedDqSql(rules: Seq[DqRule], referencedTableNames: Set[String])
 
   def parseReferencedColumnNames(sparkSession: SparkSession, expression: String): Seq[String] = {

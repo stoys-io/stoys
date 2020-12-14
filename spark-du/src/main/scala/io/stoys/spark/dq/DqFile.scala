@@ -8,7 +8,9 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
 import scala.util.{Failure, Success, Try}
 
-object DqFile {
+private[dq] object DqFile {
+  val corruptRecordField: StructField = StructField("__corrupt_record__", StringType, nullable = true)
+
   case class FileInput(df: DataFrame, rules: Seq[DqRule], metadata: Map[String, String])
 
   def openFileInputPath(sparkSession: SparkSession, inputPath: String): FileInput = {
@@ -27,7 +29,6 @@ object DqFile {
     Try(createDataFrameReader(sparkSession, parsedInputPath).load(path).schema) match {
       case Failure(t) => throw new SToysException(s"Path '$path' failed to read schema (header).", t)
       case Success(schema) =>
-        val corruptRecordField = StructField("__corrupt_record__", StringType, nullable = true)
         val df = createDataFrameReader(sparkSession, parsedInputPath)
             .schema(StructType(schema.fields :+ corruptRecordField))
             .option("columnNameOfCorruptRecord", corruptRecordField.name)

@@ -6,7 +6,7 @@ import org.apache.spark.sql.expressions.Aggregator
 
 import scala.collection.mutable
 
-class DqAggregator(columnCount: Int, existingReferencedColumnIndexes: Seq[Seq[Int]], config: DqConfig)
+private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes: Seq[Seq[Int]], config: DqConfig)
     extends Aggregator[DqAggregator.DqAggInputRow, DqAggregator.DqAgg, DqAggregator.DqAggOutputRow] {
   import DqAggregator._
 
