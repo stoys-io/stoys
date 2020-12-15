@@ -34,14 +34,15 @@ private[dq] object DqSchema {
       existingFieldsByName.get(expectedField.name.toLowerCase(Locale.ROOT)).foreach { existingField =>
         val fieldName = expectedField.name
         val expectedType = DataType.fromJson('"' + expectedField.typ + '"')
-        rules += typeRule(fieldName, existingField.dataType, expectedType, format = expectedField.format.orNull)
+        val format = Option(expectedField.format).flatten.orNull
+        rules += typeRule(fieldName, existingField.dataType, expectedType, format)
         if (!expectedField.nullable) {
           rules += notNullRule(fieldName)
         }
-        if (expectedField.enum_values.nonEmpty) {
+        if (Option(expectedField.enum_values).getOrElse(Seq.empty).nonEmpty) {
           rules += enumValuesRule(fieldName, expectedField.enum_values)
         }
-        expectedField.regexp.foreach { regexp =>
+        Option(expectedField.regexp).flatten.foreach { regexp =>
           rules += regexpRule(fieldName, regexp)
         }
       }

@@ -17,13 +17,14 @@ private[dq] object DqFramework {
       existingReferencedColumnIndexes: Seq[Int]
   )
 
-  def getRuleInfo(sparkSession: SparkSession, columnNames: Seq[String],
-      rules: Seq[DqRule]): Seq[RuleInfo] = {
+  def getRuleInfo(sparkSession: SparkSession, columnNames: Seq[String], rules: Seq[DqRule]): Seq[RuleInfo] = {
     val indexesByNormalizedNames = columnNames.zipWithIndex.map(ci => ci._1.toLowerCase(Locale.ROOT) -> ci._2).toMap
     rules.map { rule =>
-      val rawNames = rule.referenced_column_names ++ DqSql.parseReferencedColumnNames(sparkSession, rule.expression)
+      val explicitRawNames = Option(rule.referenced_column_names).getOrElse(Seq.empty)
+      val parsedRawNames = DqSql.parseReferencedColumnNames(sparkSession, rule.expression)
+      val allRawNames = explicitRawNames ++ parsedRawNames
       val visitedNormalizedRawNames = mutable.Set.empty[String]
-      val (missingNames, existingNames, existingIndexes) = rawNames.map({ rawName =>
+      val (missingNames, existingNames, existingIndexes) = allRawNames.map({ rawName =>
         // TODO: Solve table aliases correctly. (field name normalization)
         val correctedRawName = rawName.replace("`", "").split('.').last
         val normalizedRawName = correctedRawName.toLowerCase(Locale.ROOT)
