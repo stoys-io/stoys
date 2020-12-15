@@ -37,7 +37,8 @@ class Dq[T] private (ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
 
   def computeDqResult(): Dataset[DqResult] = {
     val wideDqDfInfo = computeWideDqDfInfo()
-    DqFramework.computeDqResult(wideDqDfInfo.wideDqDf, ds.columns, wideDqDfInfo.ruleInfo, config, metadata)
+    val columnNames = wideDqDfInfo.wideDqDf.columns.dropRight(wideDqDfInfo.ruleInfo.size)
+    DqFramework.computeDqResult(wideDqDfInfo.wideDqDf, columnNames, wideDqDfInfo.ruleInfo, config, metadata)
   }
 
   def computeDqViolationPerRow(): Dataset[DqViolationPerRow] = {

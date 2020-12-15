@@ -24,8 +24,32 @@ class DqTest extends SparkTestBase {
          |  $recordsTableName
          |""".stripMargin.trim
 
+    val expectedDqResult = DqResult(
+      columns = Seq(DqColumn("id"), DqColumn("value"), DqColumn("extra")),
+      rules = Seq(
+        DqRule("id__not_null", "(`id` IS NOT NULL)", None, Seq("id")),
+        DqRule("id__odd", "((`id` IS NOT NULL) AND ((`id` % 2) = 0))", None, Seq("id")),
+        DqRule("value__enum_value", "(`value` IN ('foo', 'bar', 'baz'))", None, Seq("value"))
+      ),
+      DqStatistics(
+        table = DqTableStatistic(4, 3),
+        column = Seq(DqColumnStatistics("id", 2), DqColumnStatistics("value", 2), DqColumnStatistics("extra", 0)),
+        rule = Seq(
+          DqRuleStatistics("id__not_null", 0),
+          DqRuleStatistics("id__odd", 2),
+          DqRuleStatistics("value__enum_value", 2)
+        )
+      ),
+      row_sample = Seq(
+        DqRowSample(Seq("1", "foo", "extra"), Seq("id__odd")),
+        DqRowSample(Seq("3", "invalid", "extra"), Seq("id__odd", "value__enum_value")),
+        DqRowSample(Seq("4", null, "extra"), Seq("value__enum_value"))
+      ),
+      Map.empty
+    )
+
     val dqResult = Dq.fromDqSql(sparkSession, dqSql).computeDqResult().collect().head
-    assert(dqResult.statistics.rule.map(_.violations) === Seq(0, 2, 2))
+    assert(dqResult === expectedDqResult)
   }
 
   test("fromDqSql.computeDqResult - complex") {
