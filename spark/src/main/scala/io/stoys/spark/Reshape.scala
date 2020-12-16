@@ -139,7 +139,7 @@ object Reshape {
     val normalizedFieldNames = config.sortOrder match {
       case ReshapeConfig.SortOrder.ALPHABETICAL =>
         (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct.sorted
-      case ReshapeConfig.SortOrder.SOURCE | ReshapeConfig.SortOrder.UNDEFINED =>
+      case ReshapeConfig.SortOrder.SOURCE | ReshapeConfig.SortOrder.UNDEFINED | null =>
         (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct
       case ReshapeConfig.SortOrder.TARGET =>
         (targetStruct.fields ++ sourceStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct
@@ -163,7 +163,7 @@ object Reshape {
         case (sources, _ :: Nil) =>
           // TODO: ConflictResolution is more complicated than this
 //        config.conflictResolution match {
-//          case ReshapeConfig.ConflictResolution.ERROR | ReshapeConfig.ConflictResolution.UNDEFINED =>
+//          case ReshapeConfig.ConflictResolution.ERROR | ReshapeConfig.ConflictResolution.UNDEFINED | null =>
 //            Left(List(ReshapeError(normalizedFieldPath, s"has ${sources.size} conflicting occurrences")))
 //          case ReshapeConfig.ConflictResolution.FIRST =>
 //            reshapeStructField(sources.head, target, config, sourcePath, normalizedFieldPath)

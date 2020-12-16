@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 import org.apache.http.client.utils.{URIBuilder, URLEncodedUtils}
-import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -24,11 +24,6 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   private val inputDags = mutable.Buffer.empty[SosDag]
   private val inputTables = mutable.Map.empty[String, SosTable]
   private val outputTables = mutable.Map.empty[String, SosTable]
-
-  private val reshapeConfig = ReshapeConfig.as.copy(
-//    coerceTypes = true,
-    fillMissingNulls = true
-  )
 
   def init(): Unit = {
     addInputPaths(config.inputPaths: _*)
@@ -62,9 +57,9 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     sparkSession.table(tableName.fullTableName())
   }
 
-  def ds[T <: Product : Encoder](tableName: TableName[T]): Dataset[T] = {
+  def ds[T <: Product](tableName: TableName[T]): Dataset[T] = {
     implicit val typeTagT: universe.TypeTag[T] = tableName.typeTag
-    Reshape.reshape[T](df(tableName), reshapeConfig)
+    Reshape.reshape[T](df(tableName), config.inputReshapeConfig)
   }
 
   private def writeDF(df: DataFrame, fullTableName: String): Unit = {

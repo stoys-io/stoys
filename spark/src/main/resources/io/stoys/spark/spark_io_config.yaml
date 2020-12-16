@@ -1,3 +1,5 @@
+input_reshape_config:
+  fill_missing_nulls: true
 write_format: "parquet"
 write_mode: "overwrite"
 #write_options:
