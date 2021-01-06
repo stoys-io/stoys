@@ -20,6 +20,8 @@ object DqReflection {
     val rawFieldType = field.typeSignature.dealias
     val isOption = rawFieldType <:< typeOf[Option[_]]
     val fieldType = if (isOption) rawFieldType.typeArgs.head else rawFieldType
+    val isPrimitive = fieldType.typeSymbol.asClass.isPrimitive
+
     val typ = fieldType match {
       case t if t =:= typeOf[Boolean] => "boolean"
 //      case t if t =:= typeOf[Byte] => "byte"
@@ -37,7 +39,7 @@ object DqReflection {
       case _ => throw new SToysException(s"Unsupported type ${Reflection.renderAnnotatedSymbol(field)}!")
     }
 
-    DqField(getColumnName(field), typ, nullable.getOrElse(isOption), enumValues, format, regexp)
+    DqField(getColumnName(field), typ, nullable.getOrElse(!isPrimitive || isOption), enumValues, format, regexp)
   }
 
   private def getColumnName(symbol: Symbol): String = {

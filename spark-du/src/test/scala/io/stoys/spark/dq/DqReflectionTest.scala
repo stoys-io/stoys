@@ -2,19 +2,32 @@ package io.stoys.spark.dq
 
 import java.sql.Date
 
+import io.stoys.scala.Arbitrary
 import org.scalatest.funsuite.AnyFunSuite
 
 class DqReflectionTest extends AnyFunSuite {
   import DqReflection._
   import DqReflectionTest._
 
-  test("getDqFields") {
+  test("basics") {
     val expectedFields = Seq(
       DqField("id", "integer", nullable = false, Seq.empty, None, None),
       DqField("custom_date", "date", nullable = true, Seq.empty, Some("MM/dd/yyyy"), None),
       DqField("custom_enum", "string", nullable = false, Seq("foo", "bar", "baz"), None, None)
     )
     assert(getDqFields[Record] === expectedFields)
+  }
+
+  test("nullability") {
+    val emptyDqField = Arbitrary.empty[DqField]
+    val expectedFields = Seq(
+      emptyDqField.copy(name = "int", typ = "integer", nullable = false),
+      emptyDqField.copy(name = "str", typ = "string", nullable = true),
+      emptyDqField.copy(name = "option_str", typ = "string", nullable = true),
+      emptyDqField.copy(name = "dq_field_not_nullable_str", typ = "string", nullable = false),
+      emptyDqField.copy(name = "dq_field_not_nullable_option_str", typ = "string", nullable = false)
+    )
+    assert(getDqFields[NullableRecord] === expectedFields)
   }
 }
 
@@ -27,5 +40,15 @@ object DqReflectionTest {
       customDate: Date,
       @DqField(nullable = false, enumValues = Array("foo", "bar", "baz"))
       customEnum: String
+  )
+
+  case class NullableRecord(
+      int: Int,
+      str: String,
+      optionStr: Option[String],
+      @DqField(nullable = false)
+      dqFieldNotNullableStr: String,
+      @DqField(nullable = false)
+      dqFieldNotNullableOptionStr: Option[String]
   )
 }
