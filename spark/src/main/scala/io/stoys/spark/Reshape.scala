@@ -2,7 +2,7 @@ package io.stoys.spark
 
 import io.stoys.scala.Strings
 import org.apache.spark.sql.catalyst.ScalaReflection
-import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Cast, CreateArray, CreateMap, Expression, LambdaFunction, Literal, NamedLambdaVariable, TransformKeys, TransformValues}
+import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Attribute, Cast, CreateArray, CreateMap, Expression, LambdaFunction, Literal, NamedLambdaVariable, TransformKeys, TransformValues}
 import org.apache.spark.sql.catalyst.util.usePrettyExpression
 import org.apache.spark.sql.functions.{coalesce, col, struct, to_date, to_timestamp}
 import org.apache.spark.sql.types._
@@ -28,7 +28,7 @@ object Reshape {
   @throws(classOf[ReshapeException])
   def reshape[T <: Product : TypeTag](ds: Dataset[_], config: ReshapeConfig = ReshapeConfig.default): Dataset[T] = {
     import ds.sparkSession.implicits._
-    val targetSchema = ScalaReflection.schemaFor[T].dataType.asInstanceOf[StructType]
+    val targetSchema = ScalaReflection.schemaFor[T].dataType
     reshapeToDF(ds, targetSchema, config).as[T]
   }
 
@@ -38,7 +38,8 @@ object Reshape {
     targetSchema match {
       case targetSchema: StructType if sourceSchema == targetSchema => ds.toDF()
       case targetSchema: StructType =>
-        reshapeStructType(sourceSchema, targetSchema, config, sourceColumn = null, normalizedPath = null) match {
+        reshapeStructType(sourceSchema, targetSchema, config,
+          sourceColumn = null, sourceAttributes = ds.queryExecution.analyzed.output, normalizedPath = null) match {
           case Left(errors) => throw new ReshapeException(errors)
           case Right(columns) => ds.select(columns: _*)
         }
@@ -86,13 +87,13 @@ object Reshape {
   private def reshapeStructField(sourceDataType: DataType, targetDataType: DataType, config: ReshapeConfig,
       sourceExpression: Expression): Either[List[ReshapeError], List[Column]] = {
     reshapeStructField(StructField(null, sourceDataType), StructField(null, targetDataType), config,
-      new Column(sourceExpression), normalizedFieldPath = null)
+      new Column(sourceExpression), sourceAttribute = None, normalizedFieldPath = null)
   }
 
   private def reshapeStructField(sourceField: StructField, targetField: StructField, config: ReshapeConfig,
-      sourceColumn: Column, normalizedFieldPath: String): Either[List[ReshapeError], List[Column]] = {
+      sourceColumn: Column, sourceAttribute: Option[Attribute], normalizedFieldPath: String): Either[List[ReshapeError], List[Column]] = {
     val errors = mutable.Buffer.empty[ReshapeError]
-    var column = getNestedColumn(sourceColumn, sourceField.name)
+    var column = sourceAttribute.map(a => new Column(a)).getOrElse(getNestedColumn(sourceColumn, sourceField.name))
     if (sourceField.nullable && !targetField.nullable) {
       if (config.failOnIgnoringNullability) {
         errors += ReshapeError(normalizedFieldPath, "is nullable but target column is not")
@@ -103,7 +104,8 @@ object Reshape {
     (sourceField.dataType, targetField.dataType) match {
       case (sourceDataType, targetDataType) if sourceDataType == targetDataType => // pass
       case (sourceStructType: StructType, targetStructType: StructType) =>
-        reshapeStructType(sourceStructType, targetStructType, config, column, normalizedFieldPath) match {
+        reshapeStructType(sourceStructType, targetStructType, config,
+          column, sourceAttributes = Seq.empty, normalizedFieldPath) match {
           case Right(nestedColumns) => column = struct(nestedColumns: _*)
           case Left(nestedErrors) => errors ++= nestedErrors
         }
@@ -158,7 +160,8 @@ object Reshape {
   }
 
   private def reshapeStructType(sourceStruct: StructType, targetStruct: StructType, config: ReshapeConfig,
-      sourceColumn: Column, normalizedPath: String): Either[List[ReshapeError], List[Column]] = {
+      sourceColumn: Column, sourceAttributes: Seq[Attribute],
+      normalizedPath: String): Either[List[ReshapeError], List[Column]] = {
     val sourceColumnPath = Option(sourceColumn).map(c => usePrettyExpression(c.expr).sql)
 
     val sourceFieldsByName = sourceStruct.fields.toList.groupBy(f => normalizeFieldName(f, config))
@@ -187,18 +190,18 @@ object Reshape {
             Left(List(ReshapeError(normalizedFieldPath, "is missing")))
           }
         case (source :: Nil, target :: Nil) =>
-          reshapeStructField(source, target, config, sourceColumn, normalizedFieldPath)
-        case (sources, _ :: Nil) =>
-          // TODO: ConflictResolution is more complicated than this
-//        config.conflictResolution match {
-//          case ReshapeConfig.ConflictResolution.ERROR | ReshapeConfig.ConflictResolution.UNDEFINED | null =>
-//            Left(List(ReshapeError(normalizedFieldPath, s"has ${sources.size} conflicting occurrences")))
-//          case ReshapeConfig.ConflictResolution.FIRST =>
-//            reshapeStructField(sources.head, target, config, sourcePath, normalizedFieldPath)
-//          case ReshapeConfig.ConflictResolution.LAST =>
-//            reshapeStructField(sources.last, target, config, sourcePath, normalizedFieldPath)
-//        }
-          Left(List(ReshapeError(normalizedFieldPath, s"has ${sources.size} conflicting occurrences")))
+          reshapeStructField(source, target, config, sourceColumn, sourceAttribute = None, normalizedFieldPath)
+        case (sources, target :: Nil) =>
+          config.conflictResolution match {
+            case ReshapeConfig.ConflictResolution.ERROR | ReshapeConfig.ConflictResolution.UNDEFINED | null =>
+              Left(List(ReshapeError(normalizedFieldPath, s"has ${sources.size} conflicting occurrences")))
+            case ReshapeConfig.ConflictResolution.FIRST =>
+              val firstAttribute = sourceAttributes.find(_.name == target.name)
+              reshapeStructField(sources.head, target, config, sourceColumn, firstAttribute, normalizedFieldPath)
+            case ReshapeConfig.ConflictResolution.LAST =>
+              val lastAttribute = sourceAttributes.filter(_.name == target.name).lastOption
+              reshapeStructField(sources.last, target, config, sourceColumn, lastAttribute, normalizedFieldPath)
+          }
         case (sources, Nil) =>
           if (config.failOnExtraColumn) {
             Left(List(ReshapeError(normalizedFieldPath, s"unexpectedly present (${sources.size}x)")))
@@ -206,8 +209,12 @@ object Reshape {
             if (config.dropExtraColumns) {
               Right(List.empty)
             } else {
-              // TODO: Do we need ConflictResolution here?
-              Right(sources.map(f => getNestedColumn(sourceColumn, f.name)))
+              val attributes = sourceAttributes.filter(_.name == normalizedFieldName)
+              if (attributes.nonEmpty) {
+                Right(attributes.map(a => new Column(a)))
+              } else {
+                Right(sources.map(f => getNestedColumn(sourceColumn, f.name)))
+              }
             }
           }
         case (_, targets) if targets.size > 1 =>

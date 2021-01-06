@@ -14,7 +14,6 @@ case class ReshapeConfig(
      */
     coerceTypes: Boolean,
     /**
-     * NOT IMPLEMENTED YET!!!
      * It behaves as [[ReshapeConfig.ConflictResolution.ERROR]] regardless of the config (for now).
      *
      * What should happen when two conflicting column definitions are encountered?

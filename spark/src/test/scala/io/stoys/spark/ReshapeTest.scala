@@ -10,39 +10,51 @@ class ReshapeTest extends SparkTestBase {
   import ReshapeTest._
   import sparkSession.implicits._
 
-  private val records = Seq(Record("foo", 42, NestedRecord("nested")))
+  private val record = Record("foo", 42, NestedRecord("nested"))
+  private val records = Seq(record)
   private lazy val recordsDF = records.toDF()
 
   test("coerceTypes") {
     val fixableDF = recordsDF.selectExpr("42 AS str", "CAST(num AS BYTE) AS num", "nested")
     val fixedDS = Reshape.reshape[Record](fixableDF)
-    assert(fixedDS.collect() === Seq(records.head.copy(str = "42")))
+    assert(fixedDS.collect() === Seq(record.copy(str = "42")))
     val config = ReshapeConfig.default.copy(coerceTypes = false)
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF, config))
     assert(caught.getMessage.contains("str of type IntegerType cannot be casted to StringType"))
     assert(caught.getMessage.contains("num of type ByteType cannot be casted to IntegerType"))
   }
 
-  ignore("conflictResolution") {
-    // TODO: implement conflict resolution
+  test("conflictResolution") {
+    val fixableDF = recordsDF.selectExpr("*", "'second_str' AS str", "'foo' AS extra", "'bar' AS extra")
+
+    val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF))
+    assert(caught.getMessage.contains("str has 2 conflicting occurrences"))
+    val firstConfig = ReshapeConfig.default.copy(conflictResolution = ReshapeConfig.ConflictResolution.FIRST)
+    assert(Reshape.reshape[Record](fixableDF, firstConfig).collect() === Seq(record))
+    val lastConfig = ReshapeConfig.default.copy(conflictResolution = ReshapeConfig.ConflictResolution.LAST)
+    assert(Reshape.reshape[Record](fixableDF, lastConfig).collect() === Seq(record.copy(str = "second_str")))
+
+    assert(Reshape.reshape[Record](fixableDF, lastConfig).columns.count(_ == "extra") === 0)
+    val lastNonDroppingConfig = lastConfig.copy(dropExtraColumns = false)
+    assert(Reshape.reshape[Record](fixableDF, lastNonDroppingConfig).columns.count(_ == "extra") === 2)
   }
 
   test("dropExtraColumns") {
-    val df = recordsDF.selectExpr("*", "'foo' AS extra_column")
+    val df = recordsDF.selectExpr("*", "'foo' AS extra")
     val dsWithoutExtraColumns = Reshape.reshape[Record](df)
     assert(dsWithoutExtraColumns.columns === Seq("str", "num", "nested"))
     val config = ReshapeConfig.default.copy(dropExtraColumns = false)
     val dsWithExtraColumns = Reshape.reshape[Record](df, config)
-    assert(dsWithExtraColumns.columns === Seq("str", "num", "nested", "extra_column"))
+    assert(dsWithExtraColumns.columns === Seq("str", "num", "nested", "extra"))
   }
 
   test("failOnExtraColumn") {
-    val fixableDF = recordsDF.selectExpr("*", "'foo' AS extra_column")
+    val fixableDF = recordsDF.selectExpr("*", "'foo' AS extra")
     val fixedDS = Reshape.reshape[Record](fixableDF)
     assert(fixedDS.collect() === records)
     val config = ReshapeConfig.default.copy(failOnExtraColumn = true)
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF, config))
-    assert(caught.getMessage.contains("extra_column unexpectedly present"))
+    assert(caught.getMessage.contains("extra unexpectedly present"))
   }
 
   test("failOnIgnoringNullability") {
@@ -56,7 +68,7 @@ class ReshapeTest extends SparkTestBase {
   }
 
   test("fillDefaultValues") {
-    val fixableDF = sparkSession.sql("SELECT 'unused' AS dummy_column")
+    val fixableDF = sparkSession.sql("SELECT 'unused' AS dummy")
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF))
     assert(caught.getMessage.contains("str is missing"))
     assert(caught.getMessage.contains("num is missing"))
