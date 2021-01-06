@@ -4,7 +4,7 @@ import io.stoys.scala.Strings
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Cast, CreateArray, CreateMap, Expression, LambdaFunction, Literal, NamedLambdaVariable, TransformKeys, TransformValues}
 import org.apache.spark.sql.catalyst.util.usePrettyExpression
-import org.apache.spark.sql.functions.{coalesce, col, struct}
+import org.apache.spark.sql.functions.{coalesce, col, struct, to_date, to_timestamp}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, DataFrame, Dataset}
 
@@ -140,6 +140,10 @@ object Reshape {
               errors ++= nestedErrors
           }
         }
+      case (_: StringType, _: DateType) if config.dateFormat.isDefined =>
+        column = to_date(column, config.dateFormat.orNull)
+      case (_: StringType, _: TimestampType) if config.timestampFormat.isDefined =>
+        column = to_timestamp(column, config.timestampFormat.orNull)
       case (sourceDataType, targetDataType) if config.coerceTypes && Cast.canCast(sourceDataType, targetDataType) =>
         column = column.cast(targetDataType)
       case (sourceDataType, targetDataType) =>

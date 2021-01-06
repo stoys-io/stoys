@@ -1,5 +1,7 @@
 package io.stoys.spark
 
+import java.sql.{Date, Timestamp}
+
 import io.stoys.scala.Arbitrary
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -104,6 +106,15 @@ class ReshapeTest extends SparkTestBase {
     assert(Reshape.reshape[MapOfRecord](df, config).collect() === Seq(MapOfRecord(Map("0" -> Record("foo", 42, null)))))
   }
 
+  test("custom temporal formats") {
+    val fixableDF = sparkSession.sql("SELECT '02/20/2020' AS date, '02/20/2020 02:20' AS timestamp")
+    assert(Reshape.reshape[TemporalRecord](fixableDF).collect() === Seq(TemporalRecord(null, null)))
+    val config = ReshapeConfig.default.copy(dateFormat = Some("MM/dd/yyyy"), timestampFormat = Some("MM/dd/yyyy HH:mm"))
+    val fixedDS = Reshape.reshape[TemporalRecord](fixableDF, config)
+    assert(fixedDS.collect()
+        === Seq(TemporalRecord(Date.valueOf("2020-02-20"), Timestamp.valueOf("2020-02-20 02:20:00"))))
+  }
+
   test("case insensitive") {
     val fixableDF = sparkSession.sql("SELECT 'foo' AS STR, 42 AS nUm, NULL AS nested")
     val fixedDS = Reshape.reshape[Record](fixableDF)
@@ -131,4 +142,5 @@ object ReshapeTest {
   case class SubsetOfRecord(str: String, nested: NestedRecord)
   case class SeqOfRecord(records: Seq[Record])
   case class MapOfRecord(records: Map[String, Record])
+  case class TemporalRecord(date: Date, timestamp: Timestamp)
 }

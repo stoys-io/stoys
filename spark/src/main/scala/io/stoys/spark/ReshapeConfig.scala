@@ -73,7 +73,15 @@ case class ReshapeConfig(
      *
      * Use [[ReshapeConfig.SortOrder.TARGET]] to get the order of target schema.
      */
-    sortOrder: ReshapeConfig.SortOrder.SortOrder
+    sortOrder: ReshapeConfig.SortOrder.SortOrder,
+    /**
+     * Should we use custom date format string?
+     */
+    dateFormat: Option[String],
+    /**
+     * Should we use custom timestamp format string?
+     */
+    timestampFormat: Option[String]
 )
 
 object ReshapeConfig {
@@ -99,7 +107,9 @@ object ReshapeConfig {
     fillDefaultValues = false,
     fillMissingNulls = false,
     normalizedNameMatching = false,
-    sortOrder = ReshapeConfig.SortOrder.SOURCE
+    sortOrder = ReshapeConfig.SortOrder.SOURCE,
+    dateFormat = None,
+    timestampFormat = None
   )
   val safe: ReshapeConfig = as.copy(
     failOnExtraColumn = true,
