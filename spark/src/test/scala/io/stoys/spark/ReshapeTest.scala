@@ -98,6 +98,12 @@ class ReshapeTest extends SparkTestBase {
     assert(Reshape.reshape[SeqOfRecord](df, config).collect() === Seq(SeqOfRecord(Seq(Record("foo", 42, null)))))
   }
 
+  test("maps") {
+    val df = sparkSession.sql("SELECT MAP(0, STRUCT('foo' AS str, 42 AS num)) AS records")
+    val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeConfig.SortOrder.ALPHABETICAL)
+    assert(Reshape.reshape[MapOfRecord](df, config).collect() === Seq(MapOfRecord(Map("0" -> Record("foo", 42, null)))))
+  }
+
   test("case insensitive") {
     val fixableDF = sparkSession.sql("SELECT 'foo' AS STR, 42 AS nUm, NULL AS nested")
     val fixedDS = Reshape.reshape[Record](fixableDF)
@@ -124,4 +130,5 @@ object ReshapeTest {
   case class Record(str: String, num: Int, nested: NestedRecord)
   case class SubsetOfRecord(str: String, nested: NestedRecord)
   case class SeqOfRecord(records: Seq[Record])
+  case class MapOfRecord(records: Map[String, Record])
 }
