@@ -2,7 +2,7 @@ package io.stoys.spark
 
 import io.stoys.scala.Strings
 import org.apache.spark.sql.catalyst.ScalaReflection
-import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Attribute, Cast, CreateArray, CreateMap, Expression, LambdaFunction, Literal, NamedLambdaVariable, TransformKeys, TransformValues}
+import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Attribute, Cast, CreateArray, CreateMap, Expression, LambdaFunction, Literal, NamedLambdaVariable}
 import org.apache.spark.sql.catalyst.util.usePrettyExpression
 import org.apache.spark.sql.functions.{coalesce, col, struct, to_date, to_timestamp}
 import org.apache.spark.sql.types._
@@ -119,29 +119,30 @@ object Reshape {
           case Left(nestedErrors) =>
             errors ++= nestedErrors
         }
-      case (sourceMapType: MapType, targetMapType: MapType) =>
-        val baseIdentifier = Strings.toWordCharactersCollapsing(normalizedFieldPath)
-        val keyLambdaVar = NamedLambdaVariable(s"_${baseIdentifier}__key", sourceMapType.keyType, nullable = false)
-        val valueLambdaVariable =
-          NamedLambdaVariable(s"_${baseIdentifier}__value", sourceMapType.valueType, sourceMapType.valueContainsNull)
-        if (sourceMapType.keyType != targetMapType.keyType) {
-          reshapeStructField(sourceMapType.keyType, targetMapType.keyType, config, keyLambdaVar) match {
-            case Right(nestedColumns) =>
-              val lambdaFunction = LambdaFunction(nestedColumns.head.expr, Seq(keyLambdaVar, valueLambdaVariable))
-              column = new Column(TransformKeys(column.expr, lambdaFunction))
-            case Left(nestedErrors) =>
-              errors ++= nestedErrors
-          }
-        }
-        if (sourceMapType.valueType != targetMapType.valueType) {
-          reshapeStructField(sourceMapType.valueType, targetMapType.valueType, config, valueLambdaVariable) match {
-            case Right(nestedColumns) =>
-              val lambdaFunction = LambdaFunction(nestedColumns.head.expr, Seq(keyLambdaVar, valueLambdaVariable))
-              column = new Column(TransformValues(column.expr, lambdaFunction))
-            case Left(nestedErrors) =>
-              errors ++= nestedErrors
-          }
-        }
+      // TODO: Should we create multi version build? This works only in Spark 3+ ( 3.1 even has transform_key function).
+//      case (sourceMapType: MapType, targetMapType: MapType) =>
+//        val baseIdentifier = Strings.toWordCharactersCollapsing(normalizedFieldPath)
+//        val keyLambdaVar = NamedLambdaVariable(s"_${baseIdentifier}__key", sourceMapType.keyType, nullable = false)
+//        val valueLambdaVariable =
+//          NamedLambdaVariable(s"_${baseIdentifier}__value", sourceMapType.valueType, sourceMapType.valueContainsNull)
+//        if (sourceMapType.keyType != targetMapType.keyType) {
+//          reshapeStructField(sourceMapType.keyType, targetMapType.keyType, config, keyLambdaVar) match {
+//            case Right(nestedColumns) =>
+//              val lambdaFunction = LambdaFunction(nestedColumns.head.expr, Seq(keyLambdaVar, valueLambdaVariable))
+//              column = new Column(TransformKeys(column.expr, lambdaFunction))
+//            case Left(nestedErrors) =>
+//              errors ++= nestedErrors
+//          }
+//        }
+//        if (sourceMapType.valueType != targetMapType.valueType) {
+//          reshapeStructField(sourceMapType.valueType, targetMapType.valueType, config, valueLambdaVariable) match {
+//            case Right(nestedColumns) =>
+//              val lambdaFunction = LambdaFunction(nestedColumns.head.expr, Seq(keyLambdaVar, valueLambdaVariable))
+//              column = new Column(TransformValues(column.expr, lambdaFunction))
+//            case Left(nestedErrors) =>
+//              errors ++= nestedErrors
+//          }
+//        }
       case (_: StringType, _: DateType) if config.dateFormat.isDefined =>
         column = to_date(column, config.dateFormat.orNull)
       case (_: StringType, _: TimestampType) if config.timestampFormat.isDefined =>
