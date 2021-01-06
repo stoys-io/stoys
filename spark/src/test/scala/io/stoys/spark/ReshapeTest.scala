@@ -12,13 +12,13 @@ class ReshapeTest extends SparkTestBase {
   private lazy val recordsDF = records.toDF()
 
   test("coerceTypes") {
-    val fixableDF = recordsDF.selectExpr("42 AS str", "CAST(num AS byte) AS num", "nested")
+    val fixableDF = recordsDF.selectExpr("42 AS str", "CAST(num AS BYTE) AS num", "nested")
     val fixedDS = Reshape.reshape[Record](fixableDF)
     assert(fixedDS.collect() === Seq(records.head.copy(str = "42")))
     val config = ReshapeConfig.default.copy(coerceTypes = false)
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF, config))
-    assert(caught.getMessage.contains("str type IntegerType cannot be casted to target type StringType"))
-    assert(caught.getMessage.contains("num type ByteType cannot be casted to target type IntegerType"))
+    assert(caught.getMessage.contains("str of type IntegerType cannot be casted to StringType"))
+    assert(caught.getMessage.contains("num of type ByteType cannot be casted to IntegerType"))
   }
 
   ignore("conflictResolution") {
@@ -93,14 +93,13 @@ class ReshapeTest extends SparkTestBase {
   }
 
   test("arrays") {
-    val df = sparkSession.sql("SELECT array(struct('str', 'foo')) AS records")
+    val df = sparkSession.sql("SELECT ARRAY(STRUCT(42 AS num, 'foo' AS str)) AS records")
     val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeConfig.SortOrder.ALPHABETICAL)
-    val ds = Reshape.reshape[SeqOfRecord](df, config)
-    assert(ds.collect() === Seq(SeqOfRecord(Seq(Record(null, 0, null)))))
+    assert(Reshape.reshape[SeqOfRecord](df, config).collect() === Seq(SeqOfRecord(Seq(Record("foo", 42, null)))))
   }
 
   test("case insensitive") {
-    val fixableDF = sparkSession.sql("SELECT 'foo' AS STR, 42 AS nUm, null AS nested")
+    val fixableDF = sparkSession.sql("SELECT 'foo' AS STR, 42 AS nUm, NULL AS nested")
     val fixedDS = Reshape.reshape[Record](fixableDF)
     assert(fixedDS.collect() === Seq(Record("foo", 42, null)))
   }
