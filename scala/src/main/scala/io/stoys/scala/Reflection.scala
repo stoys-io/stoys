@@ -243,13 +243,24 @@ object Reflection {
     getAnnotationParams(annotation.tree)
   }
 
-  // TODO: Add variant returning runtime type checked map.
   def getAnnotationParams[A: TypeTag](symbol: Symbol): Option[Seq[(String, Any)]] = {
     symbol.annotations.find(_.tree.tpe =:= localTypeOf[A]).map(getAnnotationParams)
   }
 
   def getAnnotationParams[T: TypeTag, A: TypeTag]: Option[Seq[(String, Any)]] = {
     getAnnotationParams[A](typeSymbolOf[T])
+  }
+
+  def getAnnotationParamsMap[A: TypeTag](symbol: Symbol): Map[String, Any] = {
+    getAnnotationParams[A](symbol).getOrElse(Seq.empty).toMap
+  }
+
+  def getAnnotationParamsMap[T: TypeTag, A: TypeTag]: Map[String, Any] = {
+    getAnnotationParamsMap[A](typeSymbolOf[T])
+  }
+
+  def getAllAnnotationsParamsMap(symbol: Symbol): Map[String, Map[String, Any]] = {
+    symbol.annotations.map(a => fullTypeNameOf(a.tree.tpe) -> getAnnotationParams(a).toMap).toMap
   }
 
   private def renderAnnotation(annotation: Annotation): String = {

@@ -64,7 +64,7 @@ class ReflectionTest extends AnyFunSuite {
     assert(isAnnotated[RegularClass, TestAnnotation] === true)
     assert(isAnnotated[AnnotatedRecordAlias, TestAnnotation] === isAnnotated[Record, TestAnnotation])
 
-    assert(recordsFields.filter(f => isAnnotated[TestAnnotation](f)).map(_.name.toString) === Seq("s"))
+    assert(recordsFields.filter(f => isAnnotated[TestAnnotation](f)).map(_.name.toString) === Seq("s", "i"))
   }
 
   test("assertAnnotatedCaseClass") {
@@ -125,6 +125,7 @@ class ReflectionTest extends AnyFunSuite {
   }
 
   test("getAnnotationParams") {
+    assert(getAnnotationParams[Record, TestAnnotationValue] === None)
     assert(getAnnotationParams[Record, TestAnnotation] === Some(Seq.empty))
     assert(getAnnotationParams[TestAnnotation](symbolOf[Record]) === Some(Seq.empty))
     // We cannot dealias getAnnotationParams as we would break it for fields.
@@ -138,6 +139,18 @@ class ReflectionTest extends AnyFunSuite {
       "enumValue" -> TestEnum.BAR,
       "classValue" -> classOf[Record],
       "annotationValue" -> Seq("value" -> "foo"))))
+  }
+
+  test("getAnnotationParamsMap") {
+    assert(getAnnotationParamsMap[Record, TestAnnotationValue] === Map.empty)
+    assert(getAnnotationParamsMap[Record, TestAnnotation] === Map.empty)
+  }
+
+  test("getAllAnnotationsParamsMap") {
+    assert(recordsFields.map(getAllAnnotationsParamsMap) === Seq(
+      Map("io.stoys.scala.TestAnnotation" -> Map.empty, "io.stoys.scala.TestAnnotationValue" -> Map("value" -> "foo")),
+      Map("io.stoys.scala.TestAnnotation" -> Map.empty),
+      Map.empty))
   }
 
   test("renderAnnotatedType") {
@@ -170,7 +183,13 @@ class ReflectionTest extends AnyFunSuite {
 
 object ReflectionTest {
   @TestAnnotation
-  case class Record(@TestAnnotation s: String, i: Int, nested: NestedRecord)
+  case class Record(
+      @TestAnnotation @TestAnnotationValue("foo")
+      s: String,
+      @TestAnnotation
+      i: Int,
+      nested: NestedRecord
+  )
 
   case class NestedRecord(d: Double)
 

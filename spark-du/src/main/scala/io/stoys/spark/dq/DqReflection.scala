@@ -13,7 +13,7 @@ object DqReflection {
   }
 
   private def getDqField(field: Symbol): DqField = {
-    val dqField = getAnnotationParams[annotation.DqField](field).getOrElse(Seq.empty).toMap
+    val dqField = getAnnotationParamsMap[annotation.DqField](field)
     val dqFieldNullable = dqField.get("nullable").asInstanceOf[Option[Boolean]]
     val dqFieldEnumValues = dqField.getOrElse("enumValues", Seq.empty[String]).asInstanceOf[Seq[String]]
     val dqFieldFormat = dqField.get("format").asInstanceOf[Option[String]]
