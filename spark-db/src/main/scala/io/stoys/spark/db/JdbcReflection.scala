@@ -3,15 +3,16 @@ package io.stoys.spark.db
 import io.stoys.scala.{Reflection, Strings}
 import io.stoys.spark.{SToysException, TableName}
 
-import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
 object JdbcReflection {
+  import Reflection._
+
   val DEFAULT_COLUMN_LENGTH: Int =
     classOf[javax.persistence.Column].getDeclaredMethod("length").getDefaultValue.asInstanceOf[java.lang.Integer]
 
-  def getColumnName(symbol: Symbol): String = {
-    Strings.toSnakeCase(Reflection.termNameOf(symbol))
+  private def getColumnName(symbol: Symbol): String = {
+    Strings.toSnakeCase(nameOf(symbol))
   }
 
   def getQualifiedTableName[T <: Product](tableName: TableName[T], schemaName: String): String = {
@@ -20,28 +21,27 @@ object JdbcReflection {
   }
 
   def getCreateTableStatement[T <: Product](tableName: TableName[T], schemaName: String): String = {
-    implicit val typeTagT: universe.TypeTag[T] = tableName.typeTag
-    Reflection.assertAnnotatedCaseClass[T, javax.persistence.Entity]()
+    assertAnnotatedCaseClass[javax.persistence.Entity](tableName.typeTag.tpe)
+    val fields = getCaseClassFields(tableName.typeTag.tpe)
     val qualifiedTableName = getQualifiedTableName[T](tableName, schemaName)
-    val sqlTypes = Reflection.getCaseClassFields[T].map(getSqlTypeName)
+    val sqlTypes = cleanupReflection(fields.map(getSqlTypeName))
     sqlTypes.mkString(s"CREATE TABLE $qualifiedTableName (\n  ", ",\n  ", "\n);")
   }
 
   def getAddConstraintStatements[T <: Product](tableName: TableName[T], schemaName: String): Seq[String] = {
-    implicit val typeTagT: universe.TypeTag[T] = tableName.typeTag
-    Reflection.assertAnnotatedCaseClass[T, javax.persistence.Entity]()
-    val fields = Reflection.getCaseClassFields[T]
+    assertAnnotatedCaseClass[javax.persistence.Entity](tableName.typeTag.tpe)
+    val fields = getCaseClassFields(tableName.typeTag.tpe)
     val fullTableName = tableName.fullTableName()
     val qualifiedTableName = getQualifiedTableName[T](tableName, schemaName)
     val fieldsWithColumnAnnotation =
-      fields.flatMap(f => Reflection.getAnnotationParams[javax.persistence.Column](f).map(ap => (f, ap.toMap)))
+      fields.flatMap(f => getAnnotationParams[javax.persistence.Column](f).map(ap => (f, ap.toMap)))
     val uniqueColumnConstraints = fieldsWithColumnAnnotation.collect {
       case (field, columnAnnotationParams) if columnAnnotationParams.getOrElse("unique", false) == true =>
         val columnName = getColumnName(field)
         s"ALTER TABLE $qualifiedTableName ADD CONSTRAINT ${fullTableName}_$columnName UNIQUE ($columnName);"
     }
     val idColumnNames = fields.collect {
-      case field if field.annotations.exists(_.tree.tpe =:= typeOf[javax.persistence.Id]) => getColumnName(field)
+      case field if isAnnotated[javax.persistence.Id](field) => getColumnName(field)
     }
     val uniqueKeyConstraint = Option(idColumnNames).filter(_.nonEmpty).map(columnNames =>
       s"ALTER TABLE $qualifiedTableName ADD PRIMARY KEY (${columnNames.mkString(", ")});")
@@ -49,35 +49,37 @@ object JdbcReflection {
   }
 
   // Note: This may need some work per db type. It seems fine for mysql, postgres and h2.
-  def getSqlTypeName(param: Symbol): String = {
-    val column = Reflection.getAnnotationParams[javax.persistence.Column](param).getOrElse(Seq.empty).toMap
-    val lob = Reflection.getAnnotationParams[javax.persistence.Lob](param)
-    val rawParamType = param.typeSignature.dealias
-    val isOption = rawParamType <:< typeOf[Option[_]]
+  private def getSqlTypeName(field: Symbol): String = {
+    val column = getAnnotationParams[javax.persistence.Column](field).getOrElse(Seq.empty).toMap
+    val lob = getAnnotationParams[javax.persistence.Lob](field)
+
+    val rawFieldType = field.typeSignature.dealias
+    val isOption = isSubtype(rawFieldType, localTypeOf[Option[_]])
+    val fieldType = if (isOption) rawFieldType.typeArgs.head else rawFieldType
+
     val maybeNotNullSuffix = if (isOption) "" else " NOT NULL"
-    val paramType = if (isOption) rawParamType.typeArgs.head else rawParamType
     val fullSqlType = if (column.contains("columnDefinition")) {
       column("columnDefinition")
-    } else if (paramType =:= typeOf[String] && lob.isDefined) {
+    } else if (fieldType =:= typeOf[String] && lob.isDefined) {
       s"TEXT$maybeNotNullSuffix"
     } else {
-      val sqlType = paramType match {
-        case t if t =:= typeOf[Boolean] => "BOOLEAN"
-//        case t if t =:= typeOf[Byte] => "TINYINT UNSIGNED"
-//        case t if t =:= typeOf[Short] => "SMALLINT"
-//        case t if t =:= typeOf[Char] => "CHAR"
-        case t if t =:= typeOf[Int] => "INT"
-        case t if t =:= typeOf[Long] => "BIGINT"
-        case t if t =:= typeOf[Float] => "FLOAT"
-        case t if t =:= typeOf[Double] => "DOUBLE"
-        case t if t =:= typeOf[String] => s"VARCHAR(${column.getOrElse("length", DEFAULT_COLUMN_LENGTH)})"
-        case t if t =:= typeOf[java.sql.Date] => "DATE"
-        case t if t <:< typeOf[Iterable[_]] => "JSON"
-        case t if Reflection.isCaseClass(t) => "JSON"
-        case _ => throw new SToysException(s"Unsupported type ${Reflection.renderAnnotatedSymbol(param)}!")
+      val sqlType = fieldType match {
+        case t if t =:= definitions.BooleanTpe => "BOOLEAN"
+//        case t if t =:= definitions.ByteTpe => "TINYINT UNSIGNED"
+//        case t if t =:= definitions.ShortTpe => "SMALLINT"
+//        case t if t =:= definitions.CharTpe => "CHAR"
+        case t if t =:= definitions.IntTpe => "INT"
+        case t if t =:= definitions.LongTpe => "BIGINT"
+        case t if t =:= definitions.FloatTpe => "FLOAT"
+        case t if t =:= definitions.DoubleTpe => "DOUBLE"
+        case t if t =:= localTypeOf[String] => s"VARCHAR(${column.getOrElse("length", DEFAULT_COLUMN_LENGTH)})"
+        case t if t =:= localTypeOf[java.sql.Date] => "DATE"
+        case t if isSubtype(t, localTypeOf[Iterable[_]]) => "JSON"
+        case t if isCaseClass(t) => "JSON"
+        case _ => throw new SToysException(s"Unsupported type ${renderAnnotatedType(field.typeSignature)}!")
       }
       s"$sqlType$maybeNotNullSuffix"
     }
-    s"${getColumnName(param)} $fullSqlType"
+    s"${getColumnName(field)} $fullSqlType"
   }
 }

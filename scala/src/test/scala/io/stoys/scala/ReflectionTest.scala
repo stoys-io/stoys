@@ -8,69 +8,73 @@ class ReflectionTest extends AnyFunSuite {
   import Reflection._
   import ReflectionTest._
 
-  test("dealiasedTypeOf") {
-    assert(dealiasedTypeOf[Record].typeSymbol.name.toString === "Record")
-    assert(dealiasedTypeOf[Record] === typeOf[Record])
-    assert(dealiasedTypeOf[RecordAlias] === dealiasedTypeOf[Record])
+  private val record = Record("foo", 42, NestedRecord(42.0))
+  private val recordsFields = typeTag[Record].tpe.typeSymbol.asClass.primaryConstructor.asMethod.paramLists.flatten
+
+  test("localTypeOf") {
+    assert(localTypeOf[Record].typeSymbol.name.toString === "Record")
+    assert(localTypeOf[AnnotatedRecordAlias] === localTypeOf[Record])
   }
 
-  test("dealiasedTypeSymbolOf") {
-    assert(dealiasedTypeSymbolOf[Record].name.toString === "Record")
-    assert(dealiasedTypeSymbolOf[Record] === symbolOf[Record])
-    assert(dealiasedTypeSymbolOf(symbolOf[Record]) === symbolOf[Record])
-    assert(dealiasedTypeSymbolOf[RecordAlias] === dealiasedTypeSymbolOf[Record])
-    assert(dealiasedTypeSymbolOf(symbolOf[RecordAlias]) === dealiasedTypeSymbolOf(symbolOf[Record]))
+  test("typeSymbolOf") {
+    assert(typeSymbolOf[Record] === symbolOf[Record])
+    assert(typeSymbolOf(typeOf[Record]) === symbolOf[Record])
+    assert(typeSymbolOf[AnnotatedRecordAlias] === typeSymbolOf[Record])
+  }
+
+  test("nameOf") {
+    assert(nameOf(symbolOf[Record]) === "Record")
+    assert(nameOf(symbolOf[AnnotatedRecordAlias]) === "AnnotatedRecordAlias")
+
+    assert(recordsFields.map(nameOf) === Seq("s", "i", "nested"))
   }
 
   test("typeNameOf") {
     assert(typeNameOf[Record] === "Record")
     assert(typeNameOf(typeOf[Record]) === "Record")
     assert(typeNameOf(symbolOf[Record]) === "Record")
+    assert(typeNameOf[AnnotatedRecordAlias] === typeNameOf[Record])
 
-    assert(typeNameOf[NestedRecord] === "NestedRecord")
-    assert(typeNameOf[RegularClass] === "RegularClass")
-
-    assert(typeNameOf[RecordAlias] === typeNameOf[Record])
-    assert(typeNameOf(typeOf[RecordAlias]) === typeNameOf(typeOf[Record]))
-    assert(typeNameOf(symbolOf[RecordAlias]) === typeNameOf(symbolOf[Record]))
-
-    assert(getCaseClassFields[Record].map(typeNameOf) === Seq("String", "Int", "NestedRecord"))
-    assert(getCaseClassFields[NestedRecord].map(typeNameOf) === Seq("Double"))
-    assert(getCaseClassFields[RecordAlias].map(typeNameOf) === Seq("String", "Int", "NestedRecord"))
+    assert(recordsFields.map(typeNameOf) === Seq("String", "Int", "NestedRecord"))
   }
 
-  test("termNameOf") {
-    assert(termNameOf(symbolOf[Record]) === "Record")
+  test("fullTypeNameOf") {
+    assert(fullTypeNameOf[Record] === classOf[Record].getCanonicalName)
+    assert(fullTypeNameOf(typeOf[Record]) === classOf[Record].getCanonicalName)
+    assert(fullTypeNameOf(symbolOf[Record]) === classOf[Record].getCanonicalName)
+    assert(fullTypeNameOf[AnnotatedRecordAlias] === fullTypeNameOf[Record])
 
-    assert(getCaseClassFields[Record].map(termNameOf) === Seq("s", "i", "nested"))
-    assert(getCaseClassFields[NestedRecord].map(termNameOf) === Seq("d"))
-    assert(getCaseClassFields[RecordAlias].map(termNameOf) === Seq("s", "i", "nested"))
+    assert(recordsFields.map(fullTypeNameOf)
+        === Seq("java.lang.String", "scala.Int", classOf[NestedRecord].getCanonicalName))
   }
 
   test("isCaseClass") {
     assert(isCaseClass[Record] === true)
     assert(isCaseClass(typeOf[Record]) === true)
     assert(isCaseClass(symbolOf[Record]) === true)
-
-    assert(isCaseClass[NestedRecord] === true)
     assert(isCaseClass[RegularClass] === false)
-
-    assert(isCaseClass[RecordAlias] === isCaseClass[Record])
-    assert(isCaseClass(typeOf[RecordAlias]) === isCaseClass(typeOf[Record]))
-    assert(isCaseClass(symbolOf[RecordAlias]) === isCaseClass(symbolOf[Record]))
+    assert(isCaseClass[AnnotatedRecordAlias] === isCaseClass[Record])
   }
 
   test("isAnnotated") {
     assert(isAnnotated[Record, TestAnnotation] === true)
+    assert(isAnnotated[TestAnnotation](symbolOf[Record]) === true)
+    assert(isAnnotated(symbolOf[Record], typeOf[TestAnnotation]) === true)
     assert(isAnnotated[NestedRecord, TestAnnotation] === false)
     assert(isAnnotated[RegularClass, TestAnnotation] === true)
-    assert(isAnnotated[RecordAlias, TestAnnotation] === isAnnotated[Record, TestAnnotation])
+    assert(isAnnotated[AnnotatedRecordAlias, TestAnnotation] === isAnnotated[Record, TestAnnotation])
+
+    assert(recordsFields.filter(f => isAnnotated[TestAnnotation](f)).map(_.name.toString) === Seq("s"))
   }
 
   test("assertAnnotatedCaseClass") {
     assertCaseClass[Record]()
+    assertCaseClass(symbolOf[Record])
+    assertCaseClass(typeOf[Record])
     assertAnnotated[Record, TestAnnotation]()
     assertAnnotatedCaseClass[Record, TestAnnotation]()
+    assertAnnotatedCaseClass[TestAnnotation](symbolOf[Record])
+    assertAnnotatedCaseClass[TestAnnotation](typeOf[Record])
 
     assertCaseClass[NestedRecord]()
     assertThrows[IllegalArgumentException](assertAnnotated[NestedRecord, TestAnnotation]())
@@ -80,38 +84,38 @@ class ReflectionTest extends AnyFunSuite {
     assertAnnotated[RegularClass, TestAnnotation]()
     assertThrows[IllegalArgumentException](assertAnnotatedCaseClass[NestedRecord, TestAnnotation]())
 
-    assertCaseClass[RecordAlias]()
-    assertAnnotated[RecordAlias, TestAnnotation]()
-    assertAnnotatedCaseClass[RecordAlias, TestAnnotation]()
+    assertCaseClass[AnnotatedRecordAlias]()
+    assertAnnotated[AnnotatedRecordAlias, TestAnnotation]()
+    assertAnnotatedCaseClass[AnnotatedRecordAlias, TestAnnotation]()
   }
 
   test("getCaseClassFields") {
-    val recordFields = getCaseClassFields[Record]
-    val recordFieldSimplified = recordFields.map(s => s.name.toString -> s.info.toString)
-    assert(recordFieldSimplified === Seq(
-      "s" -> "String", "i" -> "Int", "nested" -> classOf[NestedRecord].getName.replace('$', '.')))
-    assert(getCaseClassFields[RecordAlias] === getCaseClassFields[Record])
+    assert(getCaseClassFields[Record] === recordsFields)
+    assert(getCaseClassFields[Record].map(s => s.name.toString -> s.info.toString)
+        === Seq("s" -> "String", "i" -> "Int", "nested" -> classOf[NestedRecord].getCanonicalName))
+    assert(getCaseClassFields[AnnotatedRecordAlias] === getCaseClassFields[Record])
   }
 
   test("getCaseClassFieldNames") {
     assert(getCaseClassFieldNames[Record] === Seq("s", "i", "nested"))
-    assert(getCaseClassFieldNames[RecordAlias] === getCaseClassFieldNames[Record])
+    assert(getCaseClassFieldNames[AnnotatedRecordAlias] === getCaseClassFieldNames[Record])
   }
 
   test("createCaseClassInstance") {
-    assert(createCaseClassInstance[Record](Seq("foo", 1, NestedRecord(0.0))) === Record("foo", 1, NestedRecord(0.0)))
+    assert(createCaseClassInstance[Record](Seq("foo", 42, NestedRecord(42.0))) === record)
     assertThrows[RuntimeException](createCaseClassInstance[Record](Seq("missingArgs")))
-    assertThrows[RuntimeException](createCaseClassInstance[Record](Seq(1, "wrongOrderArgs", NestedRecord(0.0))))
+    assertThrows[RuntimeException](createCaseClassInstance[Record](Seq(42, "wrongOrderArgs", NestedRecord(42.0))))
+    assert(createCaseClassInstance[AnnotatedRecordAlias](Seq("foo", 42, NestedRecord(42.0))) === record)
   }
 
-  test("getEnumerationValues") {
-    val enumerationValues = getEnumerationValues(typeToTypeTag(typeOf[FooBarBaz.FooBarBaz]))
+  test("enumerationValuesOf") {
+    val enumerationValues = enumerationValuesOf[FooBarBaz.FooBarBaz]
     assert(enumerationValues.map(_.toString) === Seq("FOO", "BAR", "BAZ"))
-    assertThrows[ScalaReflectionException](getEnumerationValues(typeToTypeTag(typeOf[Record])))
+    assert(enumerationValues === enumerationValuesOf(typeOf[FooBarBaz.FooBarBaz]))
+    assertThrows[ScalaReflectionException](enumerationValuesOf(typeOf[Record]))
   }
 
   test("getFieldValue") {
-    val record = Record("foo", 42, NestedRecord(42.0))
     assert(getFieldValue(record, "s") === "foo")
     assert(getFieldValue(record, "i") === 42)
     assert(getFieldValue(record, "nested") === NestedRecord(42.0))
@@ -121,13 +125,14 @@ class ReflectionTest extends AnyFunSuite {
   }
 
   test("getAnnotationParams") {
+    assert(getAnnotationParams[Record, TestAnnotation] === Some(Seq.empty))
     assert(getAnnotationParams[TestAnnotation](symbolOf[Record]) === Some(Seq.empty))
     // We cannot dealias getAnnotationParams as we would break it for fields.
-    assert(getAnnotationParams[TestAnnotation](symbolOf[RecordAlias]) === None)
+    assert(getAnnotationParams[TestAnnotation](symbolOf[AnnotatedRecordAlias]) === None)
 
-    assert(getAnnotationParams[TestAnnotation](symbolOf[NotAnnotated]) === None)
-    assert(getAnnotationParams[TestAnnotation](symbolOf[AnnotatedNoParams]) === Some(Seq.empty))
-    assert(getAnnotationParams[TestAnnotation](symbolOf[AnnotatedExplicitParams]) === Some(Seq(
+    assert(getAnnotationParams[NotAnnotated, TestAnnotation] === None)
+    assert(getAnnotationParams[AnnotatedNoParams, TestAnnotation] === Some(Seq.empty))
+    assert(getAnnotationParams[AnnotatedExplicitParams, TestAnnotation] === Some(Seq(
       "stringValue" -> "overridden",
       "arrayValue" -> Seq(4, 2),
       "enumValue" -> TestEnum.BAR,
@@ -135,21 +140,22 @@ class ReflectionTest extends AnyFunSuite {
       "annotationValue" -> Seq("value" -> "foo"))))
   }
 
-  test("renderAnnotatedSymbol") {
-    assert(renderAnnotatedSymbol(symbolOf[NotAnnotated]) === "NotAnnotated")
-    assert(renderAnnotatedSymbol(symbolOf[AnnotatedNoParams]) === "@TestAnnotation() AnnotatedNoParams")
-    assert(renderAnnotatedSymbol(symbolOf[AnnotatedExplicitParams]) === "@TestAnnotation(" +
+  test("renderAnnotatedType") {
+    assert(renderAnnotatedType[NotAnnotated] === "NotAnnotated")
+    assert(renderAnnotatedType[AnnotatedNoParams] === "@TestAnnotation() AnnotatedNoParams")
+    assert(renderAnnotatedType[AnnotatedExplicitParams] === "@TestAnnotation(" +
         "stringValue = \"overridden\"," +
         " arrayValue = List(4, 2)," +
         " enumValue = BAR," +
         " classValue = class io.stoys.scala.ReflectionTest$Record," +
         " annotationValue = List((value,foo))" +
         ") AnnotatedExplicitParams")
+    assert(renderAnnotatedType(typeOf[AnnotatedRecordAlias]) === renderAnnotatedType[Record])
   }
 
   test("classNameToTypeTag") {
     assert(classNameToTypeTag(classOf[Record].getName).tpe =:= typeTag[Record].tpe)
-    assert(getCaseClassFields(classNameToTypeTag(classOf[Record].getName)) === getCaseClassFields(typeTag[Record]))
+    assert(getCaseClassFields(classNameToTypeTag(classOf[Record].getName)) === getCaseClassFields[Record])
   }
 
   test("copyCaseClass") {
@@ -164,11 +170,11 @@ class ReflectionTest extends AnyFunSuite {
 
 object ReflectionTest {
   @TestAnnotation
-  case class Record(s: String, i: Int, nested: NestedRecord)
+  case class Record(@TestAnnotation s: String, i: Int, nested: NestedRecord)
 
   case class NestedRecord(d: Double)
 
-  type RecordAlias = Record
+  type AnnotatedRecordAlias = Record @TestAnnotation
 
   @TestAnnotation
   class RegularClass
@@ -178,10 +184,10 @@ object ReflectionTest {
     val FOO, BAR, BAZ = Value
   }
 
-  case class NotAnnotated(value: String)
+  case class NotAnnotated(s: String)
 
   @TestAnnotation
-  case class AnnotatedNoParams(value: String)
+  case class AnnotatedNoParams(s: String)
 
   @TestAnnotation(
     stringValue = "overridden",
@@ -189,5 +195,5 @@ object ReflectionTest {
     enumValue = TestEnum.BAR,
     classValue = classOf[Record],
     annotationValue = new TestAnnotationValue(value = "foo"))
-  case class AnnotatedExplicitParams(value: String)
+  case class AnnotatedExplicitParams(s: String)
 }

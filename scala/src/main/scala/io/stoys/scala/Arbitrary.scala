@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time._
 import java.time.temporal.Temporal
+import java.util.Date
 import java.util.concurrent.atomic.AtomicLong
 
 import scala.reflect.runtime.universe._
@@ -42,6 +43,8 @@ class Arbitrary(strategy: Arbitrary.ArbitraryStrategy.Value, seed: Long = 0) {
 }
 
 object Arbitrary {
+  import Reflection._
+
   object ArbitraryStrategy extends Enumeration {
     val CONSTANT, DEFAULT, EMPTY, HASHED, HASHED_CONSTANT, INDEXED, INDEXED_CONSTANT, PROTO, RANDOM = Value
   }
@@ -84,31 +87,39 @@ object Arbitrary {
     make[T](new ConstantDistribution(value))
   }
 
-  def default[T <: Product : TypeTag]: T = {
-    val args = Reflection.getCaseClassFields[T].map { param =>
-      param.typeSignature.dealias match {
-        case t if t <:< typeOf[AnyVal] => makePrimitive(t, 0)
-        case t if Reflection.isCaseClass(t) => default(Reflection.typeToTypeTag(t))
+  private def default(tpe: Type): Any = {
+    val args = getCaseClassFields(tpe).map { param =>
+      baseType(param.typeSignature) match {
+        case t if isSubtype(t, typeOf[AnyVal]) => makePrimitive(t, 0)
+        case t if isCaseClass(t) => default(t)
         case _ => null
       }
     }
-    Reflection.createCaseClassInstance[T](args)
+    createCaseClassInstance(tpe, args)
   }
 
-  def empty[T <: Product : TypeTag]: T = {
-    val args = Reflection.getCaseClassFields[T].map { param =>
-      param.typeSignature.dealias match {
-        case t if t <:< typeOf[AnyVal] => makePrimitive(t, 0)
-        case t if t =:= typeOf[String] => null
-        case t if t <:< typeOf[Enumeration#Value] => makeEnumerationValue(0)(Reflection.typeToTypeTag(t))
-        case t if t <:< typeOf[Option[_]] => Option.empty
-        case t if t <:< typeOf[Iterable[_]] => makeEmptyCollection(t)
-        case t if t <:< typeOf[Temporal] || t <:< typeOf[java.util.Date] => null
-        case t if Reflection.isCaseClass(t) => empty(Reflection.typeToTypeTag(t))
+  def default[T <: Product : TypeTag]: T = cleanupReflection {
+    default(localTypeOf[T]).asInstanceOf[T]
+  }
+
+  private def empty(tpe: Type): Any = {
+    val args = getCaseClassFields(tpe).map { param =>
+      baseType(param.typeSignature) match {
+        case t if isSubtype(t, definitions.AnyValTpe) => makePrimitive(t, 0)
+        case t if isSubtype(t, localTypeOf[String]) => null
+        case t if isSubtype(t, localTypeOf[Enumeration#Value]) => makeEnumerationValue(t, 0)
+        case t if isSubtype(t, localTypeOf[Option[_]]) => Option.empty
+        case t if isSubtype(t, localTypeOf[Iterable[_]]) => makeEmptyCollection(t)
+        case t if isSubtype(t, localTypeOf[Temporal]) || isSubtype(t, localTypeOf[Date]) => null
+        case t if isCaseClass(t) => empty(t)
         case _ => null
       }
     }
-    Reflection.createCaseClassInstance[T](args)
+    createCaseClassInstance(tpe, args)
+  }
+
+  def empty[T <: Product : TypeTag]: T = cleanupReflection {
+    empty(localTypeOf[T]).asInstanceOf[T]
   }
 
   def hashed[T <: Product : TypeTag](salt: Long): T = {
@@ -120,82 +131,89 @@ object Arbitrary {
     make[T](new CounterDistribution(counter))
   }
 
-  def proto[T <: Product : TypeTag]: T = {
-    val args = Reflection.getCaseClassFields[T].map { param =>
-      param.typeSignature.dealias match {
-        case t if t <:< typeOf[AnyVal] => makePrimitive(t, 0)
-        case t if t =:= typeOf[String] => ""
-        case t if t <:< typeOf[Enumeration#Value] => makeEnumerationValue(0)(Reflection.typeToTypeTag(t))
-        case t if t <:< typeOf[Option[_]] => Option.empty
-        case t if t <:< typeOf[Iterable[_]] => makeEmptyCollection(t)
-        case t if t <:< typeOf[Temporal] || t <:< typeOf[java.util.Date] => null
-        case t if Reflection.isCaseClass(t) => proto(Reflection.typeToTypeTag(t))
+  private def proto(tpe: Type): Any = {
+    val args = getCaseClassFields(tpe).map { param =>
+      baseType(param.typeSignature) match {
+        case t if isSubtype(t, definitions.AnyValTpe) => makePrimitive(t, 0)
+        case t if isSubtype(t, localTypeOf[String]) => ""
+        case t if isSubtype(t, localTypeOf[Enumeration#Value]) => makeEnumerationValue(t, 0)
+        case t if isSubtype(t, localTypeOf[Option[_]]) => Option.empty
+        case t if isSubtype(t, localTypeOf[Iterable[_]]) => makeEmptyCollection(t)
+        case t if isSubtype(t, localTypeOf[Temporal]) || isSubtype(t, localTypeOf[Date]) => null
+        case t if isCaseClass(t) => proto(t)
         case _ => null
       }
     }
-    Reflection.createCaseClassInstance[T](args)
+    createCaseClassInstance(tpe, args)
+  }
+
+  def proto[T <: Product : TypeTag]: T = cleanupReflection {
+    proto(localTypeOf[T]).asInstanceOf[T]
   }
 
   def random[T <: Product : TypeTag](seed: Long): T = {
     make[T](new RandomDistribution(seed))
   }
 
-  def make[T <: Product : TypeTag](distribution: NaiveDistribution): T = {
-    val args = Reflection.getCaseClassFields[T].map { param =>
+  private def make(tpe: Type, distribution: NaiveDistribution): Any = {
+    val args = getCaseClassFields(tpe).map { param =>
       val number = distribution.sample(param)
-      param.typeSignature.dealias match {
-        case t if t <:< typeOf[AnyVal] => makePrimitive(t, number)
-        case t if t =:= typeOf[String] => number.toString
-        case t if t <:< typeOf[Enumeration#Value] => makeEnumerationValue(number)(Reflection.typeToTypeTag(t))
-        case t if t <:< typeOf[Option[_]] => Option.empty
-        case t if t <:< typeOf[Iterable[_]] => makeEmptyCollection(t)
-        case t if t <:< typeOf[Temporal] || t <:< typeOf[java.util.Date] => makeTemporal(t, number)
-        case t if Reflection.isCaseClass(t) => make(distribution)(Reflection.typeToTypeTag(t))
+      baseType(param.typeSignature) match {
+        case t if isSubtype(t, definitions.AnyValTpe) => makePrimitive(t, number)
+        case t if isSubtype(t, localTypeOf[String]) => number.toString
+        case t if isSubtype(t, localTypeOf[Enumeration#Value]) => makeEnumerationValue(t, number)
+        case t if isSubtype(t, localTypeOf[Option[_]]) => Option.empty
+        case t if isSubtype(t, localTypeOf[Iterable[_]]) => makeEmptyCollection(t)
+        case t if isSubtype(t, localTypeOf[Temporal]) || isSubtype(t, localTypeOf[Date]) => makeTemporal(t, number)
+        case t if isCaseClass(t) => make(t, distribution)
         case t => throw new IllegalArgumentException(s"Generating type '$t' is not supported.")
       }
     }
-    Reflection.createCaseClassInstance[T](args)
+    createCaseClassInstance(tpe, args)
   }
 
-  private def makePrimitive(typ: Type, number: Long): AnyVal = {
-    typ match {
-      case t if t =:= typeOf[Boolean] => (number & 1) == 1
-      case t if t =:= typeOf[Byte] => number.toByte
-      case t if t =:= typeOf[Short] => number.toShort
-      case t if t =:= typeOf[Char] => number.toChar
-      case t if t =:= typeOf[Int] => number.toInt
-      case t if t =:= typeOf[Long] => number.toLong
-      case t if t =:= typeOf[Float] => number.toFloat
-      case t if t =:= typeOf[Double] => number.toDouble
+  def make[T <: Product : TypeTag](distribution: NaiveDistribution): T = cleanupReflection {
+    make(localTypeOf[T], distribution).asInstanceOf[T]
+  }
+
+  private def makePrimitive(tpe: Type, number: Long): AnyVal = {
+    tpe match {
+      case t if t =:= definitions.BooleanTpe => (number & 1) == 1
+      case t if t =:= definitions.ByteTpe => number.toByte
+      case t if t =:= definitions.ShortTpe => number.toShort
+      case t if t =:= definitions.CharTpe => number.toChar
+      case t if t =:= definitions.IntTpe => number.toInt
+      case t if t =:= definitions.LongTpe => number.toLong
+      case t if t =:= definitions.FloatTpe => number.toFloat
+      case t if t =:= definitions.DoubleTpe => number.toDouble
       case t => throw new IllegalArgumentException(s"Generating primitive of type '$t' is not supported.")
     }
   }
 
-  private def makeEnumerationValue[E <: Enumeration : TypeTag](number: Long): E#Value = {
-    val values = Reflection.getEnumerationValues[E]
+  private def makeEnumerationValue(tpe: Type, number: Long): Enumeration#Value = {
+    val values = enumerationValuesOf(tpe)
     values(clamp(number, 0, values.size).toInt)
   }
 
-  private def makeEmptyCollection(typ: Type): Any = {
-    typ match {
-      case t if t <:< typeOf[Set[_]] => Set.empty
-      case t if t <:< typeOf[Seq[_]] => Seq.empty
-      case t if t <:< typeOf[Map[_, _]] => Map.empty
-      case t if t <:< typeOf[Iterable[_]] => Iterable.empty
+  private def makeEmptyCollection(tpe: Type): Any = {
+    tpe match {
+      case t if isSubtype(t, localTypeOf[Set[_]]) => Set.empty
+      case t if isSubtype(t, localTypeOf[Seq[_]]) => Seq.empty
+      case t if isSubtype(t, localTypeOf[Map[_, _]]) => Map.empty
+      case t if isSubtype(t, localTypeOf[Iterable[_]]) => Iterable.empty
       case t => throw new IllegalArgumentException(s"Generating collection of type '$t' is not supported.")
     }
   }
 
-  private def makeTemporal(typ: Type, number: Long): Any = {
-    typ match {
-      case t if t =:= typeOf[java.util.Date] =>
-        java.util.Date.from(java.sql.Date.valueOf(makeLocalDate(number)).toInstant)
-      case t if t =:= typeOf[java.sql.Date] => java.sql.Date.valueOf(makeLocalDate(number))
-      case t if t =:= typeOf[java.sql.Timestamp] => java.sql.Timestamp.valueOf(makeLocalDateTime(number))
-      case t if t =:= typeOf[LocalDate] => makeLocalDate(number)
-      case t if t =:= typeOf[LocalTime] => makeLocalTime(number)
-      case t if t =:= typeOf[LocalDateTime] => makeLocalDateTime(number)
-      case t if t =:= typeOf[Instant] => makeLocalDateTime(number).toInstant(ZoneOffset.UTC)
+  private def makeTemporal(tpe: Type, number: Long): Any = {
+    tpe match {
+      case t if t =:= localTypeOf[Date] => Date.from(java.sql.Date.valueOf(makeLocalDate(number)).toInstant)
+      case t if t =:= localTypeOf[java.sql.Date] => java.sql.Date.valueOf(makeLocalDate(number))
+      case t if t =:= localTypeOf[java.sql.Timestamp] => java.sql.Timestamp.valueOf(makeLocalDateTime(number))
+      case t if t =:= localTypeOf[LocalDate] => makeLocalDate(number)
+      case t if t =:= localTypeOf[LocalTime] => makeLocalTime(number)
+      case t if t =:= localTypeOf[LocalDateTime] => makeLocalDateTime(number)
+      case t if t =:= localTypeOf[Instant] => makeLocalDateTime(number).toInstant(ZoneOffset.UTC)
       case t => throw new IllegalArgumentException(s"Generating temporal of type '$t' is not supported.")
     }
   }

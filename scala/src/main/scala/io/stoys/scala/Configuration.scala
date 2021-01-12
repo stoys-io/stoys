@@ -38,7 +38,7 @@ case class Configuration(config: ConfigurationConfig) {
     val baseFileName = Strings.toSnakeCase(Reflection.typeNameOf[T])
     var value = Arbitrary.empty[T]
 
-    val params = Reflection.getAnnotationParams[Params](Reflection.dealiasedTypeSymbolOf[T]).getOrElse(Seq.empty).toMap
+    val params = Reflection.getAnnotationParams[T, Params].getOrElse(Seq.empty).toMap
     val allowInRootPackage = params.getOrElse("allowInRootPackage", false).asInstanceOf[Boolean]
 
     // files based overrides

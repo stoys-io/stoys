@@ -6,43 +6,47 @@ import io.stoys.spark.SToysException
 import scala.reflect.runtime.universe._
 
 object DqReflection {
-  def getDqFields[T <: Product: TypeTag]: Seq[DqField] = {
-    Reflection.getCaseClassFields[T].map(getDqField)
+  import Reflection._
+
+  def getDqFields[T <: Product : TypeTag]: Seq[DqField] = {
+    getCaseClassFields[T].map(getDqField)
   }
 
-  def getDqField(field: Symbol): DqField = {
-    val explicitParams = Reflection.getAnnotationParams[annotation.DqField](field).getOrElse(Seq.empty).toMap
-    val nullable = explicitParams.get("nullable").asInstanceOf[Option[Boolean]]
-    val enumValues = explicitParams.getOrElse("enumValues", Seq.empty[String]).asInstanceOf[Seq[String]]
-    val format = explicitParams.get("format").asInstanceOf[Option[String]]
-    val regexp = explicitParams.get("regexp").asInstanceOf[Option[String]]
+  private def getDqField(field: Symbol): DqField = {
+    val dqField = getAnnotationParams[annotation.DqField](field).getOrElse(Seq.empty).toMap
+    val dqFieldNullable = dqField.get("nullable").asInstanceOf[Option[Boolean]]
+    val dqFieldEnumValues = dqField.getOrElse("enumValues", Seq.empty[String]).asInstanceOf[Seq[String]]
+    val dqFieldFormat = dqField.get("format").asInstanceOf[Option[String]]
+    val dqFieldRegexp = dqField.get("regexp").asInstanceOf[Option[String]]
 
     val rawFieldType = field.typeSignature.dealias
-    val isOption = rawFieldType <:< typeOf[Option[_]]
+    val isOption = isSubtype(rawFieldType, localTypeOf[Option[_]])
     val fieldType = if (isOption) rawFieldType.typeArgs.head else rawFieldType
-    val isPrimitive = fieldType.typeSymbol.asClass.isPrimitive
+
+    val isPrimitive = rawFieldType.typeSymbol.asClass.isPrimitive
+    val nullable = dqFieldNullable.getOrElse(!isPrimitive)
 
     val typ = fieldType match {
-      case t if t =:= typeOf[Boolean] => "boolean"
-//      case t if t =:= typeOf[Byte] => "byte"
-//      case t if t =:= typeOf[Short] => ???
-//      case t if t =:= typeOf[Char] => "char"
-      case t if t =:= typeOf[Int] => "integer"
-      case t if t =:= typeOf[Long] => "long"
-      case t if t =:= typeOf[Float] => "float"
-      case t if t =:= typeOf[Double] => "double"
+      case t if t =:= definitions.BooleanTpe => "boolean"
+//      case t if t =:= definitions.ByteTpe => "byte"
+//      case t if t =:= definitions.ShortTpe => ???
+//      case t if t =:= definitions.CharTpe => "char"
+      case t if t =:= definitions.IntTpe => "integer"
+      case t if t =:= definitions.LongTpe => "long"
+      case t if t =:= definitions.FloatTpe => "float"
+      case t if t =:= definitions.DoubleTpe => "double"
       case t if t =:= typeOf[String] => "string"
       case t if t =:= typeOf[java.sql.Date] => "date"
       case t if t =:= typeOf[java.sql.Timestamp] => "timestamp"
-//      case t if t <:< typeOf[Map[_, _]] => "map"
-//      case t if t <:< typeOf[Iterable[_]] => "array"
-      case _ => throw new SToysException(s"Unsupported type ${Reflection.renderAnnotatedSymbol(field)}!")
+//      case t if isSubtype(t, typeOf[Map[_, _]]) => "map"
+//      case t if isSubtype(t, typeOf[Iterable[_]]) => "array"
+      case _ => throw new SToysException(s"Unsupported type ${renderAnnotatedType(field.typeSignature)}!")
     }
 
-    DqField(getColumnName(field), typ, nullable.getOrElse(!isPrimitive || isOption), enumValues, format, regexp)
+    DqField(getColumnName(field), typ, nullable, dqFieldEnumValues, dqFieldFormat, dqFieldRegexp)
   }
 
   private def getColumnName(symbol: Symbol): String = {
-    Strings.toSnakeCase(Reflection.termNameOf(symbol))
+    Strings.toSnakeCase(nameOf(symbol))
   }
 }
