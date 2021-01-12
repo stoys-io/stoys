@@ -51,13 +51,17 @@ object JdbcReflection {
   // Note: This may need some work per db type. It seems fine for mysql, postgres and h2.
   private def getSqlTypeName(field: Symbol): String = {
     val column = getAnnotationParams[javax.persistence.Column](field).getOrElse(Seq.empty).toMap
+    val columnNullable = column.get("nullable").asInstanceOf[Option[Boolean]]
     val lob = getAnnotationParams[javax.persistence.Lob](field)
 
     val rawFieldType = field.typeSignature.dealias
     val isOption = isSubtype(rawFieldType, localTypeOf[Option[_]])
     val fieldType = if (isOption) rawFieldType.typeArgs.head else rawFieldType
 
-    val maybeNotNullSuffix = if (isOption) "" else " NOT NULL"
+    val isPrimitive = rawFieldType.typeSymbol.asClass.isPrimitive
+    val nullable = columnNullable.getOrElse(!isPrimitive)
+
+    val maybeNotNullSuffix = if (nullable) "" else " NOT NULL"
     val fullSqlType = if (column.contains("columnDefinition")) {
       column("columnDefinition")
     } else if (fieldType =:= typeOf[String] && lob.isDefined) {

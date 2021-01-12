@@ -38,30 +38,30 @@ class JdbcReflectionTest extends AnyFunSuite {
           |);""".stripMargin)
     assert(getCreateTableStatement(TableName[RecordWithStrings], null) ===
         """CREATE TABLE record_with_strings (
-          |  id VARCHAR(255) NOT NULL,
+          |  id VARCHAR(255),
           |  optional VARCHAR(255),
-          |  no_annotation VARCHAR(255) NOT NULL,
-          |  lob_annotation TEXT NOT NULL,
-          |  name_is_ignored VARCHAR(255) NOT NULL,
-          |  nullable_is_ignored VARCHAR(255) NOT NULL,
-          |  length VARCHAR(42) NOT NULL,
+          |  no_annotation VARCHAR(255),
+          |  lob_annotation TEXT,
+          |  name_is_ignored VARCHAR(255),
+          |  not_nullable VARCHAR(255) NOT NULL,
+          |  length VARCHAR(42),
           |  column_definition CHAR(42),
-          |  unique VARCHAR(255) NOT NULL,
-          |  camel_cased VARCHAR(255) NOT NULL,
-          |  snake_cased VARCHAR(255) NOT NULL
+          |  unique VARCHAR(255),
+          |  camel_cased VARCHAR(255),
+          |  snake_cased VARCHAR(255)
           |);""".stripMargin)
     assert(getCreateTableStatement(TableName[RecordWithDate], null) ===
         """CREATE TABLE record_with_date (
-          |  date DATE NOT NULL
+          |  date DATE
           |);""".stripMargin)
     assert(getCreateTableStatement(TableName[RecordWithCollections], null) ===
         """CREATE TABLE record_with_collections (
-          |  seq JSON NOT NULL,
-          |  map JSON NOT NULL
+          |  seq JSON,
+          |  map JSON
           |);""".stripMargin)
     assert(getCreateTableStatement(TableName[RecordWithNestedRecord], null) ===
         """CREATE TABLE record_with_nested_record (
-          |  nested JSON NOT NULL
+          |  nested JSON
           |);""".stripMargin)
     val caughtUnsupportedType =
       intercept[SToysException](getCreateTableStatement(TableName[RecordWithUnsupportedType], null))
@@ -136,8 +136,8 @@ object JdbcReflectionTest {
       lobAnnotation: String,
       @Column(name = "ignored_name")
       nameIsIgnored: String,
-      @Column(nullable = true)
-      nullableIsIgnored: String,
+      @Column(nullable = false)
+      notNullable: String,
       @Column(length = 42)
       length: String,
       @Column(columnDefinition = "CHAR(42)")
