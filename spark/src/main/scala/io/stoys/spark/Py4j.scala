@@ -7,6 +7,10 @@ import io.stoys.scala.Reflection
 import scala.collection.JavaConverters._
 
 object Py4j {
+  val emptyOption: Option[Nothing] = None
+  val emptySeq: Seq[Nothing] = Seq.empty
+  val emptyMap: Map[Nothing, Nothing] = Map.empty
+
   def toArray[T](list: JList[T]): Array[T] = {
     list.toArray().asInstanceOf[Array[T]]
   }
@@ -17,6 +21,10 @@ object Py4j {
 
   def toMap[K, V](map: JMap[K, V]): Map[K, V] = {
     map.asScala.toMap
+  }
+
+  def toOption[T](value: T): Option[T] = {
+    Option(value)
   }
 
   def toSeq[T](list: JList[T]): Seq[T] = {
