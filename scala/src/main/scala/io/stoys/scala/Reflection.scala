@@ -20,6 +20,7 @@ object Reflection {
   private def mirror: universe.Mirror = {
     universe.runtimeMirror(Thread.currentThread().getContextClassLoader)
   }
+
   /**
    * Wrapper for [[isSubtype]] (`<:<` operator) (clean up scala reflection memory)
    *
@@ -217,27 +218,31 @@ object Reflection {
   }
 
   private def getAnnotationParams(annotation: Annotation): Seq[(String, Any)] = {
-    def getAnnotationParams(tree: Tree): Seq[(String, Any)] = tree match {
-      case Apply(Select(New(TypeTree()), termNames.CONSTRUCTOR), valueTrees) =>
-        valueTrees.map {
-          case AssignOrNamedArg(Ident(TermName(key)), valueTree) => key -> getValue(valueTree)
-        }
+    def getAnnotationParams(tree: Tree): Seq[(String, Any)] = {
+      tree match {
+        case Apply(Select(New(TypeTree()), termNames.CONSTRUCTOR), valueTrees) =>
+          valueTrees.map {
+            case AssignOrNamedArg(Ident(TermName(key)), valueTree) => key -> getValue(valueTree)
+          }
+      }
     }
 
-    def getValue(tree: Tree): Any = tree match {
-      // enum
-      case Literal(Constant(value: TermSymbol)) =>
-        val clazz = mirror.runtimeClass(value.owner.asClass)
-        val valueName = value.name.toString
-        clazz.getMethod("valueOf", classOf[String]).invoke(null, valueName)
-      // classOf[...]
-      case Literal(Constant(value: TypeRef)) => mirror.runtimeClass(value)
-      // (boxed) primitive and string
-      case Literal(Constant(value)) => value
-      // array
-      case Apply(Ident(TermName("Array")), valueTrees) => valueTrees.map(getValue)
-      // annotation
-      case tree @ Apply(Select(New(TypeTree()), termNames.CONSTRUCTOR), _) => getAnnotationParams(tree)
+    def getValue(tree: Tree): Any = {
+      tree match {
+        // enum
+        case Literal(Constant(value: TermSymbol)) =>
+          val clazz = mirror.runtimeClass(value.owner.asClass)
+          val valueName = value.name.toString
+          clazz.getMethod("valueOf", classOf[String]).invoke(null, valueName)
+        // classOf[...]
+        case Literal(Constant(value: TypeRef)) => mirror.runtimeClass(value)
+        // (boxed) primitive and string
+        case Literal(Constant(value)) => value
+        // array
+        case Apply(Ident(TermName("Array")), valueTrees) => valueTrees.map(getValue)
+        // annotation
+        case tree@Apply(Select(New(TypeTree()), termNames.CONSTRUCTOR), _) => getAnnotationParams(tree)
+      }
     }
 
     getAnnotationParams(annotation.tree)

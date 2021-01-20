@@ -92,8 +92,10 @@ object Arbitrary {
     createCaseClassInstance(tpe, args)
   }
 
-  def default[T <: Product : TypeTag]: T = cleanupReflection {
-    default(localTypeOf[T]).asInstanceOf[T]
+  def default[T <: Product : TypeTag]: T = {
+    cleanupReflection {
+      default(localTypeOf[T]).asInstanceOf[T]
+    }
   }
 
   private def empty(tpe: Type): Any = {
@@ -112,8 +114,10 @@ object Arbitrary {
     createCaseClassInstance(tpe, args)
   }
 
-  def empty[T <: Product : TypeTag]: T = cleanupReflection {
-    empty(localTypeOf[T]).asInstanceOf[T]
+  def empty[T <: Product : TypeTag]: T = {
+    cleanupReflection {
+      empty(localTypeOf[T]).asInstanceOf[T]
+    }
   }
 
   def hashed[T <: Product : TypeTag](salt: Long): T = {
@@ -141,8 +145,10 @@ object Arbitrary {
     createCaseClassInstance(tpe, args)
   }
 
-  def proto[T <: Product : TypeTag]: T = cleanupReflection {
-    proto(localTypeOf[T]).asInstanceOf[T]
+  def proto[T <: Product : TypeTag]: T = {
+    cleanupReflection {
+      proto(localTypeOf[T]).asInstanceOf[T]
+    }
   }
 
   def random[T <: Product : TypeTag](seed: Long): T = {
@@ -166,8 +172,10 @@ object Arbitrary {
     createCaseClassInstance(tpe, args)
   }
 
-  def make[T <: Product : TypeTag](distribution: NaiveDistribution): T = cleanupReflection {
-    make(localTypeOf[T], distribution).asInstanceOf[T]
+  def make[T <: Product : TypeTag](distribution: NaiveDistribution): T = {
+    cleanupReflection {
+      make(localTypeOf[T], distribution).asInstanceOf[T]
+    }
   }
 
   private def makePrimitive(tpe: Type, number: Long): AnyVal = {

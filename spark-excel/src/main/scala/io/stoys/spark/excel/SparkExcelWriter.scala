@@ -56,7 +56,7 @@ object SparkExcelWriter {
     val dfsWithSheets = dfs.zipWithIndex.map {
       case (df, _) if df.columns.contains("__sheet__") => df
       case (df, index) =>
-        df.withColumn("__sheet__", lit(s"Sheet${index+1}"))
+        df.withColumn("__sheet__", lit(s"Sheet${index + 1}"))
     }
     val (dfsWithPath, dfsWithoutPath) = dfsWithSheets.partition(_.columns.contains("__path__"))
     val finalDfs = dfsWithPath ++ dfsWithoutPath
@@ -74,7 +74,7 @@ object SparkExcelWriter {
     }
     val sheetArrayColumn = array(dfsNames.map(n => col(s"$n.__sheet__")): _*).as("__sheet_names__")
     val rowsColumns = dfsNames.zipWithIndex.map(ni => col(s"${ni._1}.__rows__").as(s"__rows_${ni._2}__"))
-    joinedDfs.select(col("__path__") +: sheetArrayColumn +: rowsColumns :_*)
+    joinedDfs.select(col("__path__") +: sheetArrayColumn +: rowsColumns: _*)
   }
 
   private def multiSheetRowToExcelByteArray(row: Row, config: ExcelWriterConfig): Array[Byte] = {

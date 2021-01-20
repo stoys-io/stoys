@@ -19,8 +19,11 @@ class DqFrameworkTest extends SparkTestBase {
 
   test("checkWideDqColumnsSanity") {
     def str(fieldName: String): StructField = StructField(fieldName, StringType)
+
     def bool(fieldName: String): StructField = StructField(fieldName, BooleanType)
+
     def schema(fields: StructField*): StructType = StructType(fields)
+
     def im(wideDqSchema: StructType, ruleCount: Int): String = {
       intercept[SToysException](checkWideDqColumnsSanity(wideDqSchema, ruleCount)).getMessage
     }

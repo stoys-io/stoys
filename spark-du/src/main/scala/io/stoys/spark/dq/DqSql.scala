@@ -79,7 +79,7 @@ private[dq] object DqSql {
       if (line <= 1 || line >= lineComments.length) {
         None
       } else {
-        (line-2).to(0).by(-1).map(lineComments).takeWhile(_.isDefined) match {
+        (line - 2).to(0).by(-1).map(lineComments).takeWhile(_.isDefined) match {
           case comments if comments.nonEmpty => Some(comments.flatten.reverse.mkString("\n"))
           case _ => None
         }

@@ -10,9 +10,9 @@ import org.apache.spark.sql.SparkSession
 
 /**
  * [[Dfs]] is utility wrapper around hadoop [[FileSystem]] library. There are following types of functions:
- *   1) [[asQualifiedPath]] returns concrete [[FileSystem]] implementation and [[Path]] from [[String]] path
- *   2) Utility functions like [[path]], [[fs]], [[readString]] and [[writeString]]
- *   3) All other functions should have the same api as the underlying FileSystem api but taking path as string
+ * 1) [[asQualifiedPath]] returns concrete [[FileSystem]] implementation and [[Path]] from [[String]] path
+ * 2) Utility functions like [[path]], [[fs]], [[readString]] and [[writeString]]
+ * 3) All other functions should have the same api as the underlying FileSystem api but taking path as string
  *
  * @param hadoopConfiguration hadoop configuration (can come from [[SparkSession]] using [[Dfs]].apply)
  */

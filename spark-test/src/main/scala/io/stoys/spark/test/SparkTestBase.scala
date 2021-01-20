@@ -23,7 +23,7 @@ abstract class SparkTestBase extends AnyFunSuite {
    * [[sparkSessionBuilderModifier]] can be used to modify SparkSession after default config is applied.
    *
    * BEWARE: Spark currently cache [[SparkSession]] and once it is create it stays the same within the jvm run.
-   *         Any modifications in second unit test (after first one is run) will not have nay effect!
+   * Any modifications in second unit test (after first one is run) will not have nay effect!
    *
    * @param builder the [[SparkSession.Builder]] to modify
    */

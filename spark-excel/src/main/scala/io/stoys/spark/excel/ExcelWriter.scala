@@ -263,7 +263,7 @@ object ExcelWriter {
     }
   }
 
-  private def autoSizeColumnsByMaxStringWidth(sheet: Sheet, startAddress: CellAddress,  columnInfo: Seq[ColumnInfo],
+  private def autoSizeColumnsByMaxStringWidth(sheet: Sheet, startAddress: CellAddress, columnInfo: Seq[ColumnInfo],
       tableData: Seq[Seq[Any]], config: ExcelWriterAutoSizeConfig): Unit = {
     val columnWidths = columnInfo.zip(computeMaxColumnStringWidths(tableData, columnInfo.length)).map {
       case (columnInfo, maxColumnStringWidth) =>

@@ -2,8 +2,8 @@ package io.stoys.spark.datasources
 
 import java.nio.charset.StandardCharsets
 
-import io.stoys.spark.{Dfs, SToysException}
 import io.stoys.spark.test.SparkTestBase
+import io.stoys.spark.{Dfs, SToysException}
 import org.apache.commons.io.IOUtils
 import org.apache.spark.SparkException
 import org.apache.spark.sql._

@@ -4,7 +4,7 @@ import io.stoys.scala.Strings
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Attribute, Cast, CreateArray, CreateMap, Expression, LambdaFunction, Literal, NamedLambdaVariable}
 import org.apache.spark.sql.catalyst.util.usePrettyExpression
-import org.apache.spark.sql.functions.{coalesce, col, struct, to_date, to_timestamp}
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, DataFrame, Dataset}
 
@@ -91,7 +91,8 @@ object Reshape {
   }
 
   private def reshapeStructField(sourceField: StructField, targetField: StructField, config: ReshapeConfig,
-      sourceColumn: Column, sourceAttribute: Option[Attribute], normalizedFieldPath: String): Either[List[ReshapeError], List[Column]] = {
+      sourceColumn: Column, sourceAttribute: Option[Attribute],
+      normalizedFieldPath: String): Either[List[ReshapeError], List[Column]] = {
     val errors = mutable.Buffer.empty[ReshapeError]
     var column = sourceAttribute.map(a => new Column(a)).getOrElse(getNestedColumn(sourceColumn, sourceField.name))
     if (sourceField.nullable && !targetField.nullable) {

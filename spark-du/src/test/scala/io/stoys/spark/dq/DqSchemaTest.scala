@@ -1,6 +1,7 @@
 package io.stoys.spark.dq
 
 import java.sql.Date
+
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.types.StructType

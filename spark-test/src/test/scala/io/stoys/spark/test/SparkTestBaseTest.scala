@@ -1,8 +1,8 @@
 package io.stoys.spark.test
 
 class SparkTestBaseTest extends SparkTestBase {
-  import sparkSession.implicits._
   import SparkTestBaseTest._
+  import sparkSession.implicits._
 
   test("file utilities") {
     assert(tmpDir.toString.contains(this.getClass.getSimpleName))

@@ -10,7 +10,7 @@ object DqRules {
 
   // factories for case classes
 
-  def name(fieldName: String, logicalName: String): String  = {
+  def name(fieldName: String, logicalName: String): String = {
     s"$fieldName$LOGICAL_NAME_SEPARATOR$logicalName"
   }
 

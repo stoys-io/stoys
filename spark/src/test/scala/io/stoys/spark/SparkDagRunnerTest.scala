@@ -49,7 +49,7 @@ class SparkDagRunnerTest extends SparkTestBase {
       s"$outputPath/pack?sos-format=parquet&sos-table_name=pack",
       s"$outputPath/metric?sos-format=parquet&sos-table_name=metric"))
     assert(readListLines(s"$sharedOutputPath/latest.list")
-      === Set(s"$outputPath?sos-listing_strategy=dag"))
+        === Set(s"$outputPath?sos-listing_strategy=dag"))
   }
 
   private def readListLines(path: String): Set[String] = {

@@ -3,7 +3,7 @@ package io.stoys.spark.dq
 import io.stoys.spark.SToysException
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
-class Dq[T] private (ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
+class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
   private var config: DqConfig = DqConfig.default
   private var fields: Seq[DqField] = Seq.empty
   private var metadata: Map[String, String] = Map.empty

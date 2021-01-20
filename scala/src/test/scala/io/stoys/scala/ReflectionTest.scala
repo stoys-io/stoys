@@ -193,7 +193,7 @@ object ReflectionTest {
 
   case class NestedRecord(d: Double)
 
-  type AnnotatedRecordAlias = Record @TestAnnotation
+  type AnnotatedRecordAlias = Record@TestAnnotation
 
   @TestAnnotation
   class RegularClass

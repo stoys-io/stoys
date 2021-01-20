@@ -3,8 +3,8 @@ package io.stoys.spark.excel
 import java.sql.Date
 
 import io.stoys.scala.IO
-import io.stoys.spark.{Reshape, ReshapeConfig}
 import io.stoys.spark.test.{DataCache, SparkTestBase}
+import io.stoys.spark.{Reshape, ReshapeConfig}
 import org.apache.spark.sql.Dataset
 
 import scala.reflect.runtime.universe.TypeTag

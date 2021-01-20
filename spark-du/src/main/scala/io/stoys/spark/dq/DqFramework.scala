@@ -3,9 +3,9 @@ package io.stoys.spark.dq
 import java.util.Locale
 
 import io.stoys.spark.SToysException
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
-import org.apache.spark.sql.functions.{array, col, expr, lit, monotonically_increasing_id, not}
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{BooleanType, StringType, StructType}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
 import scala.collection.mutable
 
