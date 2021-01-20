@@ -48,25 +48,25 @@ object Arbitrary {
   private val SECOND_OF_DAY_MIN = LocalTime.of(0, 0, 0).toSecondOfDay
   private val SECOND_OF_DAY_MAX = LocalTime.of(23, 59, 59).toSecondOfDay
 
-  trait NaiveDistribution {
+  private trait NaiveDistribution {
     def sample(param: Symbol): Long
   }
 
-  class ConstantDistribution(constant: Long) extends NaiveDistribution {
+  private class ConstantDistribution(constant: Long) extends NaiveDistribution {
     override def sample(param: Symbol): Long = constant
   }
 
-  class CounterDistribution(counter: AtomicLong) extends NaiveDistribution {
+  private class CounterDistribution(counter: AtomicLong) extends NaiveDistribution {
     override def sample(param: Symbol): Long = counter.getAndIncrement()
   }
 
-  class RandomDistribution(seed: Long) extends NaiveDistribution {
+  private class RandomDistribution(seed: Long) extends NaiveDistribution {
     private val random = new Random(seed)
 
     override def sample(param: Symbol): Long = random.nextLong()
   }
 
-  class HashedDistribution(salt: Long) extends NaiveDistribution {
+  private class HashedDistribution(salt: Long) extends NaiveDistribution {
     private val messageDigest = MessageDigest.getInstance("SHA-1")
 
     override def sample(param: Symbol): Long = {

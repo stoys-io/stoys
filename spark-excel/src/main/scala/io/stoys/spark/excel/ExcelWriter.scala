@@ -15,21 +15,21 @@ import scala.util.Try
 import scala.util.matching.Regex
 
 object ExcelWriter {
-  val CONFIG_CELL_PATTERN: Regex = "^<<([^:]*)(?::(.*))?>>$".r("key", "params")
-  val SPECIAL_COLUMN_NAME_PATTERN: Regex = "^__(.*)__$".r("key")
+  private[excel] val CONFIG_CELL_PATTERN: Regex = "^<<([^:]*)(?::(.*))?>>$".r("key", "params")
+  private[excel] val SPECIAL_COLUMN_NAME_PATTERN: Regex = "^__(.*)__$".r("key")
   private val UNITS_PER_CHARACTER_WIDTH = 256
 
-  object ConfigCellType extends Enumeration {
+  private object ConfigCellType extends Enumeration {
     type ConfigCellType = Value
-    val TABLE_STARTS_HERE, HEADER_STYLE, CELL_STYLE, COLUMN_STYLE = Value
+    val UNDEFINED, TABLE_STARTS_HERE, HEADER_STYLE, CELL_STYLE, COLUMN_STYLE = Value
   }
 
-  case class ComplexStyle(
+  private[excel] case class ComplexStyle(
       cellStyle: CellStyle,
       conditionalFormatting: Option[ConditionalFormatting]
   )
 
-  case class SheetConfig(
+  private[excel] case class SheetConfig(
       sheetName: String,
       startAddress: Option[CellAddress],
       headerStyle: Option[ComplexStyle],
@@ -37,13 +37,13 @@ object ExcelWriter {
       columnStyles: Map[String, ComplexStyle]
   )
 
-  object SheetConfig {
+  private[excel] object SheetConfig {
     def fromSheetName(sheetName: String): SheetConfig = {
       SheetConfig(sheetName, None, None, None, Map.empty)
     }
   }
 
-  case class ColumnInfo(
+  private[excel] case class ColumnInfo(
       columnName: String,
       dataFormatString: Option[String],
       converter: Option[Any => Any] = None
@@ -58,7 +58,7 @@ object ExcelWriter {
     config.poi_streaming_row_access_window_size.map(size => new SXSSFWorkbook(workbook, size)).getOrElse(workbook)
   }
 
-  def extractSheetConfig(sheet: Sheet): SheetConfig = {
+  private[excel] def extractSheetConfig(sheet: Sheet): SheetConfig = {
     val conditionalFormattingByCellAddress = extractConditionalFormattingByCellAddress(sheet)
     val cellIterator = sheet.rowIterator().asScala.flatMap(_.cellIterator().asScala)
     val stringCells = cellIterator.filter(_.getCellType == CellType.STRING)
@@ -72,17 +72,17 @@ object ExcelWriter {
             fr => fr.getFirstRow == cellAddress.getRow && fr.getFirstColumn == cellAddress.getColumn
           }))
           val complexStyle = ComplexStyle(cell.getCellStyle, conditionalFormatting)
-          Try(ConfigCellType.withName(key)).toOption match {
-            case Some(ConfigCellType.TABLE_STARTS_HERE) =>
+          Try(ConfigCellType.withName(key)).toOption.getOrElse(ConfigCellType.UNDEFINED) match {
+            case ConfigCellType.TABLE_STARTS_HERE =>
               sheetConfig = sheetConfig.copy(startAddress = Some(cellAddress))
               cell.setBlank()
-            case Some(ConfigCellType.HEADER_STYLE) =>
+            case ConfigCellType.HEADER_STYLE =>
               sheetConfig = sheetConfig.copy(headerStyle = Some(complexStyle))
               cell.getRow.removeCell(cell)
-            case Some(ConfigCellType.CELL_STYLE) =>
+            case ConfigCellType.CELL_STYLE =>
               sheetConfig = sheetConfig.copy(cellStyle = Some(complexStyle))
               cell.getRow.removeCell(cell)
-            case Some(ConfigCellType.COLUMN_STYLE) =>
+            case ConfigCellType.COLUMN_STYLE =>
               sheetConfig = sheetConfig.copy(columnStyles = sheetConfig.columnStyles.updated(params, complexStyle))
               cell.getRow.removeCell(cell)
             case _ => throw new SToysException(s"Unsupported configuration key '$key' on sheet ${sheet.getSheetName}.")

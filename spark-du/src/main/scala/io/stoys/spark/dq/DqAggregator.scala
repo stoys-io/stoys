@@ -17,13 +17,16 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
     DqAgg(
       aggPerTable = DqAggPerTable(rows = 0L, violations = 0L),
       aggPerColumn = Array.fill(columnCount)(DqAggPerColumn(violations = 0L)),
-      aggPerRule = Array.fill(ruleCount)(DqAggPerRule(
-        violations = 0L,
-        minHash = if (rowsPerRule <= 0) Long.MinValue else Long.MaxValue,
-        hashes = Array.fill(rowsPerRule)(-1L),
-        rowIds = Array.fill(rowsPerRule)(-1L),
-        rowSample = Array.fill(rowsPerRule)(null),
-        ruleHashes = Array.fill(rowsPerRule)(null)))
+      aggPerRule = Array.fill(ruleCount)(
+        DqAggPerRule(
+          violations = 0L,
+          minHash = if (rowsPerRule <= 0) Long.MinValue else Long.MaxValue,
+          hashes = Array.fill(rowsPerRule)(-1L),
+          rowIds = Array.fill(rowsPerRule)(-1L),
+          rowSample = Array.fill(rowsPerRule)(null),
+          ruleHashes = Array.fill(rowsPerRule)(null)
+        )
+      )
     )
   }
 
@@ -78,11 +81,11 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
       val aggPerRule1 = agg1.aggPerRule(ri)
       val aggPerRule2 = agg2.aggPerRule(ri)
       val aggPerRuleMerged = merged.aggPerRule(ri)
+      aggPerRuleMerged.minHash = Math.min(aggPerRule1.minHash, aggPerRule2.minHash)
       var i = rowsPerRule - 1
       var i1 = rowsPerRule - 1
       var i2 = rowsPerRule - 1
       while (i >= 0) {
-        aggPerRuleMerged.minHash = Math.min(aggPerRule1.minHash, aggPerRule2.minHash)
         if (aggPerRule1.hashes(i1) > aggPerRule2.hashes(i2)) {
           aggPerRuleMerged.hashes(i) = aggPerRule1.hashes(i1)
           aggPerRuleMerged.rowIds(i) = aggPerRule1.rowIds(i1)

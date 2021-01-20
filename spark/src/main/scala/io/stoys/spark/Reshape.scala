@@ -38,8 +38,8 @@ object Reshape {
     targetSchema match {
       case targetSchema: StructType if sourceSchema == targetSchema => ds.toDF()
       case targetSchema: StructType =>
-        reshapeStructType(sourceSchema, targetSchema, config,
-          sourceColumn = null, sourceAttributes = ds.queryExecution.analyzed.output, normalizedPath = null) match {
+        val attributes = ds.queryExecution.analyzed.output
+        reshapeStructType(sourceSchema, targetSchema, config, sourceColumn = null, attributes) match {
           case Left(errors) => throw new ReshapeException(errors)
           case Right(columns) => ds.select(columns: _*)
         }
@@ -104,8 +104,7 @@ object Reshape {
     (sourceField.dataType, targetField.dataType) match {
       case (sourceDataType, targetDataType) if sourceDataType == targetDataType => // pass
       case (sourceStructType: StructType, targetStructType: StructType) =>
-        reshapeStructType(sourceStructType, targetStructType, config,
-          column, sourceAttributes = Seq.empty, normalizedFieldPath) match {
+        reshapeStructType(sourceStructType, targetStructType, config, column, sourceAttributes = Seq.empty) match {
           case Right(nestedColumns) => column = struct(nestedColumns: _*)
           case Left(nestedErrors) => errors ++= nestedErrors
         }
@@ -161,8 +160,7 @@ object Reshape {
   }
 
   private def reshapeStructType(sourceStruct: StructType, targetStruct: StructType, config: ReshapeConfig,
-      sourceColumn: Column, sourceAttributes: Seq[Attribute],
-      normalizedPath: String): Either[List[ReshapeError], List[Column]] = {
+      sourceColumn: Column, sourceAttributes: Seq[Attribute]): Either[List[ReshapeError], List[Column]] = {
     val sourceColumnPath = Option(sourceColumn).map(c => usePrettyExpression(c.expr).sql)
 
     val sourceFieldsByName = sourceStruct.fields.toList.groupBy(f => normalizeFieldName(f, config))

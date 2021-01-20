@@ -3,7 +3,7 @@ package io.stoys.spark.db
 import java.nio.file.{Files, Paths}
 import java.sql.{Connection, DriverManager}
 import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZoneId}
+import java.time.{Instant, ZoneOffset}
 
 import io.stoys.scala.{Configuration, IO, Reflection, Strings}
 import io.stoys.spark._
@@ -142,7 +142,7 @@ class DbLoader(args: Array[String]) {
 }
 
 object DbLoader {
-  val TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneId.of("UTC"))
+  val TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC)
 
   def main(args: Array[String]): Unit = {
     val dbLoader = new DbLoader(args)
