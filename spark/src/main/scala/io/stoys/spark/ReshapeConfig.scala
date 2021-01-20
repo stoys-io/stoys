@@ -14,15 +14,15 @@ case class ReshapeConfig(
      */
     coerceTypes: Boolean,
     /**
-     * It behaves as [[ReshapeConfig.ConflictResolution.ERROR]] regardless of the config (for now).
+     * It behaves as [[ReshapeConflictResolution.ERROR]] regardless of the config (for now).
      *
      * What should happen when two conflicting column definitions are encountered?
      *
-     * In particular the value [[ReshapeConfig.ConflictResolution.LAST]] is useful. It solves the common pattern
+     * In particular the value [[ReshapeConflictResolution.LAST]] is useful. It solves the common pattern
      * of conflicting columns occurring in queries like "SELECT *, "some_value" AS value FROM table" where "table"
      * already has "value".
      */
-    conflictResolution: ReshapeConfig.ConflictResolution.ConflictingNameResolution,
+    conflictResolution: ReshapeConflictResolution,
     /**
      * Should we drop the extra columns (not present in target schema)?
      *
@@ -70,9 +70,9 @@ case class ReshapeConfig(
     /**
      * How should the output columns be sorted?
      *
-     * Use [[ReshapeConfig.SortOrder.TARGET]] to get the order of target schema.
+     * Use [[ReshapeSortOrder.TARGET]] to get the order of target schema.
      */
-    sortOrder: ReshapeConfig.SortOrder.SortOrder,
+    sortOrder: ReshapeSortOrder,
     /**
      * Should we use custom date format string?
      */
@@ -84,29 +84,19 @@ case class ReshapeConfig(
 )
 
 object ReshapeConfig {
-  object ConflictResolution extends Enumeration {
-    type ConflictingNameResolution = Value
-    val UNDEFINED, ERROR, FIRST, LAST = Value
-  }
-
-  object SortOrder extends Enumeration {
-    type SortOrder = Value
-    val UNDEFINED, ALPHABETICAL, SOURCE, TARGET = Value
-  }
-
   /**
    * [[ReshapeConfig.as]] behaves the same way as Spark's own [[Dataset.as]].
    */
   val as: ReshapeConfig = ReshapeConfig(
     coerceTypes = false,
-    conflictResolution = ReshapeConfig.ConflictResolution.ERROR,
+    conflictResolution = ReshapeConflictResolution.ERROR,
     dropExtraColumns = false,
     failOnExtraColumn = false,
     failOnIgnoringNullability = false,
     fillDefaultValues = false,
     fillMissingNulls = false,
     normalizedNameMatching = false,
-    sortOrder = ReshapeConfig.SortOrder.SOURCE,
+    sortOrder = ReshapeSortOrder.SOURCE,
     dateFormat = None,
     timestampFormat = None
   )
@@ -117,10 +107,10 @@ object ReshapeConfig {
   val default: ReshapeConfig = as.copy(
     coerceTypes = true,
     dropExtraColumns = true,
-    sortOrder = ReshapeConfig.SortOrder.TARGET
+    sortOrder = ReshapeSortOrder.TARGET
   )
   val dangerous: ReshapeConfig = default.copy(
-    conflictResolution = ReshapeConfig.ConflictResolution.LAST,
+    conflictResolution = ReshapeConflictResolution.LAST,
     fillDefaultValues = true,
     fillMissingNulls = true,
     normalizedNameMatching = true

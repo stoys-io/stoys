@@ -22,9 +22,7 @@ import scala.util.Random
 //   - Arbitrary.hashed[T] - (salted) hash of field name (better than random ;-)
 //
 // Note: It supports only some basic types - the kind of stuff all serialization frameworks do support.
-class Arbitrary(strategy: Arbitrary.ArbitraryStrategy.Value, seed: Long = 0) {
-  import Arbitrary._
-
+class Arbitrary(strategy: ArbitraryStrategy, seed: Long = 0) {
   private val counter = new AtomicLong(seed)
 
   def make[T <: Product : TypeTag]: T = {
@@ -44,10 +42,6 @@ class Arbitrary(strategy: Arbitrary.ArbitraryStrategy.Value, seed: Long = 0) {
 
 object Arbitrary {
   import Reflection._
-
-  object ArbitraryStrategy extends Enumeration {
-    val CONSTANT, DEFAULT, EMPTY, HASHED, HASHED_CONSTANT, INDEXED, INDEXED_CONSTANT, PROTO, RANDOM = Value
-  }
 
   private val EPOCH_DAY_MIN = LocalDate.of(1, 1, 1).toEpochDay
   private val EPOCH_DAY_MAX = LocalDate.of(9999, 12, 31).toEpochDay

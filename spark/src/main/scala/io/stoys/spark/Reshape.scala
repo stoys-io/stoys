@@ -169,11 +169,11 @@ object Reshape {
     val targetFieldsByName = targetStruct.fields.toList.groupBy(f => normalizeFieldName(f, config))
 
     val normalizedFieldNames = config.sortOrder match {
-      case ReshapeConfig.SortOrder.ALPHABETICAL =>
+      case ReshapeSortOrder.ALPHABETICAL =>
         (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct.sorted
-      case ReshapeConfig.SortOrder.SOURCE | ReshapeConfig.SortOrder.UNDEFINED | null =>
+      case ReshapeSortOrder.SOURCE | ReshapeSortOrder.UNDEFINED | null =>
         (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct
-      case ReshapeConfig.SortOrder.TARGET =>
+      case ReshapeSortOrder.TARGET =>
         (targetStruct.fields ++ sourceStruct.fields).map(f => normalizeFieldName(f, config)).toSeq.distinct
     }
 
@@ -194,12 +194,12 @@ object Reshape {
           reshapeStructField(source, target, config, sourceColumn, sourceAttribute = None, normalizedFieldPath)
         case (sources, target :: Nil) =>
           config.conflictResolution match {
-            case ReshapeConfig.ConflictResolution.ERROR | ReshapeConfig.ConflictResolution.UNDEFINED | null =>
+            case ReshapeConflictResolution.ERROR | ReshapeConflictResolution.UNDEFINED | null =>
               Left(List(ReshapeError(normalizedFieldPath, s"has ${sources.size} conflicting occurrences")))
-            case ReshapeConfig.ConflictResolution.FIRST =>
+            case ReshapeConflictResolution.FIRST =>
               val firstAttribute = sourceAttributes.find(_.name == target.name)
               reshapeStructField(sources.head, target, config, sourceColumn, firstAttribute, normalizedFieldPath)
-            case ReshapeConfig.ConflictResolution.LAST =>
+            case ReshapeConflictResolution.LAST =>
               val lastAttribute = sourceAttributes.filter(_.name == target.name).lastOption
               reshapeStructField(sources.last, target, config, sourceColumn, lastAttribute, normalizedFieldPath)
           }

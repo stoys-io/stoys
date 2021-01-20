@@ -29,9 +29,9 @@ class ReshapeTest extends SparkTestBase {
 
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF))
     assert(caught.getMessage.contains("str has 2 conflicting occurrences"))
-    val firstConfig = ReshapeConfig.default.copy(conflictResolution = ReshapeConfig.ConflictResolution.FIRST)
+    val firstConfig = ReshapeConfig.default.copy(conflictResolution = ReshapeConflictResolution.FIRST)
     assert(Reshape.reshape[Record](fixableDF, firstConfig).collect() === Seq(record))
-    val lastConfig = ReshapeConfig.default.copy(conflictResolution = ReshapeConfig.ConflictResolution.LAST)
+    val lastConfig = ReshapeConfig.default.copy(conflictResolution = ReshapeConflictResolution.LAST)
     assert(Reshape.reshape[Record](fixableDF, lastConfig).collect() === Seq(record.copy(str = "second_str")))
 
     assert(Reshape.reshape[Record](fixableDF, lastConfig).columns.count(_ == "extra") === 0)
@@ -100,21 +100,21 @@ class ReshapeTest extends SparkTestBase {
   test("sortOrder") {
     val fixableDF = recordsDF.selectExpr("num", "nested", "str")
     assert(Reshape.reshape[Record](fixableDF).columns === Seq("str", "num", "nested"))
-    val sourceOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeConfig.SortOrder.SOURCE)
+    val sourceOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeSortOrder.SOURCE)
     assert(Reshape.reshape[Record](fixableDF, sourceOrderConfig).columns === Seq("num", "nested", "str"))
-    val alphabeticalOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeConfig.SortOrder.ALPHABETICAL)
+    val alphabeticalOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeSortOrder.ALPHABETICAL)
     assert(Reshape.reshape[Record](fixableDF, alphabeticalOrderConfig).columns === Seq("nested", "num", "str"))
   }
 
   test("arrays") {
     val df = sparkSession.sql("SELECT ARRAY(STRUCT(42 AS num, 'foo' AS str)) AS records")
-    val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeConfig.SortOrder.ALPHABETICAL)
+    val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeSortOrder.ALPHABETICAL)
     assert(Reshape.reshape[SeqOfRecord](df, config).collect() === Seq(SeqOfRecord(Seq(Record("foo", 42, null)))))
   }
 
   ignore("maps") {
     val df = sparkSession.sql("SELECT MAP(0, STRUCT('foo' AS str, 42 AS num)) AS records")
-    val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeConfig.SortOrder.ALPHABETICAL)
+    val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeSortOrder.ALPHABETICAL)
     assert(Reshape.reshape[MapOfRecord](df, config).collect() === Seq(MapOfRecord(Map("0" -> Record("foo", 42, null)))))
   }
 
@@ -135,14 +135,14 @@ class ReshapeTest extends SparkTestBase {
 
   test("ReshapeConfig.as behaves like Arbitrary.empty[ReshapeConfig]") {
     val reshapeConfig = Arbitrary.empty[ReshapeConfig].copy(
-      conflictResolution = ReshapeConfig.ConflictResolution.ERROR,
-      sortOrder = ReshapeConfig.SortOrder.SOURCE
+      conflictResolution = ReshapeConflictResolution.ERROR,
+      sortOrder = ReshapeSortOrder.SOURCE
     )
     assert(reshapeConfig === ReshapeConfig.as)
 
     val fixableDF = recordsDF.selectExpr("num", "nested", "str")
-    val sourceOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeConfig.SortOrder.SOURCE)
-    val undefinedOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeConfig.SortOrder.UNDEFINED)
+    val sourceOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeSortOrder.SOURCE)
+    val undefinedOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeSortOrder.UNDEFINED)
     assert(Reshape.reshape[Record](fixableDF, undefinedOrderConfig).columns
         === Reshape.reshape[Record](fixableDF, sourceOrderConfig).columns)
   }
