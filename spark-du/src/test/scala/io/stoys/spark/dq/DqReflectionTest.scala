@@ -11,7 +11,7 @@ class DqReflectionTest extends AnyFunSuite {
 
   test("basics") {
     val expectedFields = Seq(
-      DqField("id", "integer", nullable = false, Seq.empty, None, None),
+      DqField("id", "integer", nullable = true, Seq.empty, None, None),
       DqField("custom_date", "date", nullable = true, Seq.empty, Some("MM/dd/yyyy"), None),
       DqField("custom_enum", "string", nullable = false, Seq("foo", "bar", "baz"), None, None)
     )
@@ -21,9 +21,10 @@ class DqReflectionTest extends AnyFunSuite {
   test("nullability") {
     val emptyDqField = Arbitrary.empty[DqField]
     val expectedFields = Seq(
-      emptyDqField.copy(name = "int", typ = "integer", nullable = false),
+      emptyDqField.copy(name = "int", typ = "integer", nullable = true),
       emptyDqField.copy(name = "str", typ = "string", nullable = true),
       emptyDqField.copy(name = "option_str", typ = "string", nullable = true),
+      emptyDqField.copy(name = "dq_field_not_nullable_int", typ = "integer", nullable = false),
       emptyDqField.copy(name = "dq_field_not_nullable_str", typ = "string", nullable = false),
       emptyDqField.copy(name = "dq_field_not_nullable_option_str", typ = "string", nullable = false)
     )
@@ -48,6 +49,8 @@ object DqReflectionTest {
       int: Int,
       str: String,
       optionStr: Option[String],
+      @DqField(nullable = false)
+      dqFieldNotNullableInt: Int,
       @DqField(nullable = false)
       dqFieldNotNullableStr: String,
       @DqField(nullable = false)

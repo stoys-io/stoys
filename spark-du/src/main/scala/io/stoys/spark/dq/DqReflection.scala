@@ -14,19 +14,16 @@ object DqReflection {
 
   private def getDqField(field: Symbol): Option[DqField] = {
     val dqField = getAnnotationParamsMap[annotation.DqField](field)
-    val dqFieldIgnore = dqField.get("ignore").asInstanceOf[Option[Boolean]]
-    val dqFieldNullable = dqField.get("nullable").asInstanceOf[Option[Boolean]]
-    val dqFieldEnumValues = dqField.getOrElse("enumValues", Seq.empty[String]).asInstanceOf[Seq[String]]
-    val dqFieldFormat = dqField.get("format").asInstanceOf[Option[String]]
-    val dqFieldRegexp = dqField.get("regexp").asInstanceOf[Option[String]]
+    val ignore = dqField.getOrElse("ignore", false).asInstanceOf[Boolean]
+    val nullable = dqField.getOrElse("nullable", true).asInstanceOf[Boolean]
+    val enumValues = dqField.getOrElse("enumValues", Seq.empty[String]).asInstanceOf[Seq[String]]
+    val format = dqField.get("format").asInstanceOf[Option[String]]
+    val regexp = dqField.get("regexp").asInstanceOf[Option[String]]
 
-    if (dqFieldIgnore.getOrElse(false)) {
+    if (ignore) {
       None
     } else {
-      val typ = getDqFieldTyp(field)
-      val isPrimitive = Reflection.typeSymbolOf(field.typeSignature).asClass.isPrimitive
-      val nullable = dqFieldNullable.getOrElse(!isPrimitive)
-      Some(DqField(getColumnName(field), typ, nullable, dqFieldEnumValues, dqFieldFormat, dqFieldRegexp))
+      Some(DqField(getColumnName(field), getDqFieldTyp(field), nullable, enumValues, format, regexp))
     }
   }
 
