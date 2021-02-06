@@ -39,7 +39,9 @@ object DqReflectionTest {
       @DqField(nullable = true, format = "MM/dd/yyyy")
       customDate: Date,
       @DqField(nullable = false, enumValues = Array("foo", "bar", "baz"))
-      customEnum: String
+      customEnum: String,
+      @DqField(ignore = true)
+      ignored: String
   )
 
   case class NullableRecord(

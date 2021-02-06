@@ -8,6 +8,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DqField {
+    boolean ignore() default false;
+
     boolean nullable() default true;
 
     String[] enumValues() default {};
