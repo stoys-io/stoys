@@ -130,14 +130,18 @@ private[dq] object DqFramework {
     import wideDqDf.sparkSession.implicits._
 
     val stackExprs = ruleInfo.map { ri =>
-      val result = if (ri.missingReferencedColumnNames.nonEmpty) lit(false) else col(ri.rule.name)
-      val column = array(ri.existingReferencedColumnNames.map(lit): _*)
-      val value = array(ri.existingReferencedColumnNames.map(cn => col(cn).cast(StringType)): _*)
+      val existingColumnNames = ri.existingReferencedColumnNames
+      val missingColumnNames = ri.missingReferencedColumnNames
+      val result = if (missingColumnNames.nonEmpty) lit(false) else col(ri.rule.name)
+      val column = array((existingColumnNames ++ missingColumnNames).map(lit): _*)
+      val existingColumnValues = existingColumnNames.map(cn => coalesce(col(cn).cast(StringType), lit("__NULL__")))
+      val missingColumnValues = missingColumnNames.map(_ => lit("__MISSING__"))
+      val value = array(existingColumnValues ++ missingColumnValues: _*)
       Seq(result, column, value, lit(ri.rule.name), lit(ri.rule.expression))
     }
     val stackExpr = stackExprs.flatten.map(_.expr.sql).mkString(", ")
     val stackedDf = wideDqDf.select(
-      array(primaryKeyFieldNames.map(col): _*).as("primary_key"),
+      array(primaryKeyFieldNames.map(fn => col(fn).cast(StringType)): _*).as("primary_key"),
       expr(s"STACK(${stackExprs.size}, $stackExpr) AS (result, column_names, values, rule_name, rule_expression)")
     )
     val filteredDf = stackedDf.where(not(col("result"))).drop("result")
