@@ -23,7 +23,7 @@ class IOTest extends AnyFunSuite {
   test("using") {
     val resource = new TestResource()
     assert(!resource.closeCalled)
-    IO.using(resource)(_ => Unit)
+    IO.using(resource)(_ => ())
     assert(resource.closeCalled)
   }
 }

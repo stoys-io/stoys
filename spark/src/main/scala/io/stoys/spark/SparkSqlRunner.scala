@@ -13,7 +13,7 @@ object SparkSqlRunner {
   val LABELS_SPECIAL_COLUMN_NAME = "__labels__"
 
   private[spark] def splitSqlStatements(databricksNotebookText: String): Seq[String] = {
-    databricksNotebookText.split("-- COMMAND --").head.split(';').map(_.trim).filterNot(_.isEmpty)
+    databricksNotebookText.split("-- COMMAND --").head.split(';').toSeq.map(_.trim).filterNot(_.isEmpty)
   }
 
   /**
@@ -71,7 +71,8 @@ object SparkSqlRunner {
     import sparkSession.implicits._
 
     val metricsDf = runSqlDF(sparkSession, clazz, sqlFileName, tables, params)
-    val (specialColumnNames, regularColumnNames) = metricsDf.columns.partition(_.matches(SPECIAL_COLUMN_NAMES_PATTERN))
+    val (specialColumnNames, regularColumnNames) =
+      metricsDf.columns.toSeq.partition(_.matches(SPECIAL_COLUMN_NAMES_PATTERN))
     val metricColumnsTransposed = explode(map(regularColumnNames.flatMap(c => Array(lit(c), col(c))): _*))
     var df = metricsDf.select(specialColumnNames.map(col) :+ metricColumnsTransposed: _*)
     val staticLabelsColumn = typedLit(Map("class_name" -> clazz.getSimpleName) ++ labels)

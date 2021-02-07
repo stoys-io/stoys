@@ -89,7 +89,7 @@ class DbLoaderTest extends SparkTestBase {
       while (resultSet.next()) {
         result.append(resultSetMapper(resultSet))
       }
-      result
+      result.toSeq
     }
   }
 

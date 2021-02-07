@@ -9,7 +9,7 @@ import io.stoys.spark.SToysException
 import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.io.IOUtils
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class ZipFileFormatTest extends SparkTestBase {
   import ZipFileFormat._

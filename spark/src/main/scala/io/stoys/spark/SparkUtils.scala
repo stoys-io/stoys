@@ -1,6 +1,11 @@
 package io.stoys.spark
 
+import java.util.ServiceLoader
+
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.sources.DataSourceRegister
+
+import scala.jdk.CollectionConverters._
 
 object SparkUtils {
   def createSparkSession(sparkConfig: SparkConfig): SparkSession = {
@@ -9,5 +14,9 @@ object SparkUtils {
     Option(sparkConfig.master).foreach(builder.master)
     Option(sparkConfig.appName).foreach(builder.appName)
     builder.getOrCreate()
+  }
+
+  def isDeltaSupported: Boolean = {
+    ServiceLoader.load(classOf[DataSourceRegister]).iterator().asScala.exists(_.shortName().toLowerCase() == "delta")
   }
 }

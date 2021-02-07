@@ -32,7 +32,7 @@ object FilePerRow {
   }
 
   private def collectFieldIndexes(schema: StructType, fieldName: String, dataType: DataType): Seq[Int] = {
-    schema.fields.zipWithIndex.collect {
+    schema.fields.toSeq.zipWithIndex.collect {
       case (StructField(name, dt, _, _), index) if name.equalsIgnoreCase(fieldName) && dt == dataType => index
     }
   }

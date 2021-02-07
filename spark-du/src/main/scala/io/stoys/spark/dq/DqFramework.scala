@@ -68,7 +68,7 @@ private[dq] object DqFramework {
   case class WideDqDfInfo(wideDqDf: DataFrame, ruleInfo: Seq[RuleInfo])
 
   def computeWideDqDfInfo[T](ds: Dataset[T], rulesWithinDs: Seq[DqRule], rules: Seq[DqRule]): WideDqDfInfo = {
-    val columnNames = ds.columns.dropRight(rulesWithinDs.size)
+    val columnNames = ds.columns.toSeq.dropRight(rulesWithinDs.size)
     val ruleInfoWithinDs = getRuleInfo(ds.sparkSession, columnNames, rulesWithinDs)
     val ruleInfo = getRuleInfo(ds.sparkSession, columnNames, rules)
     val ruleInfoCombined = ruleInfoWithinDs ++ ruleInfo
@@ -118,10 +118,11 @@ private[dq] object DqFramework {
         columnNames.zip(aggOutputRow.columnViolations).map(DqColumnStatistics.tupled),
         ruleNames.zip(aggOutputRow.ruleViolations).map(DqRuleStatistics.tupled)
       )
-      val rowSample = aggOutputRow.rowSample.zip(aggOutputRow.ruleHashes).map {
-        case (rowSample, ruleHashes) => DqRowSample(rowSample, ruleHashes.zip(ruleNames).filter(_._1 >= 0).map(_._2))
+      val rowSample = aggOutputRow.rowSample.zip(aggOutputRow.ruleHashes).toSeq.map {
+        case (rowSample, ruleHashes) =>
+          DqRowSample(rowSample.toSeq, ruleHashes.toSeq.zip(ruleNames).filter(_._1 >= 0).map(_._2))
       }
-      DqResult(resultColumns, resultRules, statistics, rowSample, metadata)
+      DqResult(resultColumns, resultRules, statistics, rowSample.toSeq, metadata)
     }
   }
 

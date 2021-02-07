@@ -74,9 +74,13 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
 
   private def writeSharedOutputPath(mergedMetrics: Option[Dataset[Metric]]): Unit = {
     config.sharedOutputPath.foreach { sharedOutputPath =>
-      mergedMetrics.foreach { mm =>
-        mm.withColumn("run_timestamp", lit(Timestamp.valueOf(config.runTimestamp)))
-            .write.format("delta").mode("append").save(s"$sharedOutputPath/metric")
+      if (SparkUtils.isDeltaSupported) {
+        mergedMetrics.foreach { mm =>
+          mm.withColumn("run_timestamp", lit(Timestamp.valueOf(config.runTimestamp)))
+              .write.format("delta").mode("append").save(s"$sharedOutputPath/metric")
+        }
+      } else {
+        logger.error(s"Delta file format is not supported. Shared metrics are not written!")
       }
       sparkIO.writeSymLink(s"$sharedOutputPath/latest.list")
     }

@@ -9,7 +9,7 @@ import io.stoys.scala.Configuration
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class SparkDagRunnerTest extends SparkTestBase {
   import SparkDagRunnerTest._
@@ -39,9 +39,12 @@ class SparkDagRunnerTest extends SparkTestBase {
     val expectedPack = Seq(Pack(1, 1000 * 11 * 12 + 11 + 12), Pack(2, 1000 * 21 * 22 + 21 + 22))
     assert(readDataset[Pack](s"$outputPath/pack").collect() === expectedPack)
 
-    val sharedMetrics = sparkSession.read.format("delta").load(s"$sharedOutputPath/metric")
-    val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp))
-    assert(sharedMetrics.collect() === Array(Row("add_metric", 42.0, Map("foo" -> "bar"), ts)))
+    // TODO: Do we want to have shared metrics optional or mandatory again once delta is published for Scala 2.13.
+    if (SparkUtils.isDeltaSupported) {
+      val sharedMetrics = sparkSession.read.format("delta").load(s"$sharedOutputPath/metric")
+      val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp))
+      assert(sharedMetrics.collect() === Array(Row("add_metric", 42.0, Map("foo" -> "bar"), ts)))
+    }
 
     assert(readListLines(s"$outputPath/.dag/input_tables.list")
         === Set(s"file:$inputPath/bar?sos-table_name=bar", s"file:$inputPath/foo?sos-table_name=foo"))

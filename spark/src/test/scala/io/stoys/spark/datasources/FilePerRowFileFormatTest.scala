@@ -50,6 +50,8 @@ class FilePerRowFileFormatTest extends SparkTestBase {
 
   def readFiles(path: String): Map[String, String] = {
     val fileStatusesByRelativePath = walkDfsFileStatusesByRelativePath(path)
-    fileStatusesByRelativePath.mapValues(fs => IOUtils.toString(dfs.open(fs.getPath.toString), StandardCharsets.UTF_8))
+    fileStatusesByRelativePath.map {
+      case (path, status) => path -> IOUtils.toString(dfs.open(status.getPath.toString), StandardCharsets.UTF_8)
+    }
   }
 }

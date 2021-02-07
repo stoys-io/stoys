@@ -126,9 +126,9 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
     )
   }
 
-  override def bufferEncoder: Encoder[DqAgg] = ExpressionEncoder[DqAgg]
+  override def bufferEncoder: Encoder[DqAgg] = ExpressionEncoder[DqAgg]()
 
-  override def outputEncoder: Encoder[DqAggOutputRow] = ExpressionEncoder[DqAggOutputRow]
+  override def outputEncoder: Encoder[DqAggOutputRow] = ExpressionEncoder[DqAggOutputRow]()
 }
 
 object DqAggregator {

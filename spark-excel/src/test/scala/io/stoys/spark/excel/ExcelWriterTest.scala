@@ -10,7 +10,7 @@ import org.apache.poi.ss.util.CellAddress
 import org.apache.poi.xssf.streaming.SXSSFWorkbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class ExcelWriterTest extends SparkTestBase {
   import ExcelWriter._

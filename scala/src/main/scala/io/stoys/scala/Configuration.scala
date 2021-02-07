@@ -107,7 +107,7 @@ object Configuration {
   def parseConfigurationConfig(args: Array[String]): ConfigurationConfig = {
     val (environmentArgs, remainingArgs) = args.partition(_.startsWith(ENVIRONMENT_ARGS_PREFIX))
     val environments = environmentArgs.flatMap(_.stripPrefix(ENVIRONMENT_ARGS_PREFIX).split(','))
-    ConfigurationConfig(environments ++ DEFAULT_ENVIRONMENTS, remainingArgs)
+    ConfigurationConfig(environments.toSeq ++ DEFAULT_ENVIRONMENTS, remainingArgs.toSeq)
   }
 
   private[scala] def prettyPrintJsonNode[T <: Product : TypeTag](jsonNode: JsonNode): String = {

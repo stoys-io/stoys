@@ -7,8 +7,8 @@ import java.util.Locale
 import org.apache.http.client.utils.{URIBuilder, URLEncodedUtils}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.jdk.CollectionConverters._
 import scala.reflect.runtime.universe
 import scala.util.matching.Regex
 
@@ -198,7 +198,7 @@ object SparkIO {
   private[stoys] def parseInputPath(inputPath: String): ParsedInputPath = {
     val pathParamsUri = new URI(inputPath)
     val path = new URIBuilder(pathParamsUri).removeQuery().build().toString
-    val nameValuePairs = URLEncodedUtils.parse(pathParamsUri, StandardCharsets.UTF_8.name())
+    val nameValuePairs = URLEncodedUtils.parse(pathParamsUri, StandardCharsets.UTF_8)
     val params = nameValuePairs.asScala.map(kv => kv.getName -> kv.getValue)
     val (rawSosOptions, options) = params.toMap.partition(_._1.toLowerCase(Locale.ROOT).startsWith(SOS_PREFIX))
     val sosOptions = toSosOptions(rawSosOptions)

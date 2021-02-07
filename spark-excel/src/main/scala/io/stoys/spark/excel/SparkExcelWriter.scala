@@ -34,7 +34,7 @@ object SparkExcelWriter {
     val workbook = ExcelWriter.createWorkbook(config)
     row.schema.fields.zipWithIndex.foreach {
       case (StructField(sheetName, ArrayType(StructType(fields), _), _, _), index) =>
-        val columnInfo = getColumnInfo(fields, config)
+        val columnInfo = getColumnInfo(fields.toSeq, config)
         val rows = row.getSeq[Row](index).map(_.toSeq)
         ExcelWriter.writeTableDataIntoWorkbook(workbook, sheetName, columnInfo, rows, config)
       case (sf, _) if ExcelWriter.SPECIAL_COLUMN_NAME_PATTERN.findFirstIn(sf.name).isDefined => // ignore
@@ -46,8 +46,8 @@ object SparkExcelWriter {
 
   private def datasetToSheetRows(ds: Dataset[_]): DataFrame = {
     val allPossibleGroupByColumnNames = Set("__path__", "__sheet__")
-    val groupByColumnNames = ds.columns.filter(allPossibleGroupByColumnNames)
-    val dataColumns = ds.schema.fieldNames.filter(fn => !groupByColumnNames.contains(fn)).map(fn => col(fn))
+    val groupByColumnNames = ds.columns.filter(allPossibleGroupByColumnNames).toSeq
+    val dataColumns = ds.schema.fieldNames.filter(fn => !groupByColumnNames.contains(fn)).map(fn => col(fn)).toSeq
     val indexedDf = ds.withColumn("__rowid__", monotonically_increasing_id())
     indexedDf.groupBy(groupByColumnNames.map(col): _*).agg(collect_list(struct(dataColumns: _*)).as("__rows__"))
   }
@@ -86,7 +86,7 @@ object SparkExcelWriter {
         (row.getSeq[Row](rowsFieldIndex), row.schema.fields(rowsFieldIndex).dataType) match {
           case (null, _) => // __sheet__ has no rows for given __path__
           case (rows, ArrayType(StructType(fields), _)) =>
-            val columnInfo = getColumnInfo(fields, config)
+            val columnInfo = getColumnInfo(fields.toSeq, config)
             ExcelWriter.writeTableDataIntoWorkbook(workbook, sheetName, columnInfo, rows.map(_.toSeq), config)
           case (_, dt) => throw new SToysException(s"Unsupported __rows__ field data type '$dt'.")
         }

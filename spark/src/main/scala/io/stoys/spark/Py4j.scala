@@ -4,7 +4,7 @@ import java.util.{List => JList, Map => JMap}
 
 import io.stoys.scala.Reflection
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object Py4j {
   val emptyOption: Option[Nothing] = None
@@ -28,7 +28,7 @@ object Py4j {
   }
 
   def toSeq[T](list: JList[T]): Seq[T] = {
-    list.asScala
+    list.asScala.toSeq
   }
 
   def toSet[T](list: JList[T]): Set[T] = {

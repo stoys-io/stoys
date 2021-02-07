@@ -53,7 +53,7 @@ abstract class SparkTestBase extends AnyFunSuite {
   }
 
   def readData[T <: Product : TypeTag](path: String): Seq[T] = {
-    readDataset[T](path).collect()
+    readDataset[T](path).collect().toSeq
   }
 
   def writeDataFrame(path: String, df: DataFrame): Unit = {

@@ -219,10 +219,10 @@ object Reflection {
 
   private def getAnnotationParams(annotation: Annotation): Seq[(String, Any)] = {
     def getAnnotationParams(tree: Tree): Seq[(String, Any)] = {
-      tree match {
-        case Apply(Select(New(TypeTree()), termNames.CONSTRUCTOR), valueTrees) =>
-          valueTrees.map {
-            case AssignOrNamedArg(Ident(TermName(key)), valueTree) => key -> getValue(valueTree)
+      tree.children.tail.map {
+        case namedArg =>
+          namedArg.children match {
+            case List(Ident(TermName(key)), valueTree) => key -> getValue(valueTree)
           }
       }
     }

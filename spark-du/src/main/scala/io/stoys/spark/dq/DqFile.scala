@@ -21,7 +21,7 @@ private[dq] object DqFile {
     if (!dfs.exists(path)) {
       throw new SToysException(s"Path '$path' does not exists.")
     }
-    if (!dfs.isFile(path)) {
+    if (!dfs.getFileStatus(path).isFile) {
       throw new SToysException(s"Path '$path' is not a file.")
     }
     val status = dfs.getFileStatus(path)

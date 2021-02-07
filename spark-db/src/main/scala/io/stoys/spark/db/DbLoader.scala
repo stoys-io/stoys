@@ -91,7 +91,10 @@ class DbLoader(args: Array[String]) {
   }
 
   def replaceParams(options: Map[String, String], keys: String*): Map[String, String] = {
-    val overrides = options.filterKeys(keys.contains).mapValues(v => Strings.replaceParams(v, params))
+    val overrides = options.flatMap {
+      case (key, value) if keys.contains(key) => Some(key -> Strings.replaceParams(value, params))
+      case _ => None
+    }
     options ++ overrides
   }
 

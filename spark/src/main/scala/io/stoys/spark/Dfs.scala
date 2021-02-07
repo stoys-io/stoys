@@ -81,16 +81,6 @@ class Dfs(hadoopConfiguration: Configuration) {
     fs.globStatus(qualifiedPath)
   }
 
-  def isDirectory(path: String): Boolean = {
-    val (fs, qualifiedPath) = asQualifiedPath(path)
-    fs.isDirectory(qualifiedPath)
-  }
-
-  def isFile(path: String): Boolean = {
-    val (fs, qualifiedPath) = asQualifiedPath(path)
-    fs.isFile(qualifiedPath)
-  }
-
   def listStatus(path: String): Array[FileStatus] = {
     val (fs, qualifiedPath) = asQualifiedPath(path)
     fs.listStatus(qualifiedPath)

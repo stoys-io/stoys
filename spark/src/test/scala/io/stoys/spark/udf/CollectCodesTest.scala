@@ -11,7 +11,7 @@ class CollectCodesTest extends SparkTestBase {
   sparkSession.udf.register("cleanup_codes", CollectCodes.cleanupCodes _)
 
   def selectSingleStringSeq(query: String): Seq[String] = {
-    sparkSession.sql(query).collect().toList.head.getAs[Seq[String]](0)
+    sparkSession.sql(query).collect().head.getSeq[String](0)
   }
 
   def mapped(expression: String): Seq[String] = {
@@ -28,10 +28,10 @@ class CollectCodesTest extends SparkTestBase {
 
   test("CollectCodes") {
     val foo = Seq(Record(1, Seq("c", "", "a"), Seq("foo1ac")), Record(2, Seq("", null, "b"), Seq("foo2ac")))
-    foo.toDS.createOrReplaceTempView("foo")
+    foo.toDS().createOrReplaceTempView("foo")
 
     val bar = Seq(Record(2, Seq("bar", "", null), Seq("bar2ac")))
-    bar.toDS.createOrReplaceTempView("bar")
+    bar.toDS().createOrReplaceTempView("bar")
 
     assert(mapped("COLLECT_CODES(codes, alternative_codes)") === Seq("a", "b", "c", "foo1ac", "foo2ac"))
 

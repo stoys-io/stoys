@@ -168,7 +168,7 @@ object DqJoin {
         rules += keyMultiplyingRule("right")
       case CROSS =>
     }
-    rules
+    rules.toSeq
   }
 
   private def count_if(condition: Column): Column = {

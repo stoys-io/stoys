@@ -25,6 +25,12 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- commons -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+        </dependency>
+
         <!-- spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -35,11 +41,12 @@
             <artifactId>spark-sql_${scala.compat.version}</artifactId>
         </dependency>
 
-        <!-- spark libraries -->
-        <dependency>
-            <groupId>io.delta</groupId>
-            <artifactId>delta-core_${scala.compat.version}</artifactId>
-        </dependency>
+        <!-- TODO: Move delta dependency back here from profiles once it is published for Scala 2.13. -->
+        <!--&lt;!&ndash; spark libraries &ndash;&gt;-->
+        <!--<dependency>-->
+        <!--    <groupId>io.delta</groupId>-->
+        <!--    <artifactId>delta-core_${scala.compat.version}</artifactId>-->
+        <!--</dependency>-->
 
         <!-- test -->
         <dependency>
@@ -73,7 +80,50 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
+                <configuration>
+                    <artifactSet combine.children="append">
+                        <includes>
+                            <include>org.apache.httpcomponents:*</include>
+                        </includes>
+                    </artifactSet>
+                    <relocations combine.children="append">
+                        <relocation>
+                            <pattern>org.apache.http.client</pattern>
+                            <shadedPattern>io.stoys.shaded.org.apache.http.client</shadedPattern>
+                        </relocation>
+                    </relocations>
+                </configuration>
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>scala-2.11</id>
+            <dependencies>
+                <dependency>
+                    <groupId>io.delta</groupId>
+                    <artifactId>delta-core_${scala.compat.version}</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>scala-2.12</id>
+            <dependencies>
+                <dependency>
+                    <groupId>io.delta</groupId>
+                    <artifactId>delta-core_${scala.compat.version}</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>scala-2.13</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.scala-lang.modules</groupId>
+                    <artifactId>scala-parallel-collections_${scala.compat.version}</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>
