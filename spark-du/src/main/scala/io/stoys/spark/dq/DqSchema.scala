@@ -14,20 +14,23 @@ private[dq] object DqSchema {
     val existingFieldNames = existingSchema.map(_.name.toLowerCase(Locale.ROOT))
     val expectedFieldNames = expectedFields.map(_.name.toLowerCase(Locale.ROOT))
     val missingFieldNames = expectedFieldNames.filterNot(existingFieldNames.toSet)
-    if (missingFieldNames.nonEmpty) {
-      val description = s"Expected fields should: ${missingFieldNames.mkString(", ")}"
+    val expectedPrimaryKeyFieldNames = primaryKeyFieldNames.map(_.toLowerCase(Locale.ROOT))
+    val missingPrimaryKeyFieldNames = expectedPrimaryKeyFieldNames.filterNot(existingFieldNames.toSet)
+    val allMissingFieldNames = missingFieldNames ++ missingPrimaryKeyFieldNames.filterNot(missingFieldNames.toSet)
+    if (allMissingFieldNames.nonEmpty) {
+      val description = s"Expected fields should: ${allMissingFieldNames.mkString(", ")}"
       val rule = namedRule("_expected_fields", "exist", "false", description)
-      rules += rule.copy(referenced_column_names = missingFieldNames)
+      rules += rule.copy(referenced_column_names = allMissingFieldNames)
     }
     if (config.report_extra_columns) {
       val extraFieldNames = existingFieldNames.filterNot(expectedFieldNames.toSet)
       val description = s"Extra fields should not exist: ${extraFieldNames.mkString(", ")}"
       rules += namedRule("_extra_fields", "not_exist", "false", description)
     }
-    if (primaryKeyFieldNames.nonEmpty) {
-      val pkFieldName = "_primary_key"
-      rules += namedRule(pkFieldName, "not_null", primaryKeyFieldNames.map(fn => s"$fn IS NOT NULL").mkString(" AND "))
-      rules += uniqueRule(pkFieldName, primaryKeyFieldNames)
+    if (expectedPrimaryKeyFieldNames.nonEmpty && missingPrimaryKeyFieldNames.isEmpty) {
+      val primaryKeyNotNullExpr = expectedPrimaryKeyFieldNames.map(fn => s"$fn IS NOT NULL").mkString(" AND ")
+      rules += namedRule("_primary_key", "not_null", primaryKeyNotNullExpr)
+      rules += uniqueRule("_primary_key", expectedPrimaryKeyFieldNames)
     }
     val existingFieldsByName = existingSchema.map(f => f.name.toLowerCase(Locale.ROOT) -> f).toMap
     expectedFields.foreach { expectedField =>

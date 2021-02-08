@@ -47,7 +47,7 @@ class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
       throw new SToysException(s"$className needs primary key column names configured!")
     }
     val wideDqDfInfo = computeWideDqDfInfo()
-    DqFramework.computeDqViolationPerRow(wideDqDfInfo.wideDqDf, wideDqDfInfo.ruleInfo, primaryKeyFieldNames)
+    DqFramework.computeDqViolationPerRow(wideDqDfInfo, primaryKeyFieldNames)
   }
 
   def selectFailingRows(): DataFrame = {

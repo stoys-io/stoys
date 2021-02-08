@@ -10,6 +10,9 @@ import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import scala.collection.mutable
 
 private[dq] object DqFramework {
+  val MISSING_TOKEN = "__MISSING__"
+  val NULL_TOKEN = "__NULL__"
+
   case class RuleInfo(
       rule: DqRule,
       missingReferencedColumnNames: Seq[String],
@@ -65,7 +68,7 @@ private[dq] object DqFramework {
     true
   }
 
-  case class WideDqDfInfo(wideDqDf: DataFrame, ruleInfo: Seq[RuleInfo])
+  case class WideDqDfInfo(wideDqDf: DataFrame, columnNames: Seq[String], ruleInfo: Seq[RuleInfo])
 
   def computeWideDqDfInfo[T](ds: Dataset[T], rulesWithinDs: Seq[DqRule], rules: Seq[DqRule]): WideDqDfInfo = {
     val columnNames = ds.columns.toSeq.dropRight(rulesWithinDs.size)
@@ -74,7 +77,7 @@ private[dq] object DqFramework {
     val ruleInfoCombined = ruleInfoWithinDs ++ ruleInfo
     val wideDqDf = if (ruleInfo.isEmpty) ds.toDF() else computeWideDqDf(ds, ruleInfo)
     checkWideDqColumnsSanity(wideDqDf.schema, ruleInfoCombined.size)
-    WideDqDfInfo(wideDqDf, ruleInfoCombined)
+    WideDqDfInfo(wideDqDf, columnNames, ruleInfoCombined)
   }
 
   private def computeWideDqDf[T](ds: Dataset[T], ruleInfo: Seq[RuleInfo]): DataFrame = {
@@ -126,23 +129,27 @@ private[dq] object DqFramework {
     }
   }
 
-  def computeDqViolationPerRow(wideDqDf: DataFrame, ruleInfo: Seq[RuleInfo],
+  def computeDqViolationPerRow(wideDqDfInfo: WideDqDfInfo,
       primaryKeyFieldNames: Seq[String]): Dataset[DqViolationPerRow] = {
-    import wideDqDf.sparkSession.implicits._
+    import wideDqDfInfo.wideDqDf.sparkSession.implicits._
 
-    val stackExprs = ruleInfo.map { ri =>
+    val primaryKeyExprs = primaryKeyFieldNames.map {
+      case fn if wideDqDfInfo.columnNames.contains(fn) => coalesce(col(fn).cast(StringType), lit(NULL_TOKEN))
+      case _ => lit(MISSING_TOKEN)
+    }
+    val stackExprs = wideDqDfInfo.ruleInfo.map { ri =>
       val existingColumnNames = ri.existingReferencedColumnNames
       val missingColumnNames = ri.missingReferencedColumnNames
       val result = if (missingColumnNames.nonEmpty) lit(false) else col(ri.rule.name)
       val column = array((existingColumnNames ++ missingColumnNames).map(lit): _*)
-      val existingColumnValues = existingColumnNames.map(cn => coalesce(col(cn).cast(StringType), lit("__NULL__")))
-      val missingColumnValues = missingColumnNames.map(_ => lit("__MISSING__"))
+      val existingColumnValues = existingColumnNames.map(cn => coalesce(col(cn).cast(StringType), lit(NULL_TOKEN)))
+      val missingColumnValues = missingColumnNames.map(_ => lit(MISSING_TOKEN))
       val value = array(existingColumnValues ++ missingColumnValues: _*)
       Seq(result, column, value, lit(ri.rule.name), lit(ri.rule.expression))
     }
     val stackExpr = stackExprs.flatten.map(_.expr.sql).mkString(", ")
-    val stackedDf = wideDqDf.select(
-      array(primaryKeyFieldNames.map(fn => col(fn).cast(StringType)): _*).as("primary_key"),
+    val stackedDf = wideDqDfInfo.wideDqDf.select(
+      array(primaryKeyExprs: _*).as("primary_key"),
       expr(s"STACK(${stackExprs.size}, $stackExpr) AS (result, column_names, values, rule_name, rule_expression)")
     )
     val filteredDf = stackedDf.where(not(col("result"))).drop("result")

@@ -118,7 +118,7 @@ class DqTest extends SparkTestBase {
       field("id", "integer", nullable = false),
       field("missing", "string")
     )
-    val primaryKeyFieldNames = Seq("id", "extra")
+    val primaryKeyFieldNames = Seq("id", "missing_id")
 
     val dq = Dq.fromDataset(records.take(2).toDS())
         .rules(rules).fields(fields).primaryKeyFieldNames(primaryKeyFieldNames)
@@ -128,11 +128,13 @@ class DqTest extends SparkTestBase {
 
     val dqViolationPerRowDs = dq.computeDqViolationPerRow()
     assert(dqViolationPerRowDs.collect() === Seq(
-      DqViolationPerRow(Seq("1", "extra"), Seq("id"), Seq("1"), "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
-      DqViolationPerRow(Seq("1", "extra"), Seq("id", "missing"), Seq("1", "__MISSING__"), "id__equal", "id = missing"),
-      DqViolationPerRow(Seq("1", "extra"), Seq("missing"), Seq("__MISSING__"), "_expected_fields__exist", "false"),
-      DqViolationPerRow(Seq("2", "extra"), Seq("id", "missing"), Seq("2", "__MISSING__"), "id__equal", "id = missing"),
-      DqViolationPerRow(Seq("2", "extra"), Seq("missing"), Seq("__MISSING__"), "_expected_fields__exist", "false")
+      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id"), Seq("1"), "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
+      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id", "missing"), Seq("1", "__MISSING__"), "id__equal", "id = missing"),
+      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
+        "_expected_fields__exist", "false"),
+      DqViolationPerRow(Seq("2", "__MISSING__"), Seq("id", "missing"), Seq("2", "__MISSING__"), "id__equal", "id = missing"),
+      DqViolationPerRow(Seq("2", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
+        "_expected_fields__exist", "false")
     ))
 
     val failingRowsDs = dq.selectFailingRows()
