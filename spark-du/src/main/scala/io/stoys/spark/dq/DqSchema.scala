@@ -18,7 +18,7 @@ private[dq] object DqSchema {
     val missingPrimaryKeyFieldNames = expectedPrimaryKeyFieldNames.filterNot(existingFieldNames.toSet)
     val allMissingFieldNames = missingFieldNames ++ missingPrimaryKeyFieldNames.filterNot(missingFieldNames.toSet)
     if (allMissingFieldNames.nonEmpty) {
-      val description = s"Expected fields should: ${allMissingFieldNames.mkString(", ")}"
+      val description = s"Expected fields should exist: ${allMissingFieldNames.mkString(", ")}"
       val rule = namedRule("_expected_fields", "exist", "false", description)
       rules += rule.copy(referenced_column_names = allMissingFieldNames)
     }

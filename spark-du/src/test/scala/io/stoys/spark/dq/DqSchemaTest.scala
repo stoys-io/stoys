@@ -22,7 +22,7 @@ class DqSchemaTest extends SparkTestBase {
     val primaryKeyFieldNames = Seq("i", "s")
 
     val expectedRules = Seq(
-      DqRule("_expected_fields__exist", "false", Some("Expected fields should: missing"), Seq("missing")),
+      DqRule("_expected_fields__exist", "false", Some("Expected fields should exist: missing"), Seq("missing")),
       DqRule("_primary_key__not_null", "i IS NOT NULL AND s IS NOT NULL", None, Seq.empty),
       DqRule("_primary_key__unique", "(COUNT(*) OVER (PARTITION BY i, s)) = 1", None, Seq.empty),
       DqRule("i__type", "i IS NULL OR CAST(i AS INT) IS NOT NULL", None, Seq.empty),

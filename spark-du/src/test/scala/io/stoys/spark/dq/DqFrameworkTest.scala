@@ -11,10 +11,10 @@ class DqFrameworkTest extends SparkTestBase {
   test("getRuleInfo") {
     val ss = sparkSession
     val rule = notNullRule("Foo")
-    assert(getRuleInfo(ss, Seq("foo"), Seq(rule)) === Seq(RuleInfo(rule, Seq.empty, Seq("foo"), Seq(0))))
-    assert(getRuleInfo(ss, Seq("FOO"), Seq(rule)) === Seq(RuleInfo(rule, Seq.empty, Seq("FOO"), Seq(0))))
-    assert(getRuleInfo(ss, Seq("bar"), Seq(rule)) === Seq(RuleInfo(rule, Seq("Foo"), Seq.empty, Seq.empty)))
-    assert(getRuleInfo(ss, Seq("bar"), Seq(rule)) === Seq(RuleInfo(rule, Seq("Foo"), Seq.empty, Seq.empty)))
+    assert(getRuleInfo(ss, Seq("foo"), Seq(rule)) === Seq(ruleInfo(rule, Seq("foo"), Seq(0), Seq.empty)))
+    assert(getRuleInfo(ss, Seq("FOO"), Seq(rule)) === Seq(ruleInfo(rule, Seq("FOO"), Seq(0), Seq.empty)))
+    assert(getRuleInfo(ss, Seq("bar"), Seq(rule)) === Seq(ruleInfo(rule, Seq.empty, Seq.empty, Seq("Foo"))))
+    assert(getRuleInfo(ss, Seq("bar"), Seq(rule)) === Seq(ruleInfo(rule, Seq.empty, Seq.empty, Seq("Foo"))))
   }
 
   test("checkWideDqColumnsSanity") {
@@ -33,5 +33,9 @@ class DqFrameworkTest extends SparkTestBase {
     assert(im(schema(str("f1"), bool("r1"), bool("r1")), 2).contains("have unique names"))
     assert(im(schema(str("fr1"), bool("fr1")), 1).contains("have unique names"))
     assert(im(schema(str("FR1"), bool("fr1")), 1).contains("have unique names"))
+  }
+
+  private def ruleInfo(rule: DqRule, existing: Seq[String], existingIndexes: Seq[Int], missing:Seq[String]): RuleInfo = {
+    RuleInfo(rule, ColumnNamesInfo(existing ++ missing, existing, existingIndexes, missing))
   }
 }
