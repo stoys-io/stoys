@@ -62,26 +62,32 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     Reshape.reshape[T](df(tableName), config.inputReshapeConfig)
   }
 
-  private def writeDF(df: DataFrame, fullTableName: String): Unit = {
+  private def writeDF(df: DataFrame, fullTableName: String,
+      format: Option[String], writeMode: Option[String], options: Map[String, String]): Unit = {
     val path = s"${config.outputPath.get}/$fullTableName"
-    val table = SosTable(fullTableName, path, config.writeFormat, config.writeOptions)
+    val table = SosTable(fullTableName, path, format, options)
     if (outputTables.contains(table.name)) {
       val msg = s"Writing table with the same table_name ${table.name} multiple times!"
       logger.error(msg)
       throw new SToysException(msg)
     } else {
       logger.info(s"Writing $fullTableName to $path.")
-      var writer = df.write
-      config.writeFormat.foreach(f => writer = writer.format(f))
-      config.writeMode.foreach(m => writer = writer.mode(m))
-      writer = writer.options(config.writeOptions)
+      val writer = df.write
+      table.format.foreach(writer.format)
+      writeMode.foreach(writer.mode)
+      writer.options(table.options)
       writer.save(path)
       outputTables.put(table.name, table)
     }
   }
 
   def write[T <: Product](ds: Dataset[T], tableName: TableName[T]): Unit = {
-    writeDF(ds.toDF(), tableName.fullTableName())
+    write[T](ds, tableName, config.writeFormat, config.writeMode, config.writeOptions)
+  }
+
+  def write[T <: Product](ds: Dataset[T], tableName: TableName[T],
+      format: Option[String], writeMode: Option[String], options: Map[String, String]): Unit = {
+    writeDF(ds.toDF(), tableName.fullTableName(), format, writeMode, options)
   }
 
   // TODO: Add listing strategies based on timestamp, checking success, etc.
