@@ -89,10 +89,8 @@ class DqTest extends SparkTestBase {
     val rules = Seq(namedRule("id", "even", "id IS NOT NULL AND (id % 2 = 0)"))
     // TODO: Can we fix double escaping in regexp?
     val fields = Seq(field("id", "integer", nullable = false, regexp = "\\\\d+"))
-    val primaryKeyFieldNames = Seq("id")
 
-    val dq = Dq.fromFileInputPath(sparkSession, recordsCsvInputPath)
-        .rules(rules).fields(fields).primaryKeyFieldNames(primaryKeyFieldNames)
+    val dq = Dq.fromFileInputPath(sparkSession, recordsCsvInputPath).rules(rules).fields(fields)
 
     val dqResult = dq.computeDqResult().collect().head
     assert(dqResult.statistics.table.violations === 2)
@@ -101,8 +99,8 @@ class DqTest extends SparkTestBase {
 
     val dqViolationPerRowDs = dq.computeDqViolationPerRow()
     assert(dqViolationPerRowDs.collect() === Seq(
-      DqViolationPerRow(Seq("1"), Seq("id"), Seq("1"), "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
-      DqViolationPerRow(Seq("3"), Seq("id"), Seq("3"), "id__even", "id IS NOT NULL AND (id % 2 = 0)")
+      DqViolationPerRow(Seq(), Seq("id"), Seq("1"), "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
+      DqViolationPerRow(Seq(), Seq("id"), Seq("3"), "id__even", "id IS NOT NULL AND (id % 2 = 0)")
     ))
 
     val failingRowsDs = dq.selectFailingRows()

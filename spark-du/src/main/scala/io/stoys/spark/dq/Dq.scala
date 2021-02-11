@@ -4,6 +4,8 @@ import io.stoys.spark.SToysException
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
+  private val logger = org.log4s.getLogger
+
   private var config: DqConfig = DqConfig.default
   private var fields: Seq[DqField] = Seq.empty
   private var metadata: Map[String, String] = Map.empty
@@ -44,7 +46,7 @@ class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
   def computeDqViolationPerRow(): Dataset[DqViolationPerRow] = {
     if (primaryKeyFieldNames.isEmpty) {
       val className = classOf[DqViolationPerRow].getSimpleName
-      throw new SToysException(s"$className needs primary key column names configured!")
+      logger.warn(s"$className should probably have primaryKeyFieldNames configured!")
     }
     val wideDqDfInfo = computeWideDqDfInfo()
     DqFramework.computeDqViolationPerRow(wideDqDfInfo, primaryKeyFieldNames)
