@@ -4,7 +4,7 @@
 
     <groupId>io.stoys</groupId>
     <artifactId>stoys-parent_2.12</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>stoys</name>
@@ -16,6 +16,7 @@
         <url>https://github.com/stoys-io/stoys.git</url>
         <connection>scm:git:git@github.com:stoys-io/stoys.git</connection>
         <developerConnection>scm:git:git@github.com:stoys-io/stoys.git</developerConnection>
+        <tag>HEAD</tag>
     </scm>
 
     <issueManagement>
@@ -39,10 +40,6 @@
             <organizationUrl>https://stoys.io</organizationUrl>
         </developer>
     </developers>
-
-    <prerequisites>
-        <maven>3.5</maven>
-    </prerequisites>
 
     <modules>
         <module>scala</module>
@@ -72,7 +69,7 @@
         <log4s.version>1.9.0</log4s.version>
         <logback.version>1.2.3</logback.version>
         <persistence-api.version>2.2</persistence-api.version>
-        <scala-collection-compat.version>2.4.1</scala-collection-compat.version>
+        <scala-collection-compat.version>2.4.2</scala-collection-compat.version>
         <scalatest.version>3.2.3</scalatest.version>
         <slf4j.version>1.7.30</slf4j.version>
         <spark.version>3.0.1</spark.version>
@@ -216,10 +213,11 @@
     <build>
         <pluginManagement>
             <plugins>
+                <!-- maven -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.1.0</version>
+                    <version>3.2.0</version>
                     <configuration>
                         <encoding>${character.encoding}</encoding>
                     </configuration>
@@ -238,6 +236,16 @@
                     </configuration>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.22.2</version>
+                    <configuration>
+                        <failIfNoTests>false</failIfNoTests>
+                    </configuration>
+                </plugin>
+
+                <!-- scala -->
+                <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
                     <version>4.4.0</version>
@@ -246,6 +254,7 @@
                             <goals>
                                 <goal>add-source</goal>
                                 <goal>compile</goal>
+                                <goal>doc-jar</goal>
                                 <goal>testCompile</goal>
                             </goals>
                         </execution>
@@ -269,20 +278,18 @@
                     </configuration>
                 </plugin>
                 <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.22.2</version>
-                    <configuration>
-                        <skipTests>true</skipTests>
-                    </configuration>
-                </plugin>
-                <plugin>
                     <groupId>org.scalatest</groupId>
                     <artifactId>scalatest-maven-plugin</artifactId>
-                    <version>2.0.0</version>
+                    <version>2.0.2</version>
                     <configuration>
                         <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                         <junitxml>.</junitxml>
+                        <filereports>StoysTestSuite.txt</filereports>
+                        <stderr/>
+                        <systemProperties>
+                            <spark.ui.enabled>false</spark.ui.enabled>
+                            <spark.ui.showConsoleProgress>false</spark.ui.showConsoleProgress>
+                        </systemProperties>
                     </configuration>
                     <executions>
                         <execution>
@@ -310,7 +317,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.2.2</version>
+                    <version>3.2.4</version>
                     <executions>
                         <execution>
                             <phase>package</phase>
@@ -367,19 +374,22 @@
                         </execution>
                     </executions>
                 </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.1.1</version>
-                    <executions>
-                        <execution>
-                            <id>attach-javadocs</id>
-                            <goals>
-                                <goal>jar</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
+                <!--<plugin>-->
+                <!--    <groupId>org.apache.maven.plugins</groupId>-->
+                <!--    <artifactId>maven-javadoc-plugin</artifactId>-->
+                <!--    <version>3.2.0</version>-->
+                <!--    <configuration>-->
+                <!--        <additionalparam>-Xdoclint:all -Xdoclint:-missing</additionalparam>-->
+                <!--    </configuration>-->
+                <!--    <executions>-->
+                <!--        <execution>-->
+                <!--            <id>attach-javadocs</id>-->
+                <!--            <goals>-->
+                <!--                <goal>jar</goal>-->
+                <!--            </goals>-->
+                <!--        </execution>-->
+                <!--    </executions>-->
+                <!--</plugin>-->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
@@ -399,6 +409,14 @@
                             </configuration>
                         </execution>
                     </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>3.0.0-M1</version>
+                    <configuration>
+                        <tagNameFormat>stoys-@{project.version}</tagNameFormat>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -505,10 +523,10 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>
                     </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                    </plugin>
+                    <!--<plugin>-->
+                    <!--    <groupId>org.apache.maven.plugins</groupId>-->
+                    <!--    <artifactId>maven-javadoc-plugin</artifactId>-->
+                    <!--</plugin>-->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
@@ -534,10 +552,10 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>
                     </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                    </plugin>
+                    <!--<plugin>-->
+                    <!--    <groupId>org.apache.maven.plugins</groupId>-->
+                    <!--    <artifactId>maven-javadoc-plugin</artifactId>-->
+                    <!--</plugin>-->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
