@@ -1,10 +1,9 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.stoys</groupId>
     <artifactId>stoys-parent_2.12</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1</version>
     <packaging>pom</packaging>
 
     <name>stoys</name>
@@ -16,7 +15,7 @@
         <url>https://github.com/stoys-io/stoys.git</url>
         <connection>scm:git:git@github.com:stoys-io/stoys.git</connection>
         <developerConnection>scm:git:git@github.com:stoys-io/stoys.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>stoys-0.1</tag>
     </scm>
 
     <issueManagement>
@@ -285,7 +284,7 @@
                         <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                         <junitxml>.</junitxml>
                         <filereports>StoysTestSuite.txt</filereports>
-                        <stderr/>
+                        <stderr />
                         <systemProperties>
                             <spark.ui.enabled>false</spark.ui.enabled>
                             <spark.ui.showConsoleProgress>false</spark.ui.showConsoleProgress>
@@ -339,10 +338,8 @@
                             </includes>
                         </artifactSet>
                         <transformers combine.children="append">
-                            <transformer
-                                    implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                            <transformer
-                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                 <mainClass>${main.class}</mainClass>
                             </transformer>
                         </transformers>
