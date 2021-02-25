@@ -1,10 +1,11 @@
 package io.stoys.spark
 
+import java.nio.file.Files
 import java.sql.{Date, Timestamp}
 
 import io.stoys.scala.Arbitrary
 import io.stoys.spark.test.SparkTestBase
-import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
 
 class ReshapeTest extends SparkTestBase {
   import ReshapeTest._
@@ -145,6 +146,16 @@ class ReshapeTest extends SparkTestBase {
     val undefinedOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeSortOrder.UNDEFINED)
     assert(Reshape.reshape[Record](fixableDF, undefinedOrderConfig).columns
         === Reshape.reshape[Record](fixableDF, sourceOrderConfig).columns)
+  }
+
+  test("reshape cannot fix json inference behaviour resolving empty array as array of strings") {
+    val emptySeqOfRecordsJsonPath = tmpDir.resolve("empty_seq_of_records.json")
+    Files.write(emptySeqOfRecordsJsonPath, "{\"records\": []}".getBytes)
+    val fixableDF = sparkSession.read.format("json").load(emptySeqOfRecordsJsonPath.toString)
+    // This is the issue. Should spark infer something else? ArrayType(NullType) maybe?
+    assert(fixableDF.schema.fields.head.dataType === ArrayType(StringType))
+    val caught = intercept[ReshapeException](Reshape.reshape[SeqOfRecord](fixableDF, ReshapeConfig.dangerous))
+    assert(caught.getMessage.contains("Column null of type StringType cannot be casted to StructType"))
   }
 }
 
