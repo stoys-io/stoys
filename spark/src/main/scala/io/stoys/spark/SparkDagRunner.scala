@@ -11,7 +11,6 @@ import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
 class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: SparkDagRunnerConfig) {
-
   private val logger = org.log4s.getLogger
 
   private val metricDatasets = mutable.Buffer.empty[Dataset[Metric]]

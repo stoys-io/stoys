@@ -44,7 +44,6 @@ class DqJoinTest extends SparkTestBase {
     val dqJoinResult = join.computeDqJoinResult().collect().head
     assert(dqJoinResult.join_statistics.left === 5)
     assert(dqJoinResult.dq_result.rules.size === 4)
-    println(io.stoys.scala.Jackson.objectMapper.writeValueAsString(dqJoinResult))
   }
 
   test("expensiveArbitraryJoin") {

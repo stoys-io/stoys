@@ -85,11 +85,9 @@ object SparkDagRunnerTest {
     import sparkSession.implicits._
 
     def multiply(foo: Dataset[Foo], bar: Dataset[Bar]): Dataset[Multiply] = {
-      //      SparkSqlRunner.runSql(sparkSession, this.getClass, "multiply.sql", Map("foo" -> foo, "bar" -> bar))
       val nonCollidingFoo = foo.withColumnRenamed("value", "fooValue")
       val nonCollidingBar = bar.withColumnRenamed("value", "barValue")
       val joined = nonCollidingFoo.join(nonCollidingBar, "id").as[FooJoinBar]
-
       joined.map(x => Multiply(x.id, x.fooValue * x.barValue))
     }
   }
