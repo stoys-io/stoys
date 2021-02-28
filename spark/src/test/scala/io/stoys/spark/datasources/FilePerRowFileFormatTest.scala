@@ -24,12 +24,12 @@ class FilePerRowFileFormatTest extends SparkTestBase {
     val textFilesPath = s"$tmpDir/file_per_row.works/text"
     val textFilesPerRow = fileContents.map(kv => TextFilePerRow(kv._1, kv._2))
     textFilesPerRow.toSeq.toDS().write.format("file_per_row").save(textFilesPath)
-    assert(readFiles(textFilesPath) === fileContents)
+    assert(walkFiles(textFilesPath) === fileContents)
 
     val binaryFilesPath = s"$tmpDir/file_per_row.works/binary"
     val binaryFilesPerRow = fileContents.map(kv => BinaryFilePerRow(kv._1, kv._2.getBytes(StandardCharsets.UTF_8)))
     binaryFilesPerRow.toSeq.toDS().write.format("file_per_row").save(binaryFilesPath)
-    assert(readFiles(binaryFilesPath) === fileContents)
+    assert(walkFiles(binaryFilesPath) === fileContents)
   }
 
   test("file_per_row.fails") {
@@ -48,9 +48,8 @@ class FilePerRowFileFormatTest extends SparkTestBase {
     assert(escapingMessage.contains("has to stay in output directory"))
   }
 
-  def readFiles(path: String): Map[String, String] = {
-    val fileStatusesByRelativePath = walkDfsFileStatusesByRelativePath(path)
-    fileStatusesByRelativePath.map {
+  def walkFiles(path: String): Map[String, String] = {
+    walkFileStatuses(path).map {
       case (path, status) => path -> IOUtils.toString(dfs.open(status.getPath.toString), StandardCharsets.UTF_8)
     }
   }

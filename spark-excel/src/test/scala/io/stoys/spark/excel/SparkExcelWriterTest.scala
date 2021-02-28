@@ -97,7 +97,7 @@ class SparkExcelWriterTest extends SparkTestBase {
          |GROUP BY true
          |""".stripMargin.trim)
 
-    val outputFileStatuses = walkDfsFileStatusesByRelativePath(s"$tmpDir/to_excel")
+    val outputFileStatuses = walkFileStatuses(s"$tmpDir/to_excel")
     assert(outputFileStatuses.keySet === Set("orders.xlsx"))
   }
 

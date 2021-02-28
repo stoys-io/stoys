@@ -23,7 +23,7 @@ class DbLoaderTest extends SparkTestBase {
 
   test("DbLoader") {
     val dbName = this.getClass.getSimpleName
-    writeData(s"$tmpDir/$dbName/$tableName", items)
+    writeTmpData(s"$dbName/$tableName", items)
 
     val jdbcUrl = s"jdbc:h2:mem:$dbName;USER=sa;PASSWORD=;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;"
 //    val jdbcUrl = s"jdbc:h2:file:$tmpDir/$dbName;USER=sa;PASSWORD=;CASE_INSENSITIVE_IDENTIFIERS=TRUE;AUTO_SERVER=TRUE;"

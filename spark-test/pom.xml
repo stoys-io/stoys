@@ -11,6 +11,13 @@
     </properties>
 
     <dependencies>
+        <!-- stoys -->
+        <dependency>
+            <groupId>io.stoys</groupId>
+            <artifactId>stoys-scala_${scala.compat.version}</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>

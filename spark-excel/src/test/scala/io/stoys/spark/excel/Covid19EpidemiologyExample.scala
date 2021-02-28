@@ -27,17 +27,20 @@ class Covid19EpidemiologyExample extends SparkTestBase {
     val excelFilesPerRowDf = SparkExcelWriter.datasetsToExcelFilesPerRow(Seq(elyDf, etrDf), config)
 
     excelFilesPerRowDf.cache()
-    excelFilesPerRowDf.write.format("file_per_row").save(s"$tmpDir/covid19_epidemiology")
+//    writeTmpDs("tmp_xlsx", excelFilesPerRowDf, "file_per_row")
+//    writeTmpDs("tmp_zip", excelFilesPerRowDf.coalesce(1), "zip",
+//      Map("zip_method" -> "STORED", "zip_file_name" -> "epidemiology.zip"))
+    excelFilesPerRowDf.write.format("file_per_row").save(s"$tmpDir/covid19_epidemiology/xlsx")
     excelFilesPerRowDf.coalesce(1).write.format("zip")
         .option("zip_method", "STORED").option("zip_file_name", "epidemiology.zip")
-        .save(s"$tmpDir/covid19_epidemiology.zip")
+        .save(s"$tmpDir/covid19_epidemiology/zip")
     excelFilesPerRowDf.unpersist()
   }
 
   def readCachedCovid19Csv[T <: Product : TypeTag](fileName: String): Dataset[T] = {
     // https://github.com/GoogleCloudPlatform/covid-19-open-data
-    val url = s"https://storage.googleapis.com/covid19-open-data/v2/${fileName}"
-    val df = dataCache.readLocallyCachedCsvFileDf(url)
+    val url = s"https://storage.googleapis.com/covid19-open-data/v2/$fileName"
+    val df = dataCache.readLocallyCachedFileDf(url, "csv", Map("header" -> "true"))
     Reshape.reshape[T](df, ReshapeConfig.dangerous)
   }
 }

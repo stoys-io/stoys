@@ -38,13 +38,13 @@ class ZipFileFormatTest extends SparkTestBase {
     val binaryFilesZipPath = s"$tmpDir/zip.works/binary"
     val binaryFilesPerRow = fileContents.map(kv => BinaryFilePerRow(kv._1, kv._2.getBytes(StandardCharsets.UTF_8)))
     binaryFilesPerRow.toSeq.toDS().coalesce(1).write.format("zip").save(binaryFilesZipPath)
-    val binaryFilesInZipFiles = readFilesInZipFiles(binaryFilesZipPath)
+    val binaryFilesInZipFiles = walkFilesInZipFiles(binaryFilesZipPath)
     assert(binaryFilesInZipFiles.keys.map(_.endsWith(".zip")).toSeq === Seq(true))
     assert(binaryFilesInZipFiles.values.toSeq === Seq(fileContents))
 
     val partitionedFilesZipPath = s"$tmpDir/zip.works/partitioned"
     binaryFilesPerRow.toSeq.toDS().repartition(16).write.format("zip").save(partitionedFilesZipPath)
-    assert(readFilesInZipFiles(partitionedFilesZipPath).size > 1)
+    assert(walkFilesInZipFiles(partitionedFilesZipPath).size > 1)
   }
 
   test("compression") {
@@ -53,17 +53,17 @@ class ZipFileFormatTest extends SparkTestBase {
 
     val defaultOptionsZipPath = s"$tmpDir/compression/default"
     ds.write.format("zip").save(defaultOptionsZipPath)
-    val defaultFilesInZipFiles = walkDfsFileStatusesByRelativePath(defaultOptionsZipPath)
+    val defaultFilesInZipFiles = walkFileStatuses(defaultOptionsZipPath)
     assert(defaultFilesInZipFiles.values.head.getLen < compressibleContent.length / 16)
 
     val storedOptionsZipPath = s"$tmpDir/compression/stored"
     ds.write.format("zip").option("zip_method", "stored").save(storedOptionsZipPath)
-    val storedFilesInZipFiles = walkDfsFileStatusesByRelativePath(storedOptionsZipPath)
+    val storedFilesInZipFiles = walkFileStatuses(storedOptionsZipPath)
     assert(storedFilesInZipFiles.values.head.getLen > compressibleContent.length)
   }
 
-  def readFilesInZipFiles(path: String): Map[String, Map[String, String]] = {
-    val filesInZipFiles = walkDfsFileStatusesByRelativePath(path).keys.map { relativePath =>
+  private def walkFilesInZipFiles(path: String): Map[String, Map[String, String]] = {
+    val filesInZipFiles = walkFileStatuses(path).keys.map { relativePath =>
       relativePath -> IO.using(new ZipFile(s"$path/$relativePath")) { zipFile =>
         val entries = Collections.list(zipFile.entries()).asScala
         entries.map(e => e.getName -> IOUtils.toString(zipFile.getInputStream(e), StandardCharsets.UTF_8)).toMap

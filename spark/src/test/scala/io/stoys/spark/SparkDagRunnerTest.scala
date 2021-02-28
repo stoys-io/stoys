@@ -14,14 +14,14 @@ import scala.jdk.CollectionConverters._
 class SparkDagRunnerTest extends SparkTestBase {
   import SparkDagRunnerTest._
 
-  test("SparkDagRunner") {
+  test("main") {
     val runTimestamp = "2020-02-02T02:22:20"
-    val inputPath = s"${tmpDir.toAbsolutePath}/ingestion"
+    val inputPath = s"${tmpDir.toAbsolutePath}/input"
     val outputPath = s"${tmpDir.toAbsolutePath}/output"
     val sharedOutputPath = s"${tmpDir.toAbsolutePath}/shared_output_path"
 
-    writeData(s"$inputPath/foo", Seq(Foo(1, 11), Foo(2, 21)))
-    writeData(s"$inputPath/bar", Seq(Bar(1, 12), Bar(2, 22)))
+    writeTmpData("input/foo", Seq(Foo(1, 11), Foo(2, 21)))
+    writeTmpData("input/bar", Seq(Bar(1, 12), Bar(2, 22)))
 
     val sparkDagRunnerArgs = Array(
       s"spark_dag_runner_config__main_dag_class=${classOf[MainDag].getName}",
@@ -37,7 +37,7 @@ class SparkDagRunnerTest extends SparkTestBase {
     SparkDagRunner.main(Array("--environments=dev") ++ sparkDagRunnerArgs ++ insightArgs)
 
     val expectedPack = Seq(Pack(1, 1000 * 11 * 12 + 11 + 12), Pack(2, 1000 * 21 * 22 + 21 + 22))
-    assert(readDataset[Pack](s"$outputPath/pack").collect() === expectedPack)
+    assert(readTmpData[Pack]("output/pack") === expectedPack)
 
     // TODO: Do we want to have shared metrics optional or mandatory again once delta is published for Scala 2.13.
     if (SparkUtils.isDeltaSupported) {

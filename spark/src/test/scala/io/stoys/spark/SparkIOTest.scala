@@ -44,7 +44,8 @@ class SparkIOTest extends SparkTestBase {
     writeDagLists(tmp, "a", Seq("aa"), Seq("aa/aa"), Seq("a/a"))
     writeDagLists(tmp, "b", Seq.empty, Seq("non_dag_table"), Seq("b/b"))
     writeDagLists(tmp, "dag", Seq("a", "b"), Seq("a/a", "b/b"), Seq("dag/foo", "dag/bar"))
-    writeEmptyDirectories(tmp, "dag/foo", "dag/bar")
+    dfs.mkdirs(s"$tmp/dag/foo")
+    dfs.mkdirs(s"$tmp/dag/bar")
 
     val dagAA = SosDag(s"$tmp/aa")
     val aa = emptySosTable.copy(name = "aa", path = s"$tmp/aa/aa")
@@ -74,8 +75,8 @@ class SparkIOTest extends SparkTestBase {
     val tmp = s"${tmpDir.toAbsolutePath}/addInputPaths"
 
     writeDagLists(tmp, "dag", Seq.empty, Seq.empty, Seq("dag/foo"))
-    writeDummyParquetTables(tmp, "dag/foo")
-    writeDummyParquetTables(tmp, "non_dag_table")
+    writeTmpData("addInputPaths/dag/foo", Seq.empty[Option[Int]])
+    writeTmpData("addInputPaths/non_dag_table", Seq.empty[Option[Int]])
 
     val sparkIOConfig = emptySparkIOConfig.copy(inputPaths = Seq(s"$tmp/dag/.dag"), outputPath = Some(s"$tmp/out"))
     IO.using(new SparkIO(sparkSession, sparkIOConfig)) { sparkIO =>
@@ -103,7 +104,7 @@ class SparkIOTest extends SparkTestBase {
     assert(dfs.exists(s"$tmp/out/.dag"))
   }
 
-  def writeDagLists(tmp: String, dagName: String,
+  private def writeDagLists(tmp: String, dagName: String,
       inputDags: Seq[String], inputTables: Seq[String], outputTables: Seq[String]): Unit = {
     dfs.writeString(s"$tmp/$dagName/.dag/input_dags.list",
       inputDags.map(d => s"$tmp/$d?sos-listing_strategy=dag").mkString("\n"))
@@ -111,14 +112,5 @@ class SparkIOTest extends SparkTestBase {
       inputTables.map(t => s"$tmp/$t").sorted.mkString("\n"))
     dfs.writeString(s"$tmp/$dagName/.dag/output_tables.list",
       outputTables.map(t => s"$tmp/$t").sorted.mkString("\n"))
-  }
-
-  def writeEmptyDirectories(tmp: String, outputTablePaths: String*): Unit = {
-    outputTablePaths.foreach(p => dfs.mkdirs(s"$tmp/$p"))
-  }
-
-  def writeDummyParquetTables(tmp: String, outputTablePaths: String*): Unit = {
-    val dummyDf = sparkSession.range(1).toDF()
-    outputTablePaths.foreach(p => writeDataFrame(s"$tmp/$p", dummyDf))
   }
 }
