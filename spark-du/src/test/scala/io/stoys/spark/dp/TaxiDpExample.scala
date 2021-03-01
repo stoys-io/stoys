@@ -1,8 +1,8 @@
 package io.stoys.spark.dp
 
+import io.stoys.spark.test.SparkTestBase
 import io.stoys.spark.test.datasets.TaxiDataset
 import io.stoys.spark.{Reshape, ReshapeConfig}
-import io.stoys.spark.test.SparkTestBase
 
 @org.scalatest.DoNotDiscover
 class TaxiDpExample extends SparkTestBase {

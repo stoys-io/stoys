@@ -1,12 +1,12 @@
 package io.stoys.spark.db
 
-import java.sql._
-
 import io.stoys.scala.{IO, Jackson}
 import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.text.StringEscapeUtils
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects}
 import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType}
+
+import java.sql._
 
 class DbLoaderTest extends SparkTestBase {
   import DbLoaderTest._

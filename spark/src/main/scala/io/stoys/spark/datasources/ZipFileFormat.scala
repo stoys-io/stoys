@@ -1,8 +1,5 @@
 package io.stoys.spark.datasources
 
-import java.util.Locale
-import java.util.zip.{CRC32, ZipEntry, ZipOutputStream}
-
 import io.stoys.spark.SToysException
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
@@ -13,6 +10,8 @@ import org.apache.spark.sql.execution.datasources.{FileFormat, OutputWriter, Out
 import org.apache.spark.sql.sources.DataSourceRegister
 import org.apache.spark.sql.types.StructType
 
+import java.util.Locale
+import java.util.zip.{CRC32, ZipEntry, ZipOutputStream}
 import scala.util.Try
 
 class ZipFileFormat extends FileFormat with DataSourceRegister with Serializable {

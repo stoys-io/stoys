@@ -1,7 +1,5 @@
 package io.stoys.spark.dp
 
-import java.time.Instant
-
 import io.stoys.spark.SToysException
 import io.stoys.spark.dp.sketches.functions.{items_sketch, kll_floats_sketch}
 import io.stoys.spark.dp.sketches.{ItemsSketchAggregator, KllFloatsSketchAggregator}
@@ -9,6 +7,8 @@ import org.apache.spark.sql.catalyst.expressions.FormatNumber
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, Dataset}
+
+import java.time.Instant
 
 private[dp] object DpFramework {
   type ColumnProfilers = Map[String, Column]

@@ -1,10 +1,9 @@
 package io.stoys.spark
 
-import java.util.ServiceLoader
-
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.sources.DataSourceRegister
 
+import java.util.ServiceLoader
 import scala.jdk.CollectionConverters._
 
 object SparkUtils {

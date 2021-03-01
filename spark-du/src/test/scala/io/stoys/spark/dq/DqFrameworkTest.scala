@@ -35,7 +35,8 @@ class DqFrameworkTest extends SparkTestBase {
     assert(im(schema(str("FR1"), bool("fr1")), 1).contains("have unique names"))
   }
 
-  private def ruleInfo(rule: DqRule, existing: Seq[String], existingIndexes: Seq[Int], missing:Seq[String]): RuleInfo = {
+  private def ruleInfo(rule: DqRule, existing: Seq[String], existingIndexes: Seq[Int],
+      missing: Seq[String]): RuleInfo = {
     RuleInfo(rule, ColumnNamesInfo(existing ++ missing, existing, existingIndexes, missing))
   }
 }

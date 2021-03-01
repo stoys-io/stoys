@@ -1,9 +1,9 @@
 package io.stoys.spark.dq
 
-import java.time.{Duration, Instant}
-
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.Row
+
+import java.time.{Duration, Instant}
 
 class DqTest extends SparkTestBase {
   import DqRules._
@@ -125,11 +125,14 @@ class DqTest extends SparkTestBase {
 
     val dqViolationPerRowDs = dq.computeDqViolationPerRow()
     assert(dqViolationPerRowDs.collect() === Seq(
-      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id"), Seq("1"), "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
-      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id", "missing"), Seq("1", "__MISSING__"), "id__equal", "id = missing"),
+      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id"), Seq("1"),
+        "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
+      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id", "missing"), Seq("1", "__MISSING__"),
+        "id__equal", "id = missing"),
       DqViolationPerRow(Seq("1", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
         "_expected_fields__exist", "false"),
-      DqViolationPerRow(Seq("2", "__MISSING__"), Seq("id", "missing"), Seq("2", "__MISSING__"), "id__equal", "id = missing"),
+      DqViolationPerRow(Seq("2", "__MISSING__"), Seq("id", "missing"), Seq("2", "__MISSING__"),
+        "id__equal", "id = missing"),
       DqViolationPerRow(Seq("2", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
         "_expected_fields__exist", "false")
     ))

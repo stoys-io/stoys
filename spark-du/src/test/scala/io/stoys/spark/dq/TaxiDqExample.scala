@@ -1,7 +1,7 @@
 package io.stoys.spark.dq
 
-import io.stoys.spark.test.datasets.TaxiDataset
 import io.stoys.spark.test.SparkTestBase
+import io.stoys.spark.test.datasets.TaxiDataset
 
 @org.scalatest.DoNotDiscover
 class TaxiDqExample extends SparkTestBase {

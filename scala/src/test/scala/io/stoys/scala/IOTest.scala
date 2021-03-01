@@ -1,9 +1,9 @@
 package io.stoys.scala
 
+import org.scalatest.funsuite.AnyFunSuite
+
 import java.io.IOException
 import java.nio.charset.StandardCharsets
-
-import org.scalatest.funsuite.AnyFunSuite
 
 class IOTest extends AnyFunSuite {
   import IOTest._

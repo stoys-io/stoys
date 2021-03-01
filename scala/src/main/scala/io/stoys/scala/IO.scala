@@ -1,10 +1,9 @@
 package io.stoys.scala
 
-import java.io.IOException
-import java.nio.charset.StandardCharsets
-
 import org.apache.commons.io.IOUtils
 
+import java.io.IOException
+import java.nio.charset.StandardCharsets
 import scala.util.control.NonFatal
 
 object IO {

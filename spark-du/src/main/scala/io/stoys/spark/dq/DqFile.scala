@@ -1,11 +1,10 @@
 package io.stoys.spark.dq
 
-import java.time.Instant
-
 import io.stoys.spark.{Dfs, SToysException, SparkIO}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 
+import java.time.Instant
 import scala.util.{Failure, Success, Try}
 
 private[dq] object DqFile {

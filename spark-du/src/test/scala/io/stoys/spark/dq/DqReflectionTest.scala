@@ -1,9 +1,9 @@
 package io.stoys.spark.dq
 
-import java.sql.Date
-
 import io.stoys.scala.Arbitrary
 import org.scalatest.funsuite.AnyFunSuite
+
+import java.sql.Date
 
 class DqReflectionTest extends AnyFunSuite {
   import DqReflection._

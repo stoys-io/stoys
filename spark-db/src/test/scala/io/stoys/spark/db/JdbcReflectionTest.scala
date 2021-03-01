@@ -1,9 +1,9 @@
 package io.stoys.spark.db
 
-import java.sql.Date
-
 import io.stoys.spark.{SToysException, TableName}
 import org.scalatest.funsuite.AnyFunSuite
+
+import java.sql.Date
 
 class JdbcReflectionTest extends AnyFunSuite {
   import JdbcReflection._

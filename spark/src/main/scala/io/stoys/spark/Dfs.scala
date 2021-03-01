@@ -1,12 +1,12 @@
 package io.stoys.spark
 
-import java.nio.charset.StandardCharsets
-
 import io.stoys.scala.IO
 import org.apache.commons.io.IOUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
 import org.apache.spark.sql.SparkSession
+
+import java.nio.charset.StandardCharsets
 
 /**
  * [[Dfs]] is utility wrapper around hadoop [[FileSystem]] library. There are following types of functions:

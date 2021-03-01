@@ -7,7 +7,6 @@ import java.time._
 import java.time.temporal.Temporal
 import java.util.Date
 import java.util.concurrent.atomic.AtomicLong
-
 import scala.reflect.runtime.universe._
 import scala.util.Random
 

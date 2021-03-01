@@ -1,8 +1,8 @@
 package io.stoys.scala
 
-import java.time.{Instant, LocalDate, LocalDateTime, LocalTime}
-
 import org.scalatest.funsuite.AnyFunSuite
+
+import java.time.{Instant, LocalDate, LocalDateTime, LocalTime}
 
 //noinspection NameBooleanParameters
 class ArbitraryTest extends AnyFunSuite {

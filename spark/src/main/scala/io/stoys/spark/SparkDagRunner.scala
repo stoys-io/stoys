@@ -1,11 +1,10 @@
 package io.stoys.spark
 
-import java.sql.Timestamp
-
 import io.stoys.scala.{Configuration, IO}
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{Dataset, SparkSession}
 
+import java.sql.Timestamp
 import scala.collection.mutable
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._

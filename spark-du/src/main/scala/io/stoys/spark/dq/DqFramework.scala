@@ -1,13 +1,12 @@
 package io.stoys.spark.dq
 
-import java.util.Locale
-
 import io.stoys.spark.SToysException
 import org.apache.spark.sql.catalyst.expressions.Stack
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{BooleanType, StringType, StructType}
 import org.apache.spark.sql.{Column, DataFrame, Dataset, SparkSession}
 
+import java.util.Locale
 import scala.collection.mutable
 
 private[dq] object DqFramework {
@@ -20,19 +19,19 @@ private[dq] object DqFramework {
 
   private def getColumnNamesInfo(columnNames: Seq[String], referencedColumnNames: Seq[String]): ColumnNamesInfo = {
     val indexesByNormalizedNames = columnNames.zipWithIndex.map(ci => ci._1.toLowerCase(Locale.ROOT) -> ci._2).toMap
-      val visitedNames = mutable.Set.empty[String]
-      val (missingNames, existingNames, existingIndexes) = referencedColumnNames.map({ name =>
-        val normalizedName = name.toLowerCase(Locale.ROOT)
-        if (visitedNames.contains(normalizedName)) {
-          (None, None, None)
-        } else {
-          visitedNames.add(normalizedName)
-          indexesByNormalizedNames.get(normalizedName) match {
-            case Some(index) => (None, Some(columnNames(index)), Some(index))
-            case None => (Some(name), None, None)
-          }
+    val visitedNames = mutable.Set.empty[String]
+    val (missingNames, existingNames, existingIndexes) = referencedColumnNames.map({ name =>
+      val normalizedName = name.toLowerCase(Locale.ROOT)
+      if (visitedNames.contains(normalizedName)) {
+        (None, None, None)
+      } else {
+        visitedNames.add(normalizedName)
+        indexesByNormalizedNames.get(normalizedName) match {
+          case Some(index) => (None, Some(columnNames(index)), Some(index))
+          case None => (Some(name), None, None)
         }
-      }).unzip3
+      }
+    }).unzip3
     val allNames = existingNames ++ missingNames
     ColumnNamesInfo(allNames.flatten, existingNames.flatten, existingIndexes.flatten, missingNames.flatten)
   }
@@ -127,7 +126,7 @@ private[dq] object DqFramework {
     }
   }
 
-  private def createSafeValuesArrayExpr(columnNamesInfo: ColumnNamesInfo): Column ={
+  private def createSafeValuesArrayExpr(columnNamesInfo: ColumnNamesInfo): Column = {
     val existingValues = columnNamesInfo.existing.map(cn => coalesce(col(cn).cast(StringType), lit(NULL_TOKEN)))
     val missingValues = columnNamesInfo.missing.map(_ => lit(MISSING_TOKEN))
     array(existingValues ++ missingValues: _*)

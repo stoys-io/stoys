@@ -1,10 +1,10 @@
 package io.stoys.spark.dq
 
-import java.sql.Date
-
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.types.StructType
+
+import java.sql.Date
 
 class DqSchemaTest extends SparkTestBase {
   import DqRules._

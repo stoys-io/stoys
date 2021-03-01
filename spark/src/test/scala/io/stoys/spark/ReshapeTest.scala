@@ -1,11 +1,11 @@
 package io.stoys.spark
 
-import java.nio.file.Files
-import java.sql.{Date, Timestamp}
-
 import io.stoys.scala.Arbitrary
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
+
+import java.nio.file.Files
+import java.sql.{Date, Timestamp}
 
 class ReshapeTest extends SparkTestBase {
   import ReshapeTest._

@@ -1,10 +1,5 @@
 package io.stoys.spark.db
 
-import java.nio.file.{Files, Paths}
-import java.sql.{Connection, DriverManager}
-import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZoneOffset}
-
 import io.stoys.scala.{Configuration, IO, Reflection, Strings}
 import io.stoys.spark._
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
@@ -12,6 +7,10 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
+import java.nio.file.{Files, Paths}
+import java.sql.{Connection, DriverManager}
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneOffset}
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success}
 

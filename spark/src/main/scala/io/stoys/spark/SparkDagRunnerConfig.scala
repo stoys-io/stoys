@@ -1,8 +1,8 @@
 package io.stoys.spark
 
-import java.time.LocalDateTime
-
 import io.stoys.scala.Params
+
+import java.time.LocalDateTime
 
 @Params(allowInRootPackage = true)
 case class SparkDagRunnerConfig(

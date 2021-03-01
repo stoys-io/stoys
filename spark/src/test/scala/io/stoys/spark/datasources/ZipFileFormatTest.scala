@@ -1,14 +1,13 @@
 package io.stoys.spark.datasources
 
-import java.nio.charset.StandardCharsets
-import java.util.Collections
-import java.util.zip.{ZipEntry, ZipFile}
-
 import io.stoys.scala.IO
 import io.stoys.spark.SToysException
 import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.io.IOUtils
 
+import java.nio.charset.StandardCharsets
+import java.util.Collections
+import java.util.zip.{ZipEntry, ZipFile}
 import scala.jdk.CollectionConverters._
 
 class ZipFileFormatTest extends SparkTestBase {

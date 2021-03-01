@@ -1,9 +1,8 @@
 package io.stoys.spark
 
-import java.util.{List => JList, Map => JMap}
-
 import io.stoys.scala.Reflection
 
+import java.util.{List => JList, Map => JMap}
 import scala.jdk.CollectionConverters._
 
 object Py4j {

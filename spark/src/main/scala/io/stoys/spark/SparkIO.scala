@@ -1,12 +1,11 @@
 package io.stoys.spark
 
-import java.net.URI
-import java.nio.charset.StandardCharsets
-import java.util.Locale
-
 import org.apache.http.client.utils.{URIBuilder, URLEncodedUtils}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
+import java.net.URI
+import java.nio.charset.StandardCharsets
+import java.util.Locale
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 import scala.reflect.runtime.universe

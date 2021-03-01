@@ -1,10 +1,9 @@
 package io.stoys.spark.dq
 
-import java.util.Locale
-
 import io.stoys.spark.dq.DqRules._
 import org.apache.spark.sql.types.{DataType, StructType}
 
+import java.util.Locale
 import scala.collection.mutable
 
 private[dq] object DqSchema {

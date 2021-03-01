@@ -1,8 +1,9 @@
 package io.stoys.spark.dp
 
-import java.sql.Date
 import io.stoys.spark.test.SparkTestBase
 import org.scalactic.Tolerance.convertNumericToPlusOrMinusWrapper
+
+import java.sql.Date
 
 class DpTest extends SparkTestBase {
   import DpTest._
@@ -38,9 +39,9 @@ class DpTest extends SparkTestBase {
     assert(histogram.size === 4)
     histogram.zipWithIndex.map {
       case (bucketCount, i) =>
-          assert(bucketCount.low === 250.0f*i +- 5.0f, s"(histogram($i).low)")
-          assert(bucketCount.high === 250.0f*(i+1) +- 5.0f, s"(histogram($i).high)")
-          assert(bucketCount.count === 250L +- 5L, s"(histogram($i).count)")
+        assert(bucketCount.low === 250.0f * i +- 5.0f, s"(histogram($i).low)")
+        assert(bucketCount.high === 250.0f * (i + 1) +- 5.0f, s"(histogram($i).high)")
+        assert(bucketCount.count === 250L +- 5L, s"(histogram($i).count)")
     }
   }
 }
