@@ -50,7 +50,7 @@ private[dp] object DpFramework {
           DpProfilerName.MIN -> format_float(min(column)),
           DpProfilerName.MAX -> format_float(max(column)),
           DpProfilerName.MEAN -> mean(column).cast(DoubleType),
-          DpProfilerName.PMF -> kll_floats_sketch(column.cast(FloatType), config.buckets),
+          DpProfilerName.PMF -> kll_floats_sketch(column.cast(FloatType), config.pmf_buckets),
           DpProfilerName.ITEMS -> items_sketch(column, config.items)
         )
       case FloatType | DoubleType | _: DecimalType =>
@@ -61,11 +61,11 @@ private[dp] object DpFramework {
           DpProfilerName.MIN -> format_float(min(columnWithNullInsteadOfNan)),
           DpProfilerName.MAX -> format_float(max(columnWithNullInsteadOfNan)),
           DpProfilerName.MEAN -> mean(columnWithNullInsteadOfNan).cast(DoubleType),
-          DpProfilerName.PMF -> kll_floats_sketch(column.cast(FloatType), config.buckets),
+          DpProfilerName.PMF -> kll_floats_sketch(column.cast(FloatType), config.pmf_buckets),
           DpProfilerName.ITEMS -> items_sketch(column, config.items)
         )
       case StringType | BinaryType =>
-        val columnTruncated = substring(column, 0, 1024)
+        val columnTruncated = if (config.max_item_length > 0) substring(column, 0, config.max_item_length) else column
         Map(
           DpProfilerName.COUNT_EMPTY -> count_if(length(column) === lit(0)),
           DpProfilerName.ITEMS -> items_sketch(columnTruncated, config.items)
@@ -82,7 +82,7 @@ private[dp] object DpFramework {
           DpProfilerName.COUNT_ZEROS -> count_if(unix_timestamp(column) === lit(zeroTimestamp)),
           DpProfilerName.MEAN -> mean(unix_timestamp(column)).cast(DoubleType),
           DpProfilerName.PMF ->
-              kll_floats_sketch(unix_timestamp(column).cast(FloatType), config.buckets),
+              kll_floats_sketch(unix_timestamp(column).cast(FloatType), config.pmf_buckets),
           DpProfilerName.ITEMS -> items_sketch(column, config.items)
         )
       case _: ArrayType | _: MapType =>

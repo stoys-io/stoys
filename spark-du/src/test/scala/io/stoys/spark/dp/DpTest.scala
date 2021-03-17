@@ -19,7 +19,7 @@ class DpTest extends SparkTestBase {
       Record(null, 0, null, null, null, null, null)
     )
 
-    val config = DpConfig.default.copy(buckets = 4, items = 2)
+    val config = DpConfig.default.copy(pmf_buckets = 4, items = 2)
     val dp = Dp.fromDataset(records.toDS()).config(config)
     val dpResult = dp.computeDpResult().collect().head
     assert(dpResult.table === DpTable(5))
@@ -33,7 +33,7 @@ class DpTest extends SparkTestBase {
   }
 
   test("pmf") {
-    val config = DpConfig.default.copy(buckets = 4, items = 2)
+    val config = DpConfig.default.copy(pmf_buckets = 4, items = 2)
     val dp = Dp.fromDataset(sparkSession.range(1000)).config(config)
     val dpResult = dp.computeDpResult().collect().head
     val pmf = dpResult.columns.head.pmf
