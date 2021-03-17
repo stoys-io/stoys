@@ -1,6 +1,6 @@
 package io.stoys.spark.dp.sketches
 
-import io.stoys.spark.dp.DpBucketCount
+import io.stoys.spark.dp.DpPmfBucket
 import org.apache.datasketches.kll.KllFloatsSketch
 import org.apache.datasketches.memory.Memory
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -85,7 +85,7 @@ private[dp] case class KllFloatsSketchAggregator(child: Expression, buckets: Int
 }
 
 private[dp] object KllFloatsSketchAggregator {
-  val dataType: DataType = ScalaReflection.schemaFor[Array[DpBucketCount[Float]]].dataType
+  val dataType: DataType = ScalaReflection.schemaFor[Array[DpPmfBucket]].dataType
 
   private val oversampling = 2.0
 }

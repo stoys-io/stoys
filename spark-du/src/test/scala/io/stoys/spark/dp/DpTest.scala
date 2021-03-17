@@ -24,24 +24,25 @@ class DpTest extends SparkTestBase {
     val dpResult = dp.computeDpResult().collect().head
     assert(dpResult.table === DpTable(5))
     assert(dpResult.columns.map(_.name) === Seq("b", "i", "s", "f", "dt", "a", "n", "n.value"))
-    assert(dpResult.columns.filter(_.name == "f").head === DpColumn(name = "f", data_type = "float",
+    assert(dpResult.columns.filter(_.name == "f").head === DpColumn(
+      name = "f", data_type = "float", nullable = true, enum_values = Seq.empty, format = None,
       count = 5L, count_empty = 2L, count_nulls = 1L, count_unique = 3L, count_zeros = 1L,
-      max_length = 4L, min = "0.00", max = "42.00", mean = "21.00",
-      histogram = Seq.empty, items = Seq(DpItemCount("NaN", 2L), DpItemCount("0.0", 1L))
+      max_length = 4L, min = "0.00", max = "42.00", mean = 21.0,
+      pmf = Seq.empty, items = Seq(DpItem("NaN", 2L), DpItem("0.0", 1L)), extras = Map.empty
     ))
   }
 
-  test("histogram") {
+  test("pmf") {
     val config = DpConfig.default.copy(buckets = 4, items = 2)
     val dp = Dp.fromDataset(sparkSession.range(1000)).config(config)
     val dpResult = dp.computeDpResult().collect().head
-    val histogram = dpResult.columns.head.histogram
-    assert(histogram.size === 4)
-    histogram.zipWithIndex.map {
-      case (bucketCount, i) =>
-        assert(bucketCount.low === 250.0f * i +- 5.0f, s"(histogram($i).low)")
-        assert(bucketCount.high === 250.0f * (i + 1) +- 5.0f, s"(histogram($i).high)")
-        assert(bucketCount.count === 250L +- 5L, s"(histogram($i).count)")
+    val pmf = dpResult.columns.head.pmf
+    assert(pmf.size === 4)
+    pmf.zipWithIndex.map {
+      case (pmfBucket, i) =>
+        assert(pmfBucket.low === 250.0 * i +- 5.0, s"(pmf($i).low)")
+        assert(pmfBucket.high === 250.0 * (i + 1) +- 5.0, s"(pmf($i).high)")
+        assert(pmfBucket.count === 250L +- 5L, s"(pmf($i).count)")
     }
   }
 }

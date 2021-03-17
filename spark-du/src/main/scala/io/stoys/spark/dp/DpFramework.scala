@@ -1,6 +1,6 @@
 package io.stoys.spark.dp
 
-import io.stoys.spark.SToysException
+import io.stoys.spark.{MetadataKeys, SToysException}
 import io.stoys.spark.dp.sketches.functions.{items_sketch, kll_floats_sketch}
 import io.stoys.spark.dp.sketches.{ItemsSketchAggregator, KllFloatsSketchAggregator}
 import org.apache.spark.sql.catalyst.expressions.FormatNumber
@@ -16,7 +16,11 @@ private[dp] object DpFramework {
   private def createMetadataColumnProfilers(fieldPath: FieldPath): ColumnProfilers = {
     Map(
       "name" -> lit(fieldPath.toString),
-      "data_type" -> lit(fieldPath.dataType.typeName)
+      "data_type" -> lit(fieldPath.field.dataType.typeName),
+      "nullable" -> lit(fieldPath.field.nullable),
+      "enum_values" -> lit(MetadataKeys.getEnumValues(fieldPath.field).getOrElse(Array.empty[String])),
+      "format" -> lit(MetadataKeys.getFormat(fieldPath.field).orNull),
+      "extras" -> map().cast(MapType(StringType, StringType))
     )
   }
 
@@ -31,22 +35,22 @@ private[dp] object DpFramework {
       DpProfilerName.MAX_LENGTH -> max(length(column)),
       DpProfilerName.MIN -> min(column).cast(StringType),
       DpProfilerName.MAX -> max(column).cast(StringType),
-      DpProfilerName.MEAN -> mean(column).cast(StringType),
-      DpProfilerName.HISTOGRAM -> lit(null).cast(KllFloatsSketchAggregator.dataType),
+      DpProfilerName.MEAN -> lit(null).cast(DoubleType),
+      DpProfilerName.PMF -> lit(null).cast(KllFloatsSketchAggregator.dataType),
       DpProfilerName.ITEMS -> lit(null).cast(ItemsSketchAggregator.dataType)
     ))
   }
 
   private def createTypeBasedColumnProfilers(fieldPath: FieldPath, config: DpConfig): ColumnProfilers = {
     val column = fieldPath.toColumn
-    val typeBasedColumnProfilers = fieldPath.dataType match {
+    val typeBasedColumnProfilers = fieldPath.field.dataType match {
       case ByteType | ShortType | IntegerType | LongType =>
         Map(
           DpProfilerName.COUNT_ZEROS -> count_if(column === lit(0)),
           DpProfilerName.MIN -> format_float(min(column)),
           DpProfilerName.MAX -> format_float(max(column)),
-          DpProfilerName.MEAN -> format_float(mean(column)),
-          DpProfilerName.HISTOGRAM -> kll_floats_sketch(column.cast(FloatType), config.buckets),
+          DpProfilerName.MEAN -> mean(column).cast(DoubleType),
+          DpProfilerName.PMF -> kll_floats_sketch(column.cast(FloatType), config.buckets),
           DpProfilerName.ITEMS -> items_sketch(column, config.items)
         )
       case FloatType | DoubleType | _: DecimalType =>
@@ -56,29 +60,28 @@ private[dp] object DpFramework {
           DpProfilerName.COUNT_ZEROS -> count_if(column === lit(0.0)),
           DpProfilerName.MIN -> format_float(min(columnWithNullInsteadOfNan)),
           DpProfilerName.MAX -> format_float(max(columnWithNullInsteadOfNan)),
-          DpProfilerName.MEAN -> format_float(mean(columnWithNullInsteadOfNan)),
-          DpProfilerName.HISTOGRAM -> kll_floats_sketch(column.cast(FloatType), config.buckets),
+          DpProfilerName.MEAN -> mean(columnWithNullInsteadOfNan).cast(DoubleType),
+          DpProfilerName.PMF -> kll_floats_sketch(column.cast(FloatType), config.buckets),
           DpProfilerName.ITEMS -> items_sketch(column, config.items)
         )
       case StringType | BinaryType =>
         val columnTruncated = substring(column, 0, 1024)
         Map(
           DpProfilerName.COUNT_EMPTY -> count_if(length(column) === lit(0)),
-          DpProfilerName.MEAN -> lit(null).cast(StringType),
           DpProfilerName.ITEMS -> items_sketch(columnTruncated, config.items)
         )
       case BooleanType =>
         Map(
           DpProfilerName.COUNT_ZEROS -> count_if(column === lit(false)),
-          DpProfilerName.MEAN -> format_float(mean(column.cast(DoubleType))),
+          DpProfilerName.MEAN -> mean(column.cast(DoubleType)),
           DpProfilerName.ITEMS -> items_sketch(column, config.items)
         )
       case TimestampType | DateType =>
         val zeroTimestamp = Instant.parse("0001-01-01T00:00:00.000000Z").getEpochSecond
         Map(
           DpProfilerName.COUNT_ZEROS -> count_if(unix_timestamp(column) === lit(zeroTimestamp)),
-          DpProfilerName.MEAN -> from_unixtime(mean(unix_timestamp(column))),
-          DpProfilerName.HISTOGRAM ->
+          DpProfilerName.MEAN -> mean(unix_timestamp(column)).cast(DoubleType),
+          DpProfilerName.PMF ->
               kll_floats_sketch(unix_timestamp(column).cast(FloatType), config.buckets),
           DpProfilerName.ITEMS -> items_sketch(column, config.items)
         )
@@ -89,14 +92,13 @@ private[dp] object DpFramework {
           DpProfilerName.MAX_LENGTH -> lit(null).cast(LongType),
           DpProfilerName.MIN -> format_float(min(sizeOrNull)),
           DpProfilerName.MAX -> format_float(max(sizeOrNull)),
-          DpProfilerName.MEAN -> format_float(mean(sizeOrNull))
+          DpProfilerName.MEAN -> mean(sizeOrNull).cast(DoubleType)
         )
       case _: StructType =>
         Map(
           DpProfilerName.MAX_LENGTH -> lit(null).cast(LongType),
           DpProfilerName.MIN -> lit(null).cast(StringType),
-          DpProfilerName.MAX -> lit(null).cast(StringType),
-          DpProfilerName.MEAN -> lit(null).cast(StringType)
+          DpProfilerName.MAX -> lit(null).cast(StringType)
         )
       case dt => throw new SToysException(s"Unknown data type $dt")
     }
@@ -151,28 +153,30 @@ private[dp] object DpFramework {
 
   object FieldPath {
     def fromRoot(structType: StructType): FieldPath = {
-      FieldPath(structType, None, Seq.empty)
+      FieldPath(StructField(null, structType), None, Seq.empty)
     }
   }
 
-  case class FieldPath(dataType: DataType, private val column: Option[Column], private val path: Seq[String]) {
+  case class FieldPath(field: StructField, private val column: Option[Column], private val path: Seq[String]) {
     def isRoot: Boolean = {
       column.isEmpty
     }
 
     def children: Seq[FieldPath] = {
-      dataType match {
+      field.dataType match {
         // TODO: One cannot use explode inside a function. What else can we do??
 //        case a: ArrayType =>
-//          Seq(FieldPath(a.elementType, column.map(explode), path.dropRight(1) :+ path.last + "[]"))
+//          Seq(FieldPath(StructField(null, a.elementType), column.map(explode), path.init :+ path.last + "[]"))
 //        case m: MapType =>
 //          Seq(
-//            FieldPath(m.keyType, column.map(c => explode(map_keys(c))), path.dropRight(1) :+ path.last + "{K}"),
-//            FieldPath(m.valueType, column.map(c => explode(map_values(c))), path.dropRight(1) :+ path.last + "{V}")
+//            FieldPath(
+//              StructField(null, m.keyType), column.map(c => explode(map_keys(c))), path.init :+ path.last + "{K}"),
+//            FieldPath(
+//              StructField(null, m.valueType), column.map(c => explode(map_values(c))), path.init :+ path.last + "{V}")
 //          )
         case s: StructType =>
           s.fields.toSeq.map { f =>
-            FieldPath(f.dataType, column.map(_.getField(f.name)).orElse(Some(col(f.name))), path :+ f.name)
+            FieldPath(f, column.map(_.getField(f.name)).orElse(Some(col(f.name))), path :+ f.name)
           }
         case _ => Seq.empty
       }

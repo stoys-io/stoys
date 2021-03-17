@@ -1,7 +1,7 @@
 package io.stoys.spark.dp.sketches
 
 import com.twitter.chill.ScalaKryoInstantiator
-import io.stoys.spark.dp.DpItemCount
+import io.stoys.spark.dp.DpItem
 import org.apache.datasketches.ArrayOfItemsSerDe
 import org.apache.datasketches.frequencies.{ErrorType, ItemsSketch}
 import org.apache.datasketches.memory.Memory
@@ -36,9 +36,9 @@ private[dp] case class ItemsSketchAggregator[T <: AnyRef](child: Expression, ite
 
   override def eval(buffer: ItemsSketch[T]): Any = {
     val frequentItems = buffer.getFrequentItems(ErrorType.NO_FALSE_POSITIVES)
-    val valueCounts = frequentItems.map(fi => UTF8String.fromString(fi.getItem.toString) -> fi.getEstimate)
-    val topValueCounts = valueCounts.sortBy(vc => (-vc._2, vc._1)).take(items)
-    ArrayData.toArrayData(topValueCounts.map(vc => InternalRow(vc._1, vc._2)))
+    val itemCounts = frequentItems.map(fi => UTF8String.fromString(fi.getItem.toString) -> fi.getEstimate)
+    val topItemCounts = itemCounts.sortBy(vc => (-vc._2, vc._1)).take(items)
+    ArrayData.toArrayData(topItemCounts.map(vc => InternalRow(vc._1, vc._2)))
   }
 
   override def serialize(buffer: ItemsSketch[T]): Array[Byte] = {
@@ -65,7 +65,7 @@ private[dp] case class ItemsSketchAggregator[T <: AnyRef](child: Expression, ite
 }
 
 private[dp] object ItemsSketchAggregator {
-  val dataType: DataType = ScalaReflection.schemaFor[Array[DpItemCount[String]]].dataType
+  val dataType: DataType = ScalaReflection.schemaFor[Array[DpItem]].dataType
 
   private val itemsSketchLoadFactor = 0.75
   private val oversampling = 2.0
