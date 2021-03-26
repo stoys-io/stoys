@@ -12,13 +12,13 @@ import org.apache.spark.sql.catalyst.{InternalRow, ScalaReflection}
 import org.apache.spark.sql.types.DataType
 import org.apache.spark.unsafe.types.UTF8String
 
-private[dp] case class ItemsSketchAggregator[T <: AnyRef](child: Expression, items: Int,
+private[dp] case class DataSketchesItemsSketchAggregator[T <: AnyRef](child: Expression, items: Int,
     mutableAggBufferOffset: Int = 0, inputAggBufferOffset: Int = 0) extends TypedImperativeAggregate[ItemsSketch[T]] {
-  import ItemsSketchAggregator._
+  import DataSketchesItemsSketchAggregator._
 
   override def createAggregationBuffer(): ItemsSketch[T] = {
-    val size = 1 << math.ceil(math.log(oversampling * items / itemsSketchLoadFactor) / math.log(2)).toInt
-    new ItemsSketch[T](size)
+    val maxMapSize = 1 << math.ceil(math.log(oversampling * items / itemsSketchLoadFactor) / math.log(2)).toInt
+    new ItemsSketch[T](maxMapSize)
   }
 
   override def update(buffer: ItemsSketch[T], input: InternalRow): ItemsSketch[T] = {
@@ -59,12 +59,12 @@ private[dp] case class ItemsSketchAggregator[T <: AnyRef](child: Expression, ite
 
   override def nullable: Boolean = false
 
-  override def dataType: DataType = ItemsSketchAggregator.dataType
+  override def dataType: DataType = DataSketchesItemsSketchAggregator.dataType
 
   override def children: Seq[Expression] = Seq(child)
 }
 
-private[dp] object ItemsSketchAggregator {
+private[dp] object DataSketchesItemsSketchAggregator {
   val dataType: DataType = ScalaReflection.schemaFor[Array[DpItem]].dataType
 
   private val itemsSketchLoadFactor = 0.75

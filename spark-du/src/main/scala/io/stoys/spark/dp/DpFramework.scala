@@ -1,8 +1,8 @@
 package io.stoys.spark.dp
 
 import io.stoys.spark.{MetadataKeys, SToysException}
-import io.stoys.spark.dp.sketches.functions.{items_sketch, kll_floats_sketch}
-import io.stoys.spark.dp.sketches.{ItemsSketchAggregator, KllFloatsSketchAggregator}
+import io.stoys.spark.dp.sketches.functions.{data_sketches_items_sketch, data_sketches_kll_floats_sketch}
+import io.stoys.spark.dp.sketches.{DataSketchesItemsSketchAggregator, DataSketchesKllFloatsSketchAggregator}
 import org.apache.spark.sql.catalyst.expressions.FormatNumber
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
@@ -36,8 +36,8 @@ private[dp] object DpFramework {
       DpProfilerName.MIN -> min(column).cast(StringType),
       DpProfilerName.MAX -> max(column).cast(StringType),
       DpProfilerName.MEAN -> lit(null).cast(DoubleType),
-      DpProfilerName.PMF -> lit(null).cast(KllFloatsSketchAggregator.dataType),
-      DpProfilerName.ITEMS -> lit(null).cast(ItemsSketchAggregator.dataType)
+      DpProfilerName.PMF -> lit(null).cast(DataSketchesKllFloatsSketchAggregator.dataType),
+      DpProfilerName.ITEMS -> lit(null).cast(DataSketchesItemsSketchAggregator.dataType)
     ))
   }
 
@@ -50,8 +50,8 @@ private[dp] object DpFramework {
           DpProfilerName.MIN -> format_float(min(column)),
           DpProfilerName.MAX -> format_float(max(column)),
           DpProfilerName.MEAN -> mean(column).cast(DoubleType),
-          DpProfilerName.PMF -> kll_floats_sketch(column.cast(FloatType), config.pmf_buckets),
-          DpProfilerName.ITEMS -> items_sketch(column, config.items)
+          DpProfilerName.PMF -> data_sketches_kll_floats_sketch(column.cast(FloatType), config.pmf_buckets),
+          DpProfilerName.ITEMS -> data_sketches_items_sketch(column, config.items)
         )
       case FloatType | DoubleType | _: DecimalType =>
         val columnWithNullInsteadOfNan = nanvl(column, lit(null))
@@ -61,20 +61,20 @@ private[dp] object DpFramework {
           DpProfilerName.MIN -> format_float(min(columnWithNullInsteadOfNan)),
           DpProfilerName.MAX -> format_float(max(columnWithNullInsteadOfNan)),
           DpProfilerName.MEAN -> mean(columnWithNullInsteadOfNan).cast(DoubleType),
-          DpProfilerName.PMF -> kll_floats_sketch(column.cast(FloatType), config.pmf_buckets),
-          DpProfilerName.ITEMS -> items_sketch(column, config.items)
+          DpProfilerName.PMF -> data_sketches_kll_floats_sketch(column.cast(FloatType), config.pmf_buckets),
+          DpProfilerName.ITEMS -> data_sketches_items_sketch(column, config.items)
         )
       case StringType | BinaryType =>
         val columnTruncated = if (config.max_item_length > 0) substring(column, 0, config.max_item_length) else column
         Map(
           DpProfilerName.COUNT_EMPTY -> count_if(length(column) === lit(0)),
-          DpProfilerName.ITEMS -> items_sketch(columnTruncated, config.items)
+          DpProfilerName.ITEMS -> data_sketches_items_sketch(columnTruncated, config.items)
         )
       case BooleanType =>
         Map(
           DpProfilerName.COUNT_ZEROS -> count_if(column === lit(false)),
           DpProfilerName.MEAN -> mean(column.cast(DoubleType)),
-          DpProfilerName.ITEMS -> items_sketch(column, config.items)
+          DpProfilerName.ITEMS -> data_sketches_items_sketch(column, config.items)
         )
       case TimestampType | DateType =>
         val zeroTimestamp = Instant.parse("0001-01-01T00:00:00.000000Z").getEpochSecond
@@ -82,8 +82,8 @@ private[dp] object DpFramework {
           DpProfilerName.COUNT_ZEROS -> count_if(unix_timestamp(column) === lit(zeroTimestamp)),
           DpProfilerName.MEAN -> mean(unix_timestamp(column)).cast(DoubleType),
           DpProfilerName.PMF ->
-              kll_floats_sketch(unix_timestamp(column).cast(FloatType), config.pmf_buckets),
-          DpProfilerName.ITEMS -> items_sketch(column, config.items)
+              data_sketches_kll_floats_sketch(unix_timestamp(column).cast(FloatType), config.pmf_buckets),
+          DpProfilerName.ITEMS -> data_sketches_items_sketch(column, config.items)
         )
       case _: ArrayType | _: MapType =>
         val sizeOrNull = when(size(column) < lit(0), lit(null)).otherwise(size(column))

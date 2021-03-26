@@ -24,7 +24,7 @@ class DpTest extends SparkTestBase {
     val dpResult = dp.computeDpResult().collect().head
     assert(dpResult.table === DpTable(5))
     assert(dpResult.columns.map(_.name) === Seq("b", "i", "s", "f", "dt", "a", "n", "n.value"))
-    assert(dpResult.columns.filter(_.name == "f").head === DpColumn(
+    assert(dpResult.columns.filter(_.name == "f").head.copy(pmf = Seq.empty) === DpColumn(
       name = "f", data_type = "float", nullable = true, enum_values = Seq.empty, format = None,
       count = 5L, count_empty = 2L, count_nulls = 1L, count_unique = 3L, count_zeros = 1L,
       max_length = 4L, min = "0.00", max = "42.00", mean = 21.0,
