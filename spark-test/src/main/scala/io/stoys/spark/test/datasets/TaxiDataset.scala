@@ -41,28 +41,3 @@ class TaxiDataset(sparkSession: SparkSession) {
     new Column(ArrayTransform(column.expr, createLambda(f)))
   }
 }
-
-object TaxiDataset {
-  case class TripDataPlus(
-      VendorID: Int,
-      tpep_pickup_datetime: Timestamp,
-      tpep_dropoff_datetime: Timestamp,
-      passenger_count: Int,
-      trip_distance: Float,
-      RatecodeID: Int,
-      store_and_fwd_flag: Int,
-      PULocationID: Int,
-      DOLocationID: Int,
-      payment_type: Int,
-      fare_amount: Float,
-      extra: Float,
-      mta_tax: Float,
-      tip_amount: Float,
-      tolls_amount: Float,
-      improvement_surcharge: Float,
-      total_amount: Float,
-      congestion_surcharge: Float,
-      passengers: Array[String],
-      cats: String
-  )
-}

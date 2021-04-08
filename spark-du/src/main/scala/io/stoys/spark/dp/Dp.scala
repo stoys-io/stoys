@@ -11,12 +11,20 @@ class Dp[T] private(ds: Dataset[T]) {
     this
   }
 
-  def computeDpResult(): Dataset[DpResult] = {
+  @deprecated
+  def computeDpResultLegacy(): Dataset[DpResult] = {
     DpLegacy.computeDpResult(ds, config)
+  }
+
+  def computeDpResult(): Dataset[DpResult] = {
+    val aggregator = new DpAggregator(config)
+    ds.toDF().select(aggregator.toColumn)
   }
 }
 
 object Dp {
+  private[dp] val DEFAULT_TIME_ZONE_ID = "UTC"
+
   def fromDataset[T](ds: Dataset[T]): Dp[T] = {
     new Dp(ds)
   }
