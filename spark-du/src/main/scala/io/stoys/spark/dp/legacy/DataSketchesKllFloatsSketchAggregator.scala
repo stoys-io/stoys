@@ -1,4 +1,4 @@
-package io.stoys.spark.dp.sketches
+package io.stoys.spark.dp.legacy
 
 import io.stoys.spark.dp.DpPmfBucket
 import org.apache.datasketches.kll.KllFloatsSketch

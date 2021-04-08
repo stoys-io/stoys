@@ -1,8 +1,8 @@
-package io.stoys.spark.dp
+package io.stoys.spark.dp.legacy
 
+import io.stoys.spark.dp.legacy.functions.{data_sketches_items_sketch, data_sketches_kll_floats_sketch}
+import io.stoys.spark.dp.{DpConfig, DpProfilerName, DpResult}
 import io.stoys.spark.{MetadataKeys, SToysException}
-import io.stoys.spark.dp.sketches.functions.{data_sketches_items_sketch, data_sketches_kll_floats_sketch}
-import io.stoys.spark.dp.sketches.{DataSketchesItemsSketchAggregator, DataSketchesKllFloatsSketchAggregator}
 import org.apache.spark.sql.catalyst.expressions.FormatNumber
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
@@ -10,7 +10,7 @@ import org.apache.spark.sql.{Column, Dataset}
 
 import java.time.Instant
 
-private[dp] object DpFramework {
+private[dp] object DpLegacy {
   type ColumnProfilers = Map[String, Column]
 
   private def createMetadataColumnProfilers(fieldPath: FieldPath): ColumnProfilers = {

@@ -1,4 +1,4 @@
-package io.stoys.spark.dp.sketches
+package io.stoys.spark.dp.legacy
 
 import com.twitter.chill.ScalaKryoInstantiator
 import io.stoys.spark.dp.DpItem

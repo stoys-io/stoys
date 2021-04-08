@@ -1,5 +1,6 @@
 package io.stoys.spark.dp
 
+import io.stoys.spark.dp.legacy.DpLegacy
 import org.apache.spark.sql.Dataset
 
 class Dp[T] private(ds: Dataset[T]) {
@@ -11,7 +12,7 @@ class Dp[T] private(ds: Dataset[T]) {
   }
 
   def computeDpResult(): Dataset[DpResult] = {
-    DpFramework.computeDpResult(ds, config)
+    DpLegacy.computeDpResult(ds, config)
   }
 }
 

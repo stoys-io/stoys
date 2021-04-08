@@ -1,4 +1,4 @@
-package io.stoys.spark.dp.sketches
+package io.stoys.spark.dp.legacy
 
 import org.apache.spark.sql.Column
 
