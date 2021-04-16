@@ -1,13 +1,11 @@
 package io.stoys.spark
 
-import org.apache.http.client.utils.{URIBuilder, URLEncodedUtils}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
-import java.net.URI
+import java.net.{URI, URLDecoder, URLEncoder}
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 import scala.collection.mutable
-import scala.jdk.CollectionConverters._
 import scala.reflect.runtime.universe
 import scala.util.matching.Regex
 
@@ -184,11 +182,15 @@ object SparkIO {
   case class SosTable(name: String, path: String, format: Option[String],
       options: Map[String, String]) extends SosInput {
     override def toUrlString: String = {
-      val uriBuilder = new URIBuilder(path)
-      format.foreach(f => uriBuilder.addParameter(s"${SOS_PREFIX}format", f))
-      Option(name).foreach(n => uriBuilder.addParameter(s"${SOS_PREFIX}table_name", n))
-      options.foreach(kv => uriBuilder.addParameter(kv._1, kv._2))
-      uriBuilder.build().toString
+      val formatParam = format.map(f => s"${SOS_PREFIX}format" -> f).toSeq
+      val nameParam = Option(name).map(n => s"${SOS_PREFIX}table_name" -> n)
+      val optionParams = options.toSeq
+      val allParams = formatParam ++ nameParam ++ optionParams
+      val allEncodedParams = allParams.map {
+        case (key, null) => key
+        case (key, value) => s"$key=${URLEncoder.encode(value, StandardCharsets.UTF_8.toString)}"
+      }
+      allEncodedParams.mkString(s"$path?", "&", "")
     }
   }
 
@@ -202,9 +204,14 @@ object SparkIO {
 
   private[stoys] def parseInputPath(inputPath: String): ParsedInputPath = {
     val pathParamsUri = new URI(inputPath)
-    val path = new URIBuilder(pathParamsUri).removeQuery().build().toString
-    val nameValuePairs = URLEncodedUtils.parse(pathParamsUri, StandardCharsets.UTF_8)
-    val params = nameValuePairs.asScala.map(kv => kv.getName -> kv.getValue)
+    val path = pathParamsUri.getPath
+    val params = Option(pathParamsUri.getRawQuery).toSeq.flatMap(_.split("&").map { rawParam =>
+      rawParam.split('=') match {
+        case Array(key, rawValue) => key -> URLDecoder.decode(rawValue, StandardCharsets.UTF_8.toString)
+        case Array(key) if rawParam.length > key.length => key -> ""
+        case Array(key) => key -> null
+      }
+    })
     val (rawSosOptions, options) = params.toMap.partition(_._1.toLowerCase(Locale.ROOT).startsWith(SOS_PREFIX))
     val sosOptions = toSosOptions(rawSosOptions)
     ParsedInputPath(path, sosOptions, options)

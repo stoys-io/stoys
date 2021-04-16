@@ -24,12 +24,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- commons -->
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-        </dependency>
-
         <!-- spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -79,19 +73,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <configuration>
-                    <artifactSet combine.children="append">
-                        <includes>
-                            <include>org.apache.httpcomponents:*</include>
-                        </includes>
-                    </artifactSet>
-                    <relocations combine.children="append">
-                        <relocation>
-                            <pattern>org.apache.http.client</pattern>
-                            <shadedPattern>io.stoys.shaded.org.apache.http.client</shadedPattern>
-                        </relocation>
-                    </relocations>
-                </configuration>
             </plugin>
         </plugins>
     </build>
