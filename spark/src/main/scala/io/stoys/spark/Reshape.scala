@@ -1,6 +1,7 @@
 package io.stoys.spark
 
 import io.stoys.scala.Strings
+import io.stoys.spark.MetadataKeys.{ENUM_VALUES_KEY, FORMAT_KEY}
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Attribute, Cast, CreateArray, CreateMap, Expression, LambdaFunction, Literal, NamedLambdaVariable}
 import org.apache.spark.sql.catalyst.util.usePrettyExpression
@@ -103,7 +104,8 @@ object Reshape {
       }
     }
     (sourceField.dataType, targetField.dataType) match {
-      case (sourceDataType, targetDataType) if sourceDataType == targetDataType => // pass
+      case (sourceDataType, targetDataType) if sourceDataType == targetDataType => // same shape
+
       case (sourceStructType: StructType, targetStructType: StructType) =>
         reshapeStructType(sourceStructType, targetStructType, config, column, sourceAttributes = Seq.empty) match {
           case Right(nestedColumns) => column = struct(nestedColumns: _*)
@@ -119,7 +121,7 @@ object Reshape {
           case Left(nestedErrors) =>
             errors ++= nestedErrors
         }
-      // TODO: Should we create multi version build? This works only in Spark 3+ ( 3.1 even has transform_key function).
+      // TODO: Should we create multi version build? This works only in Spark 3+ (3.1 even has transform_key function).
 //      case (sourceMapType: MapType, targetMapType: MapType) =>
 //        val baseIdentifier = Strings.toWordCharactersCollapsing(normalizedFieldPath)
 //        val keyLambdaVar = NamedLambdaVariable(s"_${baseIdentifier}__key", sourceMapType.keyType, nullable = false)
@@ -143,6 +145,28 @@ object Reshape {
 //              errors ++= nestedErrors
 //          }
 //        }
+
+      case (_: StringType, _: IntegerType | LongType) if targetField.metadata.contains(ENUM_VALUES_KEY) =>
+        val enumValues = targetField.metadata.getStringArray(ENUM_VALUES_KEY).map(_.toUpperCase)
+        column = upper(trim(column))
+        column = array_position(lit(enumValues), column).cast(IntegerType) - 1
+      case (_: IntegerType | LongType, _: StringType) if sourceField.metadata.contains(ENUM_VALUES_KEY) =>
+        val enumValues = sourceField.metadata.getStringArray(ENUM_VALUES_KEY)
+        column = element_at(lit(enumValues), column + 1)
+      case (_: StringType, _: BooleanType) if targetField.metadata.contains(ENUM_VALUES_KEY) =>
+        val Array(falseValue, trueValue) = targetField.metadata.getStringArray(ENUM_VALUES_KEY).map(_.toUpperCase)
+        column = upper(trim(column))
+        column = when(column === falseValue, false).when(column === trueValue, true).otherwise(null)
+      case (_: BooleanType, _: StringType) if sourceField.metadata.contains(ENUM_VALUES_KEY) =>
+        val Array(falseValue, trueValue) = sourceField.metadata.getStringArray(ENUM_VALUES_KEY).map(_.toUpperCase)
+        column = when(column, lit(trueValue)).otherwise(lit(falseValue))
+      case (_: StringType, _: DateType) if targetField.metadata.contains(FORMAT_KEY) =>
+        column = to_date(column, targetField.metadata.getString(FORMAT_KEY))
+      case (_: StringType, _: TimestampType) if targetField.metadata.contains(FORMAT_KEY) =>
+        column = to_timestamp(column, targetField.metadata.getString(FORMAT_KEY))
+      case (_: DateType | TimestampType, _: StringType) if sourceField.metadata.contains(FORMAT_KEY) =>
+        column = date_format(column, sourceField.metadata.getString(FORMAT_KEY))
+
       case (_: StringType, _: DateType) if config.dateFormat.isDefined =>
         column = to_date(column, config.dateFormat.orNull)
       case (_: StringType, _: TimestampType) if config.timestampFormat.isDefined =>

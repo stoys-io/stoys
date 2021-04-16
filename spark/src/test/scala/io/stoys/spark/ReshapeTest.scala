@@ -2,7 +2,8 @@ package io.stoys.spark
 
 import io.stoys.scala.Arbitrary
 import io.stoys.spark.test.SparkTestBase
-import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
+import org.apache.spark.sql.catalyst.ScalaReflection
+import org.apache.spark.sql.types.{ArrayType, DateType, IntegerType, Metadata, StringType, StructField, StructType, TimestampType}
 
 import java.nio.file.Files
 import java.sql.{Date, Timestamp}
@@ -119,13 +120,40 @@ class ReshapeTest extends SparkTestBase {
     assert(Reshape.reshape[MapOfRecord](df, config).collect() === Seq(MapOfRecord(Map("0" -> Record("foo", 42, null)))))
   }
 
-  test("custom temporal formats") {
+  test("custom temporal formats - DpConfig") {
     val fixableDF = sparkSession.sql("SELECT '02/20/2020' AS date, '02/20/2020 02:20' AS timestamp")
     assert(Reshape.reshape[TemporalRecord](fixableDF).collect() === Seq(TemporalRecord(null, null)))
     val config = ReshapeConfig.default.copy(dateFormat = Some("MM/dd/yyyy"), timestampFormat = Some("MM/dd/yyyy HH:mm"))
     val fixedDS = Reshape.reshape[TemporalRecord](fixableDF, config)
     assert(fixedDS.collect()
         === Seq(TemporalRecord(Date.valueOf("2020-02-20"), Timestamp.valueOf("2020-02-20 02:20:00"))))
+  }
+
+  test("custom temporal formats - Metadata") {
+    val fixableDF = sparkSession.sql("SELECT '02/20/2020' AS date, '02/20/2020 02:20' AS timestamp")
+    val defaultSchema = ScalaReflection.schemaFor[TemporalRecord].dataType
+    val targetSchema = StructType(Seq(
+      StructField("date", DateType, metadata = Metadata.fromJson("""{"format": "MM/dd/yyyy"}""")),
+      StructField("timestamp", TimestampType, metadata = Metadata.fromJson("""{"format": "MM/dd/yyyy HH:mm"}"""))
+    ))
+    val reshapedToDefaultSchema = Reshape.reshapeToDF(fixableDF, defaultSchema).as[TemporalRecord]
+    assert(reshapedToDefaultSchema.collect() === Seq(TemporalRecord(null, null)))
+    val reshapedToTargetSchema = Reshape.reshapeToDF(fixableDF, targetSchema).as[TemporalRecord]
+    assert(reshapedToTargetSchema.collect()
+        === Seq(TemporalRecord(Date.valueOf("2020-02-20"), Timestamp.valueOf("2020-02-20 02:20:00"))))
+  }
+
+  test("custom enum values - Metadata") {
+    val fixableDF = sparkSession.sql("SELECT 'Bar ' AS enumeration")
+    val defaultSchema = ScalaReflection.schemaFor[EnumerationRecord].dataType
+    val fooBarBazMetadata = Metadata.fromJson("""{"enum_values": ["foo", "bar", "baz"]}""")
+    val targetSchema = StructType(Seq(
+      StructField("enumeration", IntegerType, metadata = fooBarBazMetadata)
+    ))
+    val reshapedToDefaultSchema = Reshape.reshapeToDF(fixableDF, defaultSchema).as[EnumerationRecord]
+    assert(reshapedToDefaultSchema.collect() === Seq(EnumerationRecord(null)))
+    val reshapedToTargetSchema = Reshape.reshapeToDF(fixableDF, targetSchema).as[EnumerationRecord]
+    assert(reshapedToTargetSchema.collect() === Seq(EnumerationRecord(1)))
   }
 
   test("case insensitive") {
@@ -166,4 +194,5 @@ object ReshapeTest {
   case class SeqOfRecord(records: Seq[Record])
   case class MapOfRecord(records: Map[String, Record])
   case class TemporalRecord(date: Date, timestamp: Timestamp)
+  case class EnumerationRecord(enumeration: java.lang.Integer)
 }
