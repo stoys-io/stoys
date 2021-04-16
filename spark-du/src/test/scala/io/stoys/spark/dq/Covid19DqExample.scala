@@ -1,10 +1,9 @@
 package io.stoys.spark.dq
 
-import io.stoys.spark.test.SparkTestBase
+import io.stoys.spark.test.SparkExampleBase
 import io.stoys.spark.test.datasets.Covid19Dataset
 
-@org.scalatest.DoNotDiscover
-class Covid19DqExample extends SparkTestBase {
+class Covid19DqExample extends SparkExampleBase {
   private lazy val covid19Dataset = new Covid19Dataset(sparkSession)
 
   private lazy val epidemiologyDf = covid19Dataset.readCachedCovid19Csv("epidemiology.csv")
@@ -13,14 +12,14 @@ class Covid19DqExample extends SparkTestBase {
   test("covid19_dq") {
     val dq = Dq.fromDataset(epidemiologyDf).config(DqConfig.default).fields(Seq.empty).rules(Seq.empty)
     val dqResult = dq.computeDqResult().collect().head
-    val dqResultJsonPath = writeValueAsJsonFile("dq_result.json", dqResult)
+    val dqResultJsonPath = writeValueAsJsonTmpFile("dq_result.json", dqResult, logFullContent = true)
     assert(dqResultJsonPath.toFile.exists())
   }
 
   test("covid19_dq_join") {
     val dqJoin = DqJoin.equiJoin(epidemiologyDf, demographicsDf, Seq("key"), Seq("key"))
     val dqJoinResult = dqJoin.computeDqJoinResult().collect().head
-    val dqJoinResultJsonPath = writeValueAsJsonFile("dq_join_result.json", dqJoinResult)
+    val dqJoinResultJsonPath = writeValueAsJsonTmpFile("dq_join_result.json", dqJoinResult, logFullContent = true)
     assert(dqJoinResultJsonPath.toFile.exists())
   }
 }

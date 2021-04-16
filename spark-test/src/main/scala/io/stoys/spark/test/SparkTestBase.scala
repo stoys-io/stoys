@@ -1,6 +1,6 @@
 package io.stoys.spark.test
 
-import io.stoys.scala.{Jackson, Strings}
+import io.stoys.scala.Strings
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.{Configuration => HadoopConfiguration}
 import org.apache.hadoop.fs.FileStatus
@@ -8,8 +8,7 @@ import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.{BeforeAndAfterEachTestData, TestData}
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Path, Paths}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
@@ -17,8 +16,6 @@ import scala.reflect.runtime.universe._
 
 abstract class SparkTestBase extends AnyFunSuite with BeforeAndAfterEachTestData {
   import SparkTestBase._
-
-  private val logger = org.log4s.getLogger
 
   protected val defaultDataSourceFormat: String = "parquet"
   protected val defaultDataSourceOptions: Map[String, String] = Map.empty
@@ -92,7 +89,7 @@ abstract class SparkTestBase extends AnyFunSuite with BeforeAndAfterEachTestData
     readTmpDf(relativeTmpPath, format, options).as[T].collect()
   }
 
-  def writeTmpDs[T <: Product](relativeTmpPath: String, ds: Dataset[T],
+  def writeTmpDs(relativeTmpPath: String, ds: Dataset[_],
       format: String = defaultDataSourceFormat, options: Map[String, String] = defaultDataSourceOptions): Path = {
     val path = tmpDir.resolve(relativeTmpPath)
     ds.write.format(format).options(options).save(path.toString)
@@ -104,32 +101,6 @@ abstract class SparkTestBase extends AnyFunSuite with BeforeAndAfterEachTestData
     import sparkSession.implicits._
     val df = sparkSession.createDataset(data)
     writeTmpDs(relativeTmpPath, df, format, options)
-  }
-
-  /**
-   * Write value as json string to a file.
-   *
-   * Note: This is not intended for fixtures but rather to save extra output from tests for debugging purposes.
-   *
-   * @param relativeTmpPath relative path to write to (within [[tmpDir]])
-   * @param value a value to write
-   * @param logFilePath should the absolute path be logged?
-   * @param logFileContent should the file json content be logged as well?
-   * @tparam T type of the value
-   * @return [[Path]] of the file written
-   */
-  def writeValueAsJsonFile[T](relativeTmpPath: String, value: T,
-      logFilePath: Boolean = true, logFileContent: Boolean = false): Path = {
-    val valueJsonString = Jackson.objectMapper.writeValueAsString(value)
-    val path = tmpDir.resolve(relativeTmpPath)
-    Files.write(path, valueJsonString.getBytes(StandardCharsets.UTF_8))
-    if (logFilePath) {
-      logger.info(s"File $relativeTmpPath written to:\n${path.toAbsolutePath}")
-    }
-    if (logFileContent) {
-      logger.info(s"File $relativeTmpPath content:\n$valueJsonString")
-    }
-    path
   }
 
   /**

@@ -279,6 +279,9 @@
                         <junitxml>.</junitxml>
                         <filereports>StoysTestSuite.txt</filereports>
                         <stderr />
+                        <environmentVariables>
+                            <SPARK_LOCAL_IP>127.0.0.1</SPARK_LOCAL_IP>
+                        </environmentVariables>
                         <systemProperties>
                             <spark.ui.enabled>false</spark.ui.enabled>
                             <spark.ui.showConsoleProgress>false</spark.ui.showConsoleProgress>
@@ -500,6 +503,28 @@
             <properties>
                 <spark.version>3.2.0-SNAPSHOT</spark.version>
             </properties>
+        </profile>
+
+        <profile>
+            <id>disable-scalatest-examples</id>
+            <activation>
+                <property>
+                    <name>!wildcardSuites</name>
+                </property>
+            </activation>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.scalatest</groupId>
+                            <artifactId>scalatest-maven-plugin</artifactId>
+                            <configuration>
+                                <tagsToExclude>io.stoys.spark.test.Example</tagsToExclude>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
         </profile>
 
         <profile>

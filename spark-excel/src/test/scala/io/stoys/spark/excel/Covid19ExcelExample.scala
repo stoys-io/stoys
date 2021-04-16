@@ -1,7 +1,7 @@
 package io.stoys.spark.excel
 
 import io.stoys.scala.{IO, Reflection}
-import io.stoys.spark.test.SparkTestBase
+import io.stoys.spark.test.SparkExampleBase
 import io.stoys.spark.test.datasets.Covid19Dataset
 import io.stoys.spark.{Reshape, ReshapeConfig}
 import org.apache.spark.sql.Dataset
@@ -9,8 +9,7 @@ import org.apache.spark.sql.Dataset
 import java.util.Locale
 import scala.reflect.runtime.universe.TypeTag
 
-@org.scalatest.DoNotDiscover
-class Covid19ExcelExample extends SparkTestBase {
+class Covid19ExcelExample extends SparkExampleBase {
   private val logger = org.log4s.getLogger
 
   private lazy val covid19Dataset = new Covid19Dataset(sparkSession)
@@ -36,10 +35,10 @@ class Covid19ExcelExample extends SparkTestBase {
     excelFilesPerRowDf.unpersist()
 
     val epidemiologyUsXlsxPath = tmpDir.resolve("xlsx/epidemiology_US.xlsx")
-    logger.info(s"File epidemiology_US.xlsx written to:\n${epidemiologyUsXlsxPath.toAbsolutePath}")
+    logger.info(s"File epidemiology_US.xlsx written to:\n${highlight(epidemiologyUsXlsxPath.toAbsolutePath)}")
     assert(epidemiologyUsXlsxPath.toFile.exists())
     val epidemiologyZipPath = tmpDir.resolve("zip/epidemiology.zip")
-    logger.info(s"File epidemiology.zip written to:\n${epidemiologyZipPath.toAbsolutePath}")
+    logger.info(s"File epidemiology.zip written to:\n${highlight(epidemiologyZipPath.toAbsolutePath)}")
     assert(epidemiologyZipPath.toFile.exists())
   }
 

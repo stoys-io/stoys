@@ -2,10 +2,6 @@ package io.stoys.spark.test
 
 import org.apache.spark.sql.Row
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import scala.jdk.CollectionConverters._
-
 class SparkTestBaseTest extends SparkTestBase {
   import SparkTestBaseTest._
   import sparkSession.implicits._
@@ -26,20 +22,6 @@ class SparkTestBaseTest extends SparkTestBase {
     val statuses = walkFileStatuses(classLevelTmpDir.toString)
     assert(statuses.keySet.filterNot(_.matches("file_utilities/record.*parquet")) === Set.empty)
     assert(statuses.size === 2)
-  }
-
-  test("writeValueAsJsonFile") {
-    val records = Seq(Record("foo", 42))
-    val recordsJsonPath = writeValueAsJsonFile("records.json", records)
-    assert(recordsJsonPath.toFile.exists())
-    val recordsJsonContent = Files.readAllLines(recordsJsonPath, StandardCharsets.UTF_8).asScala.mkString("\n")
-    assert(recordsJsonContent ===
-        """
-          |[ {
-          |  "s" : "foo",
-          |  "i" : 42
-          |} ]
-          |""".stripMargin.trim)
   }
 }
 
