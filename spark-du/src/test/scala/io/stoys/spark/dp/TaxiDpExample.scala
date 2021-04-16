@@ -1,7 +1,9 @@
 package io.stoys.spark.dp
 
+import io.stoys.spark.Reshape
 import io.stoys.spark.test.SparkTestBase
 import io.stoys.spark.test.datasets.TaxiDataset
+import org.apache.spark.sql.types.{DoubleType, StringType}
 
 @org.scalatest.DoNotDiscover
 class TaxiDpExample extends SparkTestBase {
@@ -15,5 +17,10 @@ class TaxiDpExample extends SparkTestBase {
     val dpResult = dp.computeDpResult().collect().head
     val dpResultJsonPath = writeValueAsJsonFile("dp_result.json", dpResult)
     assert(dpResultJsonPath.toFile.exists())
+
+    val targetSchema = DpSchema.updateSchema(tripDataPlusDf.schema, dpResult)
+    val reshapedTripDataPlusDf = Reshape.reshapeToDF(tripDataPlusDf, targetSchema)
+    assert(tripDataPlusDf.schema.fields.filter(_.name == "trip_distance").map(_.dataType) === Seq(StringType))
+    assert(reshapedTripDataPlusDf.schema.fields.filter(_.name == "trip_distance").map(_.dataType) === Seq(DoubleType))
   }
 }
