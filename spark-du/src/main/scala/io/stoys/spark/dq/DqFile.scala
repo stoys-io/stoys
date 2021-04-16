@@ -30,6 +30,7 @@ private[dq] object DqFile {
       case Success(schema) =>
         val df = createDataFrameReader(sparkSession, parsedInputPath)
             .schema(StructType(schema.fields :+ corruptRecordField))
+            .option("mode", "PERMISSIVE")
             .option("columnNameOfCorruptRecord", corruptRecordField.name)
             .load(path)
         val corruptRecordRule = DqRules.namedRule("_record", "not_corrupted", s"${corruptRecordField.name} IS NULL")
