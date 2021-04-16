@@ -16,8 +16,15 @@ class DqRulesTest extends SparkTestBase {
   }
 
   test("namedRule") {
-    val rule = namedRule("id", "even", "id IS NOT NULL AND (id % 2 = 0)")
+    val rule = namedRule("id", "even", "id % 2 = 0")
     assert(eval(rule, "id", null) === false)
+    assert(eval(rule, "id", 1) === false)
+    assert(eval(rule, "id", 42) === true)
+  }
+
+  test("nullSafeNamedRule") {
+    val rule = nullSafeNamedRule("id", "even", "id % 2 = 0")
+    assert(eval(rule, "id", null) === true)
     assert(eval(rule, "id", 1) === false)
     assert(eval(rule, "id", 42) === true)
   }
@@ -38,7 +45,7 @@ class DqRulesTest extends SparkTestBase {
 
   test("enumValuesRule") {
     val rule = enumValuesRule("sex", Seq("M", "F"))
-    assert(eval(rule, "sex", null) === false)
+    assert(eval(rule, "sex", null) === true)
     assert(eval(rule, "sex", "") === false)
     assert(eval(rule, "sex", "M") === true)
     assert(eval(rule, "sex", "F") === true)
@@ -60,7 +67,7 @@ class DqRulesTest extends SparkTestBase {
 
   test("regexpRule") {
     val rule = regexpRule("value", "(foo|\\\\d+)")
-    assert(eval(rule, "value", null) === false)
+    assert(eval(rule, "value", null) === true)
     assert(eval(rule, "value", "foo") === true)
     assert(eval(rule, "value", "bar") === false)
     assert(eval(rule, "value", "42") === true)

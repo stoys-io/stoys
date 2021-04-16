@@ -18,6 +18,11 @@ object DqRules {
     rule(name(fieldName, logicalName), expression, description)
   }
 
+  def nullSafeNamedRule(
+      fieldName: String, logicalName: String, expression: String, description: String = null): DqRule = {
+    namedRule(fieldName, logicalName, s"$fieldName IS NULL OR ($expression)", description)
+  }
+
   def rule(name: String, expression: String, description: String = null): DqRule = {
     DqRule(name, expression, Option(description), Seq.empty)
   }
@@ -54,7 +59,7 @@ object DqRules {
     } else {
       s"CAST($fieldName AS STRING) IN ${enumValues.mkString("('", "', '", "')")}"
     }
-    namedRule(fieldName, "enum_values", expression)
+    nullSafeNamedRule(fieldName, "enum_values", expression)
   }
 
   def notNullRule(fieldName: String): DqRule = {
@@ -62,17 +67,17 @@ object DqRules {
   }
 
   def regexpRule(fieldName: String, regexp: String): DqRule = {
-    namedRule(fieldName, "regexp", s"CAST($fieldName AS STRING) RLIKE '$regexp'")
+    nullSafeNamedRule(fieldName, "regexp", s"CAST($fieldName AS STRING) RLIKE '$regexp'")
   }
 
   def typeRule(fieldName: String, sourceType: DataType, targetType: DataType, format: String = null): DqRule = {
     if (Cast.canCast(sourceType, targetType)) {
       val expression = (targetType, Option(format)) match {
-        case (DateType, Some(format)) => s"$fieldName IS NULL OR TO_DATE($fieldName, '$format') IS NOT NULL"
-        case (TimestampType, Some(format)) => s"$fieldName IS NULL OR TO_TIMESTAMP($fieldName, '$format') IS NOT NULL"
-        case (dataType, _) => s"$fieldName IS NULL OR CAST($fieldName AS ${dataType.sql}) IS NOT NULL"
+        case (DateType, Some(format)) => s"TO_DATE($fieldName, '$format') IS NOT NULL"
+        case (TimestampType, Some(format)) => s"TO_TIMESTAMP($fieldName, '$format') IS NOT NULL"
+        case (dataType, _) => s"CAST($fieldName AS ${dataType.sql}) IS NOT NULL"
       }
-      namedRule(fieldName, "type", expression)
+      nullSafeNamedRule(fieldName, "type", expression)
     } else {
       val description = s"Field '$fieldName' type '$sourceType' has to be castable to type '$targetType'."
       namedRule(fieldName, "type", "false", description)
@@ -86,11 +91,11 @@ object DqRules {
   // composite and multi field rules
 
   def all(ruleName: String, rules: Seq[DqRule], description: String = null): DqRule = {
-    rule(ruleName, rules.map(_.expression).mkString(" AND "), description)
+    rule(ruleName, rules.map(_.expression).mkString("(", ") AND (", ")"), description)
   }
 
   def any(ruleName: String, rules: Seq[DqRule], description: String = null): DqRule = {
-    rule(ruleName, rules.map(_.expression).mkString(" OR "), description)
+    rule(ruleName, rules.map(_.expression).mkString("(", ") OR (", ")"), description)
   }
 
   def uniqueRule(baseRuleName: String, fieldNames: Seq[String]): DqRule = {
