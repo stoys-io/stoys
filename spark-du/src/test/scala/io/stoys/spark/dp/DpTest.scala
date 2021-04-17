@@ -11,7 +11,7 @@ class DpTest extends SparkTestBase {
   import io.stoys.spark.test.implicits._
   import sparkSession.implicits._
 
-  private val emptyDpColumn = Arbitrary.empty[DpColumn]
+  private lazy val emptyDpColumn = Arbitrary.empty[DpColumn]
 
   test("computeDpResult - TypedRecord") {
     val typedRecords = Seq(

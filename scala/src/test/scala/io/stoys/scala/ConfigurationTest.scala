@@ -12,9 +12,9 @@ import java.time.LocalDate
 class ConfigurationTest extends AnyFunSuite {
   import ConfigurationTest._
 
-  private val emptyTestConfig = Arbitrary.empty[TestConfig]
-  private val defaultTestConfig = emptyTestConfig.copy(int = 42)
-  private val fooTestConfig = defaultTestConfig.copy(string = "foo", seq = Seq("foo"), map = Map("foo" -> "foo"))
+  private lazy val emptyTestConfig = Arbitrary.empty[TestConfig]
+  private lazy val defaultTestConfig = emptyTestConfig.copy(int = 42)
+  private lazy val fooTestConfig = defaultTestConfig.copy(string = "foo", seq = Seq("foo"), map = Map("foo" -> "foo"))
 
   test("parseConfigurationConfig") {
     assert(Configuration.parseConfigurationConfig(Array("environments=foo"))

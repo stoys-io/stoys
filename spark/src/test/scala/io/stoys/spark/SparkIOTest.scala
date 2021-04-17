@@ -8,8 +8,8 @@ class SparkIOTest extends SparkTestBase {
 
   private lazy val dfs = Dfs(sparkSession)
 
-  private val emptySparkIOConfig = Arbitrary.empty[SparkIOConfig]
-  private val emptySosTable = Arbitrary.empty[SosTable]
+  private lazy val emptySparkIOConfig = Arbitrary.empty[SparkIOConfig]
+  private lazy val emptySosTable = Arbitrary.empty[SosTable]
 
   test("parseInputPath") {
     val emptySosOptions = Arbitrary.empty[SosOptions]

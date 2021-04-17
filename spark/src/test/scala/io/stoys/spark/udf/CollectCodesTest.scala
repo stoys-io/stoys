@@ -7,26 +7,25 @@ class CollectCodesTest extends SparkTestBase {
   import CollectCodesTest._
   import sparkSession.implicits._
 
-  sparkSession.udf.register("collect_codes", new CollectCodes())
-  sparkSession.udf.register("cleanup_codes", CollectCodes.cleanupCodes _)
-
-  def selectSingleStringSeq(query: String): Seq[String] = {
+  private def selectSingleStringSeq(query: String): Seq[String] = {
     sparkSession.sql(query).collect().head.getSeq[String](0)
   }
 
-  def mapped(expression: String): Seq[String] = {
+  private def mapped(expression: String): Seq[String] = {
     selectSingleStringSeq(s"SELECT $expression AS codes FROM foo")
   }
 
-  def grouped(expression: String): Seq[String] = {
+  private def grouped(expression: String): Seq[String] = {
     selectSingleStringSeq(s"SELECT $expression AS codes FROM foo GROUP BY true")
   }
 
-  def joined(expression: String): Seq[String] = {
+  private def joined(expression: String): Seq[String] = {
     selectSingleStringSeq(s"SELECT $expression AS codes FROM foo JOIN bar ON foo.id = bar.id")
   }
 
   test("CollectCodes") {
+    sparkSession.udf.register("collect_codes", new CollectCodes())
+
     val foo = Seq(Record(1, Seq("c", "", "a"), Seq("foo1ac")), Record(2, Seq("", null, "b"), Seq("foo2ac")))
     foo.toDS().createOrReplaceTempView("foo")
 
@@ -51,6 +50,13 @@ class CollectCodesTest extends SparkTestBase {
       "SELECT COLLECT_CODES(codes1, codes2) FROM VALUES (array('foo'), array('bar')) AS (codes1, codes2)") === foobar)
 
     assertThrows[SparkException](selectSingleStringSeq("SELECT COLLECT_CODES(42)"))
+  }
+
+  test("cleanupCodes") {
+    sparkSession.udf.register("cleanup_codes", CollectCodes.cleanupCodes _)
+
+    assert(selectSingleStringSeq(s"SELECT CLEANUP_CODES(ARRAY('foo', 'bar', '', null, 'foo')) AS codes")
+        === Seq("bar", "foo"))
   }
 }
 

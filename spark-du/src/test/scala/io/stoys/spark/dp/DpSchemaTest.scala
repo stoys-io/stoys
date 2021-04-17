@@ -7,7 +7,7 @@ import org.apache.spark.sql.types._
 class DpSchemaTest extends SparkTestBase {
   import io.stoys.spark.test.implicits._
 
-  private val emptyDpColumn = Arbitrary.empty[DpColumn]
+  private lazy val emptyDpColumn = Arbitrary.empty[DpColumn]
 
   test("DpSchema") {
     val sourceFields = Seq(
