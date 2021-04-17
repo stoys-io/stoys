@@ -65,11 +65,9 @@
         <delta.version>0.8.0</delta.version>
         <jackson.version>2.12.3</jackson.version>
         <log4s.version>1.9.0</log4s.version>
-        <logback.version>1.2.3</logback.version>
         <persistence-api.version>2.2</persistence-api.version>
         <scala-collection-compat.version>2.4.3</scala-collection-compat.version>
         <scalatest.version>3.2.7</scalatest.version>
-        <slf4j.version>1.7.30</slf4j.version>
         <spark.version>3.1.1</spark.version>
     </properties>
 
@@ -90,28 +88,6 @@
                 <groupId>org.scala-lang.modules</groupId>
                 <artifactId>scala-collection-compat_${scala.compat.version}</artifactId>
                 <version>${scala-collection-compat.version}</version>
-            </dependency>
-
-            <!-- logging -->
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-api</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>log4j-over-slf4j</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>jul-to-slf4j</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>${logback.version}</version>
             </dependency>
 
             <!-- jdbc -->
@@ -153,12 +129,6 @@
                 <artifactId>spark-core_${scala.compat.version}</artifactId>
                 <version>${spark.version}</version>
                 <scope>provided</scope>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-log4j12</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
