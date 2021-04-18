@@ -83,12 +83,13 @@ object SparkExcelWriter {
     sheetNames.zipWithIndex.foreach {
       case (sheetName, index) =>
         val rowsFieldIndex = row.fieldIndex(s"__rows_${index}__")
-        (row.getSeq[Row](rowsFieldIndex), row.schema.fields(rowsFieldIndex).dataType) match {
-          case (null, _) => // __sheet__ has no rows for given __path__
-          case (rows, ArrayType(StructType(fields), _)) =>
+        row.schema.fields(rowsFieldIndex).dataType match {
+          case _ if row.isNullAt(rowsFieldIndex) => // __sheet__ has no rows for given __path__
+          case ArrayType(StructType(fields), _) =>
+            val rows = row.getSeq[Row](rowsFieldIndex)
             val columnInfo = getColumnInfo(fields.toSeq, config)
             ExcelWriter.writeTableDataIntoWorkbook(workbook, sheetName, columnInfo, rows.map(_.toSeq), config)
-          case (_, dt) => throw new SToysException(s"Unsupported __rows__ field data type '$dt'.")
+          case dt => throw new SToysException(s"Unsupported __rows__ field data type '$dt'.")
         }
     }
     ExcelWriter.serializeWorkbookToByteArray(workbook)
