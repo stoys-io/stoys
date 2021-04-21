@@ -23,7 +23,7 @@ class Dp[T] private(ds: Dataset[T]) {
 }
 
 object Dp {
-  private[dp] val DEFAULT_TIME_ZONE_ID = "UTC"
+  private[dp] val DEFAULT_ZONE_ID = "UTC"
 
   def fromDataset[T](ds: Dataset[T]): Dp[T] = {
     new Dp(ds)

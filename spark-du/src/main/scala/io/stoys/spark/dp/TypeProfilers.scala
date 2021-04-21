@@ -5,37 +5,51 @@ import org.apache.spark.sql.types._
 
 import java.lang.{Long => JLong}
 import java.sql.{Date, Timestamp}
+import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate, LocalDateTime, ZoneId}
+import scala.util.Try
 
 private[dp] trait TypeProfiler[T] {
-  def update(value: Any): Unit
+  def update(value: Any): Double
 
   def merge(that: TypeProfiler[T]): TypeProfiler[T]
 
   def profile(baseProfile: Option[DpColumn], config: DpConfig): Option[DpColumn]
 }
 
-private[dp] class AnyProfiler(
-    val name: String,
-    val simpleDataTypeName: String,
-    val nullable: Boolean,
+private[dp] object TypeProfiler {
+  val IS_EXACT_EXTRAS_KEY = "is_exact"
+  val IS_INFERRED_TYPE_EXTRAS_KEY = "is_inferred_type"
+  val MAX_LENGTH_IN_BITS_EXTRAS_KEY = "max_length_in_bits"
+  val QUANTILES_EXTRAS_KEY = "quantiles"
+  val ZONE_ID_EXTRAS_KEY = "zone_id"
+}
+
+private[dp] case class AnyProfiler(
+    name: String,
+    simpleDataTypeName: String,
+    nullable: Boolean,
     var count: Long,
     var countNulls: Long,
+    var typeProfiler: TypeProfiler[Any],
     var cardinalitySketch: CardinalitySketch,
     var frequencySketch: FrequencySketch[Any],
-    var typeProfiler: TypeProfiler[Any]
+    var quantileSketch: QuantileSketch
 ) extends TypeProfiler[Any] {
 
-  override def update(value: Any): Unit = {
+  override def update(value: Any): Double = {
     count += 1
     if (value == null) {
       countNulls += 1
+      Double.NaN
     } else {
+      val doubleValue = typeProfiler.update(value)
       if (simpleDataTypeName != null) {
         cardinalitySketch.update(value)
         frequencySketch.update(value)
+        quantileSketch.update(doubleValue)
       }
-      typeProfiler.update(value)
+      doubleValue
     }
   }
 
@@ -46,11 +60,12 @@ private[dp] class AnyProfiler(
       case that: AnyProfiler =>
         this.count += that.count
         this.countNulls += that.countNulls
+        this.typeProfiler.merge(that.typeProfiler)
         if (simpleDataTypeName != null) {
           this.cardinalitySketch.merge(that.cardinalitySketch)
           this.frequencySketch.merge(that.frequencySketch)
+          this.quantileSketch.merge(that.quantileSketch)
         }
-        this.typeProfiler.merge(that.typeProfiler)
         this
     }
   }
@@ -59,6 +74,10 @@ private[dp] class AnyProfiler(
     if (count == 0L) {
       None
     } else {
+      val isExact = Option(frequencySketch).map(_.isExact).filter(identity)
+      val items = Option(frequencySketch).map(_.getItems(_.toString)).getOrElse(Seq.empty).sortBy(_.item)
+      val exactUnique = isExact.map(_ => items.size.toLong)
+      val approximateUnique = Option(cardinalitySketch).flatMap(_.getNumberOfUnique)
       val baseProfile = DpColumn(
         name = name,
         data_type = simpleDataTypeName,
@@ -68,18 +87,78 @@ private[dp] class AnyProfiler(
         count = count,
         count_empty = None,
         count_nulls = Some(countNulls),
-        count_unique = Option(cardinalitySketch).flatMap(_.getNumberOfUnique),
+        count_unique = exactUnique.orElse(approximateUnique),
         count_zeros = None,
         max_length = None,
         min = None,
         max = None,
         mean = None,
-        pmf = Seq.empty,
-        items = Option(frequencySketch).toSeq.flatMap(_.getItems(_.toString).sortBy(_.item)),
-        extras = Map.empty
+        pmf = Option(quantileSketch).map(_.getPmfBuckets).getOrElse(Seq.empty),
+        items = items,
+        extras = getExactExtras ++ getQuantileExtras
       )
-      typeProfiler.profile(Some(baseProfile), config)
+      val profile = typeProfiler.profile(Some(baseProfile), config)
+      val exactPmfHack = isExact.flatMap(_ => profile.flatMap(getExactPmfHack))
+      exactPmfHack.map(pmf => profile.map(_.copy(pmf = pmf))).getOrElse(profile)
     }
+  }
+
+  private def getExactExtras: Map[String, String] = {
+    if (simpleDataTypeName == null) {
+      Map.empty
+    } else {
+      Map(TypeProfiler.IS_EXACT_EXTRAS_KEY -> Option(frequencySketch).exists(_.isExact).toString)
+    }
+  }
+
+  private def getQuantileExtras: Map[String, String] = {
+    val quantileExtras = Option(quantileSketch).flatMap { sketch =>
+      val percentiles = Seq(5, 25, 50, 75, 95)
+      val quantiles = percentiles.map(_ / 100.0)
+      sketch.getQuantiles(quantiles).map { values =>
+        val payload = quantiles.zip(values).map(qv => s""""${qv._1}": "${qv._2}"""").mkString("{", ",", "}")
+        Map(TypeProfiler.QUANTILES_EXTRAS_KEY -> payload)
+      }
+    }
+    quantileExtras.getOrElse(Map.empty)
+  }
+
+  private def getExactPmfHack(profile: DpColumn): Option[Seq[DpPmfBucket]] = {
+    if (profile.items.size <= 1) {
+      None
+    } else {
+      profile.data_type match {
+        case null => None
+        case "byte" | "short" | "int" | "long" if profile.enum_values.nonEmpty =>
+          val normalizedValues = profile.enum_values.map(_.trim.toUpperCase)
+          getDiscretePmfBuckets(profile.items, i => normalizedValues.indexOf(i.trim.toUpperCase))
+        case "byte" | "short" | "int" | "long" => getDiscretePmfBuckets(profile.items, _.toLong)
+        case "float" | "double" => getDiscretePmfBuckets(profile.items, _.toDouble)
+        case "boolean" if profile.enum_values.nonEmpty =>
+          val normalizedFalseValue = profile.enum_values.headOption.map(_.trim.toUpperCase).orNull
+          getDiscretePmfBuckets(profile.items, i => if (i.trim.toUpperCase != normalizedFalseValue) 1 else 0)
+        case "boolean" => getDiscretePmfBuckets(profile.items, i => if (i.toBoolean) 1 else 0)
+        case "date" | "timestamp" if profile.format.nonEmpty =>
+          val zoneId = ZoneId.of(profile.extras.getOrElse(TypeProfiler.ZONE_ID_EXTRAS_KEY, Dp.DEFAULT_ZONE_ID))
+          val formatter = DateTimeFormatter.ofPattern(profile.format.orNull).withZone(zoneId)
+          getDiscretePmfBuckets(profile.items, i => LocalDateTime.parse(i, formatter).atZone(zoneId).toEpochSecond)
+        case "timestamp" if profile.format.nonEmpty =>
+          val zoneId = ZoneId.of(profile.extras.getOrElse(TypeProfiler.ZONE_ID_EXTRAS_KEY, Dp.DEFAULT_ZONE_ID))
+          val formatter = DateTimeFormatter.ofPattern(profile.format.orNull).withZone(zoneId)
+          getDiscretePmfBuckets(profile.items, i => LocalDate.parse(i, formatter).atStartOfDay(zoneId).toEpochSecond)
+        case _ => None
+      }
+    }
+  }
+
+  private def getDiscretePmfBuckets(items: Seq[DpItem], itemToDouble: String => Double): Option[Seq[DpPmfBucket]] = {
+    val pmf = Try {
+      val itemValues = items.map(i => itemToDouble(i.item)).sorted
+      val deltas = itemValues.sliding(2).map(w => w.last - w.head).toSeq.sorted
+      val medianDelta = deltas(deltas.size / 2)
+      items.map(i => DpPmfBucket(i.item.toDouble - medianDelta / 2.0, i.item.toDouble + medianDelta / 2.0, i.count))
+    }
+    pmf.toOption
   }
 }
 
@@ -98,28 +177,25 @@ private[dp] object AnyProfiler {
   }
 
   def zero(field: StructField, config: DpConfig): AnyProfiler = {
+    val baseProfiler = AnyProfiler(
+      name = field.name,
+      simpleDataTypeName = null,
+      nullable = field.nullable,
+      count = 0L,
+      countNulls = 0L,
+      typeProfiler = getTypeProfiler(field.dataType, config),
+      cardinalitySketch = null,
+      frequencySketch = null,
+      quantileSketch = null
+    )
     field.dataType match {
-      case _: ArrayType | _: MapType | _: StructType =>
-        new AnyProfiler(
-          name = field.name,
-          simpleDataTypeName = null,
-          nullable = field.nullable,
-          count = 0L,
-          countNulls = 0L,
-          cardinalitySketch = null,
-          frequencySketch = null,
-          typeProfiler = getTypeProfiler(field.dataType, config)
-        )
+      case _: ArrayType | _: MapType | _: StructType => baseProfiler
       case _ =>
-        new AnyProfiler(
-          name = field.name,
+        baseProfiler.copy(
           simpleDataTypeName = field.dataType.typeName,
-          nullable = field.nullable,
-          count = 0L,
-          countNulls = 0L,
           cardinalitySketch = CardinalitySketch.create(config),
           frequencySketch = FrequencySketch.create(config),
-          typeProfiler = getTypeProfiler(field.dataType, config)
+          quantileSketch = QuantileSketch.create(config)
         )
     }
   }
@@ -151,10 +227,11 @@ private[dp] class StringProfiler(
     }
   }
 
-  override def update(value: Any): Unit = {
+  override def update(value: Any): Double = {
     value match {
       case s: String => updateString(s)
     }
+    Double.NaN
   }
 
   override def merge(that: TypeProfiler[String]): StringProfiler = {
@@ -205,21 +282,20 @@ private[dp] class IntegralProfiler(
     var min: Long,
     var max: Long,
     var sum: Long,
-    var quantileSketch: QuantileSketch,
     val zoneId: ZoneId
 ) extends TypeProfiler[Long] {
 
-  def updateLong(value: Long): Unit = {
+  def updateLong(value: Long): Double = {
     if (value == 0L) {
       countZero += 1
     }
     min = math.min(min, value)
     max = math.max(max, value)
     sum += value
-    quantileSketch.update(value)
+    value.toDouble
   }
 
-  override def update(value: Any): Unit = {
+  override def update(value: Any): Double = {
     value match {
       case b: Boolean => updateLong(if (b) 1 else 0)
       case b: Byte => updateLong(b)
@@ -241,7 +317,6 @@ private[dp] class IntegralProfiler(
         this.min = math.min(this.min, that.min)
         this.max = math.max(this.max, that.max)
         this.sum = this.sum + that.sum
-        this.quantileSketch.merge(that.quantileSketch)
     }
     this
   }
@@ -255,17 +330,14 @@ private[dp] class IntegralProfiler(
       profile.count - profile.count_nulls.getOrElse(0L) match {
         case 0L => profile
         case countNonNulls =>
+          val integralExtras = Map(TypeProfiler.MAX_LENGTH_IN_BITS_EXTRAS_KEY -> maxLengthInBits.toString)
           profile.copy(
             min = Some(itemToString(min)),
             max = Some(itemToString(max)),
             mean = Some(math.round(sum.toDouble / countNonNulls)),
             count_zeros = Some(countZero),
-            max_length = Some((maxLengthBits + 7) / 8),
-            pmf = quantileSketch.getPmfBuckets,
-            extras = Map(
-              "max_length_bits" -> maxLengthBits.toString,
-              "quantiles" -> quantileSketch.getQuantiles(Seq(0.25, 0.5, 0.75)).mkString("[", ",", "]")
-            )
+            max_length = Some((maxLengthInBits + 7) / 8),
+            extras = profile.extras ++ integralExtras
           )
       }
     }
@@ -278,12 +350,11 @@ private[dp] class IntegralProfiler(
       min = min,
       max = max,
       sum = sum,
-      quantileSketch = quantileSketch,
-      requiresDoublePrecision = maxLengthBits >= 24
+      requiresDoublePrecision = maxLengthInBits >= 24
     )
   }
 
-  private def maxLengthBits: Int = {
+  private def maxLengthInBits: Int = {
     val minBits = JLong.SIZE - JLong.numberOfLeadingZeros(math.abs(min))
     val maxBits = JLong.SIZE - JLong.numberOfLeadingZeros(math.abs(max))
     math.max(minBits, maxBits)
@@ -297,8 +368,7 @@ private[dp] object IntegralProfiler {
       min = Long.MaxValue,
       max = Long.MinValue,
       sum = 0L,
-      quantileSketch = QuantileSketch.create(config),
-      zoneId = ZoneId.of(config.time_zone_id.getOrElse(Dp.DEFAULT_TIME_ZONE_ID))
+      zoneId = ZoneId.of(config.time_zone_id.getOrElse(Dp.DEFAULT_ZONE_ID))
     )
   }
 }
@@ -309,11 +379,10 @@ private[dp] class FractionalProfiler(
     var min: Double,
     var max: Double,
     var sum: Double,
-    var quantileSketch: QuantileSketch,
     var requiresDoublePrecision: Boolean
 ) extends TypeProfiler[Double] {
 
-  def updateDouble(value: Double): Unit = {
+  def updateDouble(value: Double): Double = {
     if (value.isNaN) {
       countNaN += 1
     } else {
@@ -323,11 +392,11 @@ private[dp] class FractionalProfiler(
       min = math.min(min, value)
       max = math.max(max, value)
       sum = sum + value
-      quantileSketch.update(value)
     }
+    value
   }
 
-  override def update(value: Any): Unit = {
+  override def update(value: Any): Double = {
     value match {
       case f: Float => updateDouble(f)
       case d: Double => updateDouble(d)
@@ -343,7 +412,6 @@ private[dp] class FractionalProfiler(
         this.min = math.min(this.min, that.min)
         this.max = math.max(this.max, that.max)
         this.sum = this.sum + that.sum
-        this.quantileSketch.merge(that.quantileSketch)
         this.requiresDoublePrecision |= that.requiresDoublePrecision
     }
     this
@@ -369,11 +437,7 @@ private[dp] class FractionalProfiler(
             mean = Some(sum / (countNonNulls - countNaN)),
             count_empty = Some(countNaN),
             count_zeros = Some(countZero),
-            max_length = maxLength,
-            pmf = quantileSketch.getPmfBuckets,
-            extras = Map(
-              "quantiles" -> quantileSketch.getQuantiles(Seq(0.25, 0.5, 0.75)).mkString("[", ",", "]")
-            )
+            max_length = maxLength
           )
       }
     }
@@ -388,7 +452,6 @@ private[dp] object FractionalProfiler {
       min = Double.MaxValue,
       max = Double.MinValue,
       sum = 0.0,
-      quantileSketch = QuantileSketch.create(config),
       requiresDoublePrecision = dataType == DoubleType
     )
   }
@@ -400,7 +463,7 @@ private[dp] class IterableProfiler(
     var maxLength: Int
 ) extends TypeProfiler[Iterable[_]] {
 
-  def updateIterable(value: Iterable[_]): Unit = {
+  def updateIterable(value: Iterable[_]): Double = {
     if (value.isEmpty) {
       countEmpty += 1
     }
@@ -410,9 +473,10 @@ private[dp] class IterableProfiler(
     if (maxLength < value.size) {
       maxLength = value.size
     }
+    Double.NaN
   }
 
-  override def update(value: Any): Unit = {
+  override def update(value: Any): Double = {
     value match {
       case s: Seq[_] => updateIterable(s)
       case a: Array[_] => updateIterable(a)
@@ -455,7 +519,7 @@ private[dp] object IterableProfiler {
 }
 
 private[dp] class StructProfiler() extends TypeProfiler[AnyRef] {
-  override def update(value: Any): Unit = Unit
+  override def update(value: Any): Double = Double.NaN
 
   override def merge(that: TypeProfiler[AnyRef]): StructProfiler = this
 

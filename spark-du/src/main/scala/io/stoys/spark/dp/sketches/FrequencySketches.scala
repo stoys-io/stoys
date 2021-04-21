@@ -8,6 +8,8 @@ private[dp] trait FrequencySketch[T] {
 
   def merge(that: FrequencySketch[T]): Unit
 
+  def isExact: Boolean
+
   def getItems(itemToString: T => String): Seq[DpItem]
 }
 
@@ -21,6 +23,8 @@ private[dp] class DummyFrequencySketch[T] extends FrequencySketch[T] {
   override def update(value: T): Unit = Unit
 
   override def merge(that: FrequencySketch[T]): Unit = Unit
+
+  override def isExact: Boolean = true
 
   override def getItems(itemToString: T => String): Seq[DpItem] = Seq.empty
 }
@@ -38,6 +42,10 @@ private[dp] class DataSketchesItemsSketch[T] private(
     that match {
       case that: DataSketchesItemsSketch[T] => this.sketch.merge(that.sketch)
     }
+  }
+
+  override def isExact: Boolean = {
+    sketch.getMaximumError == 0
   }
 
   override def getItems(itemToString: T => String): Seq[DpItem] = {

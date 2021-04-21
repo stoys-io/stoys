@@ -37,7 +37,7 @@ class DpTest extends SparkTestBase {
       count = 5L,
       count_empty = 1L,
       count_nulls = 1L,
-      count_unique = 2L,
+      count_unique = 3L,
       count_zeros = 2L,
       max_length = 4L,
       min = "-0.0",
@@ -45,7 +45,10 @@ class DpTest extends SparkTestBase {
       mean = None,
       pmf = Seq.empty,
       items = Seq(DpItem("-0.0", 2L), DpItem("42.0", 1L), DpItem("NaN", 1L)),
-      extras = Map("quantiles" -> "[-0.0,-0.0,42.0]")
+      extras = Map(
+        "is_exact" -> "true",
+        "quantiles" -> """{"0.05": "-0.0","0.25": "-0.0","0.5": "-0.0","0.75": "42.0","0.95": "42.0"}"""
+      )
     ))
     assert(fColumn.mean.get === 14.0 +- 0.001)
   }
@@ -128,9 +131,16 @@ class DpTest extends SparkTestBase {
     ))
   }
 
-  test("pmf") {
+  test("pmf - discrete") {
+    val dp = Dp.fromDataset(0.until(42).map(i => (i % 3).toFloat).toDS())
+    val dpResult = dp.computeDpResult().collect().head
+    val pmf = dpResult.columns.head.pmf
+    assert(pmf === Seq(DpPmfBucket(-0.5, 0.5, 14), DpPmfBucket(0.5, 1.5, 14), DpPmfBucket(1.5, 2.5, 14)))
+  }
+
+  test("pmf - approximate") {
     val config = DpConfig.default.copy(pmf_buckets = 4, items = 2)
-    val dp = Dp.fromDataset(sparkSession.range(1000)).config(config)
+    val dp = Dp.fromDataset(0.until(1000).toDS()).config(config)
     val dpResult = dp.computeDpResult().collect().head
     val pmf = dpResult.columns.head.pmf
     assert(pmf.size === 4)

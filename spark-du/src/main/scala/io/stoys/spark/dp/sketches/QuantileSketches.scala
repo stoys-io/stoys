@@ -9,7 +9,7 @@ private[dp] trait QuantileSketch {
 
   def merge(that: QuantileSketch): Unit
 
-  def getQuantiles(quantiles: Seq[Double]): Seq[Double]
+  def getQuantiles(quantiles: Seq[Double]): Option[Seq[Double]]
 
   def getPmfBuckets: Seq[DpPmfBucket]
 }
@@ -25,7 +25,7 @@ private[dp] class DummyQuantileSketch extends QuantileSketch {
 
   override def merge(that: QuantileSketch): Unit = Unit
 
-  override def getQuantiles(quantiles: Seq[Double]): Seq[Double] = Seq.empty
+  override def getQuantiles(quantiles: Seq[Double]): Option[Seq[Double]] = None
 
   override def getPmfBuckets: Seq[DpPmfBucket] = Seq.empty
 }
@@ -45,26 +45,32 @@ private[dp] class DataSketchesKllSketch private(
     }
   }
 
-  override def getQuantiles(quantiles: Seq[Double]): Seq[Double] = {
+  override def getQuantiles(quantiles: Seq[Double]): Option[Seq[Double]] = {
     if (sketch.isEmpty) {
-      Seq.empty
+      None
     } else {
-      sketch.getQuantiles(quantiles.toArray).map(_.toDouble).toSeq
+      Some(sketch.getQuantiles(quantiles.toArray).map(_.toDouble).toSeq)
     }
   }
 
   override def getPmfBuckets: Seq[DpPmfBucket] = {
-    if (sketch.isEmpty) {
-      Seq.empty
-    } else {
-      val step = (sketch.getMaxValue - sketch.getMinValue) / pmfBuckets
-      val splits = 0.until(pmfBuckets).map(i => sketch.getMinValue + step * i).distinct.sorted
-      if (step.isNaN || step.isInfinite || step == 0.0 || splits.isEmpty) {
-        Seq.empty
-      } else {
-        val pmf = sketch.getPMF(splits.drop(1).toArray)
-        splits.zip(pmf).map(sb => DpPmfBucket(sb._1, sb._1 + step, math.round(sketch.getN * sb._2)))
-      }
+    pmfBuckets match {
+      case _ if sketch.isEmpty => Seq.empty
+      case n if n <= 0 => Seq.empty
+      case 1 => Seq(DpPmfBucket(sketch.getMinValue, sketch.getMaxValue, sketch.getN))
+      case n =>
+        val Array(quantileLow, quantileHigh) = sketch.getQuantiles(Array(0.005, 0.995))
+        val quantileStep = (quantileHigh - quantileLow) / n
+        val low = math.max(sketch.getMinValue, quantileLow - quantileStep / 2.0f)
+        val high = math.min(sketch.getMaxValue, quantileHigh + quantileStep / 2.0f)
+        val step = (high - low) / n
+        val splits = 0.until(n).map(i => low + step * i).distinct.sorted
+        if (step.isNaN || step.isInfinite || step == 0.0 || splits.isEmpty) {
+          Seq.empty
+        } else {
+          val pmfValues = sketch.getPMF(splits.drop(1).toArray)
+          splits.zip(pmfValues).map(sb => DpPmfBucket(sb._1, sb._1 + step, math.round(sketch.getN * sb._2)))
+        }
     }
   }
 }
@@ -91,34 +97,41 @@ private[dp] class DataSketchesReqSketch private(
     }
   }
 
-  override def getQuantiles(quantiles: Seq[Double]): Seq[Double] = {
+  override def getQuantiles(quantiles: Seq[Double]): Option[Seq[Double]] = {
     if (sketch.isEmpty) {
-      Seq.empty
+      None
     } else {
-      sketch.getQuantiles(quantiles.toArray).map(_.toDouble).toSeq
+      Some(sketch.getQuantiles(quantiles.toArray).map(_.toDouble).toSeq)
     }
   }
 
   override def getPmfBuckets: Seq[DpPmfBucket] = {
-    if (sketch.isEmpty) {
-      Seq.empty
-    } else {
-      val step = (sketch.getMaxValue - sketch.getMinValue) / pmfBuckets
-      val splits = 0.until(pmfBuckets).map(i => sketch.getMinValue + step * i).distinct.sorted
-      if (step.isNaN || step.isInfinite || step == 0.0 || splits.isEmpty) {
-        Seq.empty
-      } else {
-        val pmf = sketch.getPMF(splits.drop(1).toArray)
-        splits.zip(pmf).map(sb => DpPmfBucket(sb._1, sb._1 + step, math.round(sketch.getN * sb._2)))
-      }
+    pmfBuckets match {
+      case _ if sketch.isEmpty => Seq.empty
+      case n if n <= 0 => Seq.empty
+      case 1 => Seq(DpPmfBucket(sketch.getMinValue, sketch.getMaxValue, sketch.getN))
+      case n =>
+        val Array(quantileLow, quantileHigh) = sketch.getQuantiles(Array(0.005, 0.995))
+        val quantileStep = (quantileHigh - quantileLow) / n
+        val low = math.max(sketch.getMinValue, quantileLow - quantileStep / 2.0f)
+        val high = math.min(sketch.getMaxValue, quantileHigh + quantileStep / 2.0f)
+        val step = (high - low) / n
+        val splits = 0.until(n).map(i => low + step * i).distinct.sorted
+        if (step.isNaN || step.isInfinite || step == 0.0 || splits.isEmpty) {
+          Seq.empty
+        } else {
+          val pmfValues = sketch.getPMF(splits.drop(1).toArray)
+          splits.zip(pmfValues).map(sb => DpPmfBucket(sb._1, sb._1 + step, math.round(sketch.getN * sb._2)))
+        }
     }
   }
 }
 
 private[dp] object DataSketchesReqSketch {
   def create(pmfBuckets: Int): DataSketchesReqSketch = {
-    val k = ReqSketch.builder().getK // TODO: use pmfBuckets
-    val sketch = ReqSketch.builder().setK(k).setHighRankAccuracy(true).build()
+    val defaultK = ReqSketch.builder().getK
+    val k = math.max(4, math.min(1024, defaultK + 2 * (math.log(pmfBuckets) / math.log(2) / 2.0).round.toInt))
+    val sketch = ReqSketch.builder().setK(k).setHighRankAccuracy(false).build()
     new DataSketchesReqSketch(sketch, pmfBuckets)
   }
 }

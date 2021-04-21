@@ -3,7 +3,6 @@ package io.stoys.spark.dp
 import org.apache.spark.sql.types._
 
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
-import java.time.temporal.ChronoField
 import java.time.{Instant, LocalDate, LocalDateTime, ZoneId}
 
 private[dp] trait TypeInferenceProfiler {
@@ -27,11 +26,11 @@ private[dp] case object NullTypeInferenceProfiler extends TypeInferenceProfiler 
     val integralTIP = IntegralTypeInferenceProfiler(IntegralProfiler.zero(LongType, config))
     val fractionalTIP = FractionalTypeInferenceProfiler(FractionalProfiler.zero(DoubleType, config))
     // TODO: add DecimalTypeProfiler?
-    val zoneId = ZoneId.of(config.time_zone_id.getOrElse(Dp.DEFAULT_TIME_ZONE_ID))
+    val zoneIdName = config.time_zone_id.getOrElse(Dp.DEFAULT_ZONE_ID)
     val dateTIPs = config.type_inference_config.date_formats
-        .map(f => DateTimeTypeInferenceProfiler(IntegralProfiler.zero(LongType, config), DateType, f, zoneId))
+        .map(f => DateTimeTypeInferenceProfiler(IntegralProfiler.zero(LongType, config), DateType, f, zoneIdName))
     val timestampTIPs = config.type_inference_config.timestamp_formats
-        .map(f => DateTimeTypeInferenceProfiler(IntegralProfiler.zero(LongType, config), TimestampType, f, zoneId))
+        .map(f => DateTimeTypeInferenceProfiler(IntegralProfiler.zero(LongType, config), TimestampType, f, zoneIdName))
     Seq(integralTIP, fractionalTIP) ++ dateTIPs ++ timestampTIPs
   }
 
@@ -122,9 +121,10 @@ private[dp] case class DateTimeTypeInferenceProfiler(
     integralProfiler: IntegralProfiler,
     dataType: DataType,
     format: String,
-    zoneId: ZoneId
+    zoneIdName: String
 ) extends TypeInferenceProfiler {
 
+  private val zoneId = ZoneId.of(zoneIdName)
   private val formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId)
 
   override def update(stringValue: String): Boolean = {
@@ -143,7 +143,7 @@ private[dp] case class DateTimeTypeInferenceProfiler(
   override def merge(that: TypeInferenceProfiler): TypeInferenceProfiler = {
     that match {
       case that: DateTimeTypeInferenceProfiler if this.dataType == that.dataType && this.format == that.format =>
-        DateTimeTypeInferenceProfiler(this.integralProfiler.merge(that.integralProfiler), dataType, format, zoneId)
+        DateTimeTypeInferenceProfiler(this.integralProfiler.merge(that.integralProfiler), dataType, format, zoneIdName)
       case _ => null
     }
   }
@@ -154,20 +154,18 @@ private[dp] case class DateTimeTypeInferenceProfiler(
       format = Option(format),
       min = p.min.map(reformatItem),
       max = p.max.map(reformatItem),
-      items = p.items.map(i => i.copy(item = reformatItem(i.item))) // TODO: Should we just keep the original strings?
+      items = p.items.map(i => i.copy(item = reformatItem(i.item))), // TODO: Should keep items as they are?
+      extras = p.extras ++ Map(TypeProfiler.ZONE_ID_EXTRAS_KEY -> zoneIdName)
     ))
   }
 
   private def reformatItem(item: String): String = {
     item match {
       case item if item.isEmpty => item
-      case item =>
-        val epochSeconds = formatter.parse(item) match {
-          case ta if ta.isSupported(ChronoField.INSTANT_SECONDS) => Instant.from(ta).toEpochMilli / 1000L
-          case ta if ta.isSupported(ChronoField.SECOND_OF_DAY) => LocalDateTime.from(ta).atZone(zoneId).toEpochSecond
-          case ta if ta.isSupported(ChronoField.EPOCH_DAY) => LocalDate.from(ta).atStartOfDay(zoneId).toEpochSecond
-        }
-        epochSeconds.toString
+      case item if dataType == DateType =>
+        LocalDate.parse(item, formatter).atStartOfDay(zoneId).toEpochSecond.toString
+      case item if dataType == TimestampType =>
+        LocalDateTime.parse(item, formatter).atZone(zoneId).toEpochSecond.toString
     }
   }
 }
@@ -188,10 +186,11 @@ private[dp] class TypeInferenceStringProfiler(
     }
   }
 
-  override def update(value: Any): Unit = {
+  override def update(value: Any): Double = {
     value match {
       case s: String => updateString(s)
     }
+    Double.NaN
   }
 
   override def merge(that: TypeProfiler[String]): TypeInferenceStringProfiler = {
@@ -208,7 +207,7 @@ private[dp] class TypeInferenceStringProfiler(
     val stringProfile = stringProfiler.profile(baseProfile, config)
     val typeEnumProfile = Option(typeInferenceProfiler).flatMap(_.profile(baseProfile, config))
         .orElse(stringProfile.flatMap(p => TypeInferenceStringProfiler.matchEnumValues(p, config)))
-        .map(p => p.copy(extras = p.extras + ("is_inferred_type" -> "true")))
+        .map(p => p.copy(extras = p.extras + (TypeProfiler.IS_INFERRED_TYPE_EXTRAS_KEY -> "true")))
     val profile = (typeEnumProfile, stringProfile) match {
       case (None, None) => None
       case (Some(typeEnumProfile), None) => Some(typeEnumProfile)
