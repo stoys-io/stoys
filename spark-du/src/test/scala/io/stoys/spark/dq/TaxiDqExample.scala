@@ -16,16 +16,18 @@ class TaxiDqExample extends SparkExampleBase {
          |  *,
          |  passenger_count < 10 AS taxi_is_not_a_bus,
          |  trip_distance > 0.0 AS taxi_is_for_transportation,
+         |  -- 40,007.863 km (24,859.734 mi) is Earth's circumference
+         |  trip_distance <= 24859.734 AS taxi_is_not_on_orbit,
          |  total_amount > 0.0 AS taxi_is_not_a_charity,
-         |  total_amount < 100 AS total_amount_is_not_expensive,
-         |  total_amount < 1000 AS total_amount_is_not_very_expensive,
-         |  tpep_pickup_datetime < tpep_dropoff_datetime AS pickup_before_dropoff,
-         |  tpep_pickup_datetime BETWEEN TO_DATE("2020-02-01") AND TO_DATE("2020-02-29") AS pickup_in_february_2020,
+         |  total_amount < 100.0 AS taxi_is_affordable,
+         |  tpep_pickup_datetime < tpep_dropoff_datetime AS pick_up_before_drop_off,
+         |  tpep_pickup_datetime BETWEEN TO_DATE("2020-02-01") AND TO_DATE("2020-02-29") AS pick_up_in_february_2020,
+         |  tpep_dropoff_datetime BETWEEN TO_DATE("2020-02-01") AND TO_DATE("2020-02-29") AS drop_off_in_february_2020,
          |  -- monkeys are cute, smart but annoying :(
          |  NOT passengers LIKE "%🐵%" AS no_monkeys_please,
          |  -- everybody loves penguins!
          |  -- have you seen one today?
-         |  passengers LIKE "*%🐧%" AS penguin_is_a_must
+         |  passengers LIKE "%🐧%" AS penguin_is_a_must
          |FROM
          |  trip_data_plus
          |--LIMIT 42
