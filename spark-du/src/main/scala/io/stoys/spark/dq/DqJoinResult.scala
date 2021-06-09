@@ -1,7 +1,7 @@
 package io.stoys.spark.dq
 
 case class DqJoinResult(
-    join_statistics: DqJoinStatistics,
+    dq_join_statistics: DqJoinStatistics,
     dq_result: DqResult
 )
 

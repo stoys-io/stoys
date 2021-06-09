@@ -37,13 +37,13 @@ class DqJoin private(leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Col
 
   def computeDqJoinResult(): Dataset[DqJoinResult] = {
     import joinKeyCountsDs.sparkSession.implicits._
-    val joinStatistics = computeDqJoinStatistics()
-    val result = computeDqResult()
-    val joinResult = joinStatistics.crossJoin(result).select(
-      struct(joinStatistics("*")).as("join_statistics"),
-      struct(result("*")).as("dq_result")
+    val dqJoinStatistics = computeDqJoinStatistics()
+    val dqResult = computeDqResult()
+    val dqJoinResult = dqJoinStatistics.crossJoin(dqResult).select(
+      struct(dqJoinStatistics("*")).as("dq_join_statistics"),
+      struct(dqResult("*")).as("dq_result")
     )
-    joinResult.as[DqJoinResult]
+    dqJoinResult.as[DqJoinResult]
   }
 
   def getJoinMetadata: Map[String, String] = {

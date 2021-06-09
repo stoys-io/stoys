@@ -42,7 +42,7 @@ class DqJoinTest extends SparkTestBase {
   test("computeDqJoinResult") {
     val join = DqJoin.equiJoin(orderDs, itemDs, Seq("item_id"), Seq("id"))
     val dqJoinResult = join.computeDqJoinResult().collect().head
-    assert(dqJoinResult.join_statistics.left === 5)
+    assert(dqJoinResult.dq_join_statistics.left === 5)
     assert(dqJoinResult.dq_result.rules.size === 4)
   }
 
