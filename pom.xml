@@ -55,20 +55,20 @@
         <jdk.version>11</jdk.version>
         <character.encoding>UTF-8</character.encoding>
 
-        <default.scala.version>2.12.13</default.scala.version>
+        <default.scala.version>2.12.14</default.scala.version>
         <default.scala.compat.version>2.12</default.scala.compat.version>
         <scala.version>${default.scala.version}</scala.version>
         <scala.compat.version>${default.scala.compat.version}</scala.compat.version>
 
-        <commons-io.version>2.8.0</commons-io.version>
+        <commons-io.version>2.9.0</commons-io.version>
         <commons-text.version>1.9</commons-text.version>
-        <delta.version>0.8.0</delta.version>
+        <delta.version>1.0.0</delta.version>
         <jackson.version>2.12.3</jackson.version>
-        <log4s.version>1.9.0</log4s.version>
+        <log4s.version>1.10.0</log4s.version>
         <persistence-api.version>2.2</persistence-api.version>
-        <scala-collection-compat.version>2.4.3</scala-collection-compat.version>
-        <scalatest.version>3.2.7</scalatest.version>
-        <spark.version>3.1.1</spark.version>
+        <scala-collection-compat.version>2.4.4</scala-collection-compat.version>
+        <scalatest.version>3.2.9</scalatest.version>
+        <spark.version>3.1.2</spark.version>
     </properties>
 
     <dependencyManagement>
@@ -417,14 +417,14 @@
         <profile>
             <id>scala-2.12</id>
             <properties>
-                <scala.version>2.12.13</scala.version>
+                <scala.version>2.12.14</scala.version>
                 <scala.compat.version>2.12</scala.compat.version>
             </properties>
         </profile>
         <profile>
             <id>scala-2.13</id>
             <properties>
-                <scala.version>2.13.5</scala.version>
+                <scala.version>2.13.6</scala.version>
                 <scala.compat.version>2.13</scala.compat.version>
                 <scala-parallel-collections.version>1.0.0</scala-parallel-collections.version>
             </properties>
@@ -453,7 +453,7 @@
         <profile>
             <id>spark-2.4</id>
             <properties>
-                <spark.version>2.4.7</spark.version>
+                <spark.version>2.4.8</spark.version>
             </properties>
         </profile>
         <profile>
@@ -465,7 +465,7 @@
         <profile>
             <id>spark-3.1</id>
             <properties>
-                <spark.version>3.1.1</spark.version>
+                <spark.version>3.1.2</spark.version>
             </properties>
         </profile>
         <profile>
