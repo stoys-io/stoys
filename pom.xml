@@ -15,7 +15,7 @@
         <url>https://github.com/stoys-io/stoys.git</url>
         <connection>scm:git:git@github.com:stoys-io/stoys.git</connection>
         <developerConnection>scm:git:git@github.com:stoys-io/stoys.git</developerConnection>
-        <tag>stoys-0.1</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <issueManagement>
@@ -377,8 +377,9 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>3.0.0-M1</version>
+                    <version>3.0.0-M4</version>
                     <configuration>
+                        <autoVersionSubmodules>true</autoVersionSubmodules>
                         <tagNameFormat>stoys-@{project.version}</tagNameFormat>
                     </configuration>
                 </plugin>
