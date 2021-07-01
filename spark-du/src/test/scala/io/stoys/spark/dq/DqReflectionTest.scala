@@ -1,6 +1,7 @@
 package io.stoys.spark.dq
 
 import io.stoys.scala.Arbitrary
+import io.stoys.spark.SToysException
 import org.scalatest.funsuite.AnyFunSuite
 
 import java.sql.Date
@@ -30,6 +31,11 @@ class DqReflectionTest extends AnyFunSuite {
     )
     assert(getDqFields[NullableRecord] === expectedFields)
   }
+
+  test("unsupported") {
+    assertThrows[SToysException](getDqFields[UnsupportedRecord])
+    assert(getDqFields[UnsupportedRecord](ignoreUnsupportedTypes = true) === Seq.empty)
+  }
 }
 
 object DqReflectionTest {
@@ -55,5 +61,9 @@ object DqReflectionTest {
       dqFieldNotNullableStr: String,
       @DqField(nullable = false)
       dqFieldNotNullableOptionStr: Option[String]
+  )
+
+  case class UnsupportedRecord(
+      unsupported: java.util.UUID
   )
 }
