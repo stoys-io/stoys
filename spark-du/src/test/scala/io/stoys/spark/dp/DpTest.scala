@@ -15,18 +15,18 @@ class DpTest extends SparkTestBase {
 
   test("computeDpResult - TypedRecord") {
     val typedRecords = Seq(
-      TypedRecord(false, 1, "foo", -0.0f, "2020-02-20"),
-      TypedRecord(true, 2, "bar", -.0e1f, "2020-02-19"),
-      TypedRecord(false, 3, "foo", 42.0f, "2020-02-21"),
-      TypedRecord(true, 4, "", Float.NaN, "2020-02-20"),
-      TypedRecord(null, 5, null, null, null)
+      TypedRecord(false, 1, "foo", -0.0f, "2020-02-20", "1"),
+      TypedRecord(true, 2, "bar", -.0e1f, "2020-02-19", "2"),
+      TypedRecord(false, 3, "foo", 42.0f, "2020-02-21", "3"),
+      TypedRecord(true, 4, "", Float.NaN, "2020-02-20", "4"),
+      TypedRecord(null, 5, null, null, null, null)
     )
 
     val config = DpConfig.default.copy(pmf_buckets = 4)
     val dp = Dp.fromDataset(typedRecords.toDS()).config(config)
     val dpResult = dp.computeDpResult().collect().head
     assert(dpResult.table === DpTable(5))
-    assert(dpResult.columns.map(_.name) === Seq("b", "i", "s", "f", "dt"))
+    assert(dpResult.columns.map(_.name) === Seq("b", "i", "s", "f", "dt", "bd"))
     val fColumn = dpResult.columns.find(_.name == "f").get
     assert(fColumn.copy(mean = None, pmf = Seq.empty) === DpColumn(
       name = "f",
@@ -154,7 +154,7 @@ class DpTest extends SparkTestBase {
 }
 
 object DpTest {
-  case class TypedRecord(b: Option[Boolean], i: Int, s: String, f: Option[Float], dt: Date)
+  case class TypedRecord(b: Option[Boolean], i: Int, s: String, f: Option[Float], dt: Date, bd: java.math.BigDecimal)
   case class StringRecord(b: String, i: String, s: String, f: String, dt: String)
   case class NestedRecord(value: String)
   case class CollectionRecord(a: Array[Int], m: Map[String, Int], n: NestedRecord)

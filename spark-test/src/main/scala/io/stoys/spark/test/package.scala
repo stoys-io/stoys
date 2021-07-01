@@ -14,5 +14,7 @@ package object test {
     implicit def toDate(date: String): Date = Date.valueOf(date)
 
     implicit def toLocalDate(date: String): LocalDate = LocalDate.parse(date)
+
+    implicit def toBigDecimal(bigDecimal: String): java.math.BigDecimal = new java.math.BigDecimal(bigDecimal)
   }
 }

@@ -400,7 +400,11 @@ private[dp] class FractionalProfiler(
     value match {
       case f: Float => updateDouble(f)
       case d: Double => updateDouble(d)
-      case bd: BigDecimal => updateDouble(bd.toDouble)
+      case d: Decimal => updateDouble(d.toDouble)
+      case bd: java.math.BigDecimal => updateDouble(bd.doubleValue())
+      case bi: java.math.BigInteger => updateDouble(bi.doubleValue())
+      case bd: scala.math.BigDecimal => updateDouble(bd.doubleValue())
+      case bi: scala.math.BigInt => updateDouble(bi.doubleValue())
     }
   }
 
@@ -426,10 +430,12 @@ private[dp] class FractionalProfiler(
       profile.count - profile.count_nulls.getOrElse(0L) match {
         case 0L => profile
         case countNonNulls =>
-          val maxLength = profile.data_type match {
-            case "float" | "string" if !requiresDoublePrecision => Some(4L)
-            case "float" | "double" | "string" => Some(8L)
-//            case "decimal" | "string" => None // TODO: support decimals
+          val maxLength = DataType.fromJson(s""""${profile.data_type}"""") match {
+            case FloatType | StringType if !requiresDoublePrecision => Some(4L)
+            case FloatType | DoubleType | StringType => Some(8L)
+            case dt: DecimalType if DecimalType.is32BitDecimalType(dt) => Some(4L)
+            case dt: DecimalType if DecimalType.is64BitDecimalType(dt) => Some(8L)
+            case dt: DecimalType => Some(math.ceil(dt.precision / math.log10(2.0) / 8).toLong)
           }
           profile.copy(
             min = Some(itemToString(min)),
