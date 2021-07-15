@@ -68,6 +68,10 @@ class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
 }
 
 object Dq {
+  def fromDataFrame(df: DataFrame): Dq[Row] = {
+    fromDataset(df)
+  }
+
   def fromDataset[T](ds: Dataset[T]): Dq[T] = {
     new Dq(ds, Seq.empty)
   }
