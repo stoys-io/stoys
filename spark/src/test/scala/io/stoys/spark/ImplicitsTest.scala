@@ -6,13 +6,15 @@ class ImplicitsTest extends SparkTestBase {
   import ImplicitsTest._
 
   test("implicits") {
-    val df = sparkSession.sql("SELECT '42' AS str, 42 AS int")
+    val df = sparkSession.sql("SELECT '42' AS s, 42 AS i")
+
     assertTypeError("df.reshape[Record]")
+
     import io.stoys.spark.implicits._
-    assert(df.reshape[Record].columns === Seq("str"))
+    assert(df.reshape[Record].columns === Seq("s"))
   }
 }
 
 object ImplicitsTest {
-  case class Record(str: String)
+  case class Record(s: String)
 }

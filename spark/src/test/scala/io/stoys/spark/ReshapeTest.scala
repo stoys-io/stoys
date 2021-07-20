@@ -17,24 +17,24 @@ class ReshapeTest extends SparkTestBase {
   private lazy val recordsDF = records.toDF()
 
   test("coerceTypes") {
-    val fixableDF = recordsDF.selectExpr("42 AS str", "CAST(num AS BYTE) AS num", "nested")
+    val fixableDF = recordsDF.selectExpr("42 AS s", "CAST(i AS BYTE) AS i", "nested")
     val fixedDS = Reshape.reshape[Record](fixableDF)
-    assert(fixedDS.collect() === Seq(record.copy(str = "42")))
+    assert(fixedDS.collect() === Seq(record.copy(s = "42")))
     val config = ReshapeConfig.default.copy(coerceTypes = false)
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF, config))
-    assert(caught.getMessage.contains("str of type IntegerType cannot be casted to StringType"))
-    assert(caught.getMessage.contains("num of type ByteType cannot be casted to IntegerType"))
+    assert(caught.getMessage.contains("s of type IntegerType cannot be casted to StringType"))
+    assert(caught.getMessage.contains("i of type ByteType cannot be casted to IntegerType"))
   }
 
   test("conflictResolution") {
-    val fixableDF = recordsDF.selectExpr("*", "'second_str' AS str", "'foo' AS extra", "'bar' AS extra")
+    val fixableDF = recordsDF.selectExpr("*", "'second_s' AS s", "'foo' AS extra", "'bar' AS extra")
 
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF))
-    assert(caught.getMessage.contains("str has 2 conflicting occurrences"))
+    assert(caught.getMessage.contains("s has 2 conflicting occurrences"))
     val firstConfig = ReshapeConfig.default.copy(conflictResolution = ReshapeConflictResolution.FIRST)
     assert(Reshape.reshape[Record](fixableDF, firstConfig).collect() === Seq(record))
     val lastConfig = ReshapeConfig.default.copy(conflictResolution = ReshapeConflictResolution.LAST)
-    assert(Reshape.reshape[Record](fixableDF, lastConfig).collect() === Seq(record.copy(str = "second_str")))
+    assert(Reshape.reshape[Record](fixableDF, lastConfig).collect() === Seq(record.copy(s = "second_s")))
 
     assert(Reshape.reshape[Record](fixableDF, lastConfig).columns.count(_ == "extra") === 0)
     val lastNonDroppingConfig = lastConfig.copy(dropExtraColumns = false)
@@ -44,10 +44,10 @@ class ReshapeTest extends SparkTestBase {
   test("dropExtraColumns") {
     val df = recordsDF.selectExpr("*", "'foo' AS extra")
     val dsWithoutExtraColumns = Reshape.reshape[Record](df)
-    assert(dsWithoutExtraColumns.columns === Seq("str", "num", "nested"))
+    assert(dsWithoutExtraColumns.columns === Seq("s", "i", "nested"))
     val config = ReshapeConfig.default.copy(dropExtraColumns = false)
     val dsWithExtraColumns = Reshape.reshape[Record](df, config)
-    assert(dsWithExtraColumns.columns === Seq("str", "num", "nested", "extra"))
+    assert(dsWithExtraColumns.columns === Seq("s", "i", "nested", "extra"))
   }
 
   test("failOnExtraColumn") {
@@ -66,14 +66,14 @@ class ReshapeTest extends SparkTestBase {
     assert(fixedDS.collect() === records)
     val config = ReshapeConfig.default.copy(failOnIgnoringNullability = true)
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF, config))
-    assert(caught.getMessage.contains("num is nullable but target column is not"))
+    assert(caught.getMessage.contains("i is nullable but target column is not"))
   }
 
   test("fillDefaultValues") {
     val fixableDF = sparkSession.sql("SELECT 'unused' AS dummy")
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF))
-    assert(caught.getMessage.contains("str is missing"))
-    assert(caught.getMessage.contains("num is missing"))
+    assert(caught.getMessage.contains("s is missing"))
+    assert(caught.getMessage.contains("i is missing"))
     assert(caught.getMessage.contains("nested is missing"))
     val config = ReshapeConfig.default.copy(fillDefaultValues = true)
     val fixedDS = Reshape.reshape[Record](fixableDF, config)
@@ -81,9 +81,9 @@ class ReshapeTest extends SparkTestBase {
   }
 
   test("fillMissingNulls") {
-    val fixableDF = sparkSession.sql("SELECT 42 AS num")
+    val fixableDF = sparkSession.sql("SELECT 42 AS i")
     val caught = intercept[ReshapeException](Reshape.reshape[Record](fixableDF))
-    assert(caught.getMessage.contains("str is missing"))
+    assert(caught.getMessage.contains("s is missing"))
     assert(caught.getMessage.contains("nested is missing"))
     val config = ReshapeConfig.default.copy(fillMissingNulls = true)
     val fixedDS = Reshape.reshape[Record](fixableDF, config)
@@ -91,31 +91,31 @@ class ReshapeTest extends SparkTestBase {
   }
 
   test("normalizedNameMatching") {
-    val fixableDF = sparkSession.sql("SELECT 'foo' AS `nested str`")
+    val fixableDF = sparkSession.sql("SELECT 'foo' AS `nested string`")
     val caught = intercept[ReshapeException](Reshape.reshape[NestedRecord](fixableDF))
-    assert(caught.getMessage.contains("nestedstr is missing"))
+    assert(caught.getMessage.contains("nestedstring is missing"))
     val config = ReshapeConfig.default.copy(normalizedNameMatching = true)
     val fixedDS = Reshape.reshape[NestedRecord](fixableDF, config)
     assert(fixedDS.collect() === Seq(NestedRecord("foo")))
   }
 
   test("sortOrder") {
-    val fixableDF = recordsDF.selectExpr("num", "nested", "str")
-    assert(Reshape.reshape[Record](fixableDF).columns === Seq("str", "num", "nested"))
+    val fixableDF = recordsDF.selectExpr("i", "nested", "s")
+    assert(Reshape.reshape[Record](fixableDF).columns === Seq("s", "i", "nested"))
     val sourceOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeSortOrder.SOURCE)
-    assert(Reshape.reshape[Record](fixableDF, sourceOrderConfig).columns === Seq("num", "nested", "str"))
+    assert(Reshape.reshape[Record](fixableDF, sourceOrderConfig).columns === Seq("i", "nested", "s"))
     val alphabeticalOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeSortOrder.ALPHABETICAL)
-    assert(Reshape.reshape[Record](fixableDF, alphabeticalOrderConfig).columns === Seq("nested", "num", "str"))
+    assert(Reshape.reshape[Record](fixableDF, alphabeticalOrderConfig).columns === Seq("i", "nested", "s"))
   }
 
   test("arrays") {
-    val df = sparkSession.sql("SELECT ARRAY(STRUCT(42 AS num, 'foo' AS str)) AS records")
+    val df = sparkSession.sql("SELECT ARRAY(STRUCT(42 AS i, 'foo' AS s)) AS records")
     val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeSortOrder.ALPHABETICAL)
     assert(Reshape.reshape[SeqOfRecord](df, config).collect() === Seq(SeqOfRecord(Seq(Record("foo", 42, null)))))
   }
 
   ignore("maps") {
-    val df = sparkSession.sql("SELECT MAP(0, STRUCT('foo' AS str, 42 AS num)) AS records")
+    val df = sparkSession.sql("SELECT MAP(0, STRUCT('foo' AS s, 42 AS i)) AS records")
     val config = ReshapeConfig.dangerous.copy(sortOrder = ReshapeSortOrder.ALPHABETICAL)
     assert(Reshape.reshape[MapOfRecord](df, config).collect() === Seq(MapOfRecord(Map("0" -> Record("foo", 42, null)))))
   }
@@ -157,7 +157,7 @@ class ReshapeTest extends SparkTestBase {
   }
 
   test("case insensitive") {
-    val fixableDF = sparkSession.sql("SELECT 'foo' AS STR, 42 AS nUm, NULL AS nested")
+    val fixableDF = sparkSession.sql("SELECT 'foo' AS S, 42 AS I, NULL AS nested")
     val fixedDS = Reshape.reshape[Record](fixableDF)
     assert(fixedDS.collect() === Seq(Record("foo", 42, null)))
   }
@@ -169,7 +169,7 @@ class ReshapeTest extends SparkTestBase {
     )
     assert(reshapeConfig === ReshapeConfig.as)
 
-    val fixableDF = recordsDF.selectExpr("num", "nested", "str")
+    val fixableDF = recordsDF.selectExpr("i", "nested", "s")
     val sourceOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeSortOrder.SOURCE)
     val undefinedOrderConfig = ReshapeConfig.default.copy(sortOrder = ReshapeSortOrder.UNDEFINED)
     assert(Reshape.reshape[Record](fixableDF, undefinedOrderConfig).columns
@@ -188,9 +188,9 @@ class ReshapeTest extends SparkTestBase {
 }
 
 object ReshapeTest {
-  case class NestedRecord(nestedStr: String)
-  case class Record(str: String, num: Int, nested: NestedRecord)
-  case class SubsetOfRecord(str: String, nested: NestedRecord)
+  case class NestedRecord(nestedString: String)
+  case class Record(s: String, i: Int, nested: NestedRecord)
+  case class SubsetOfRecord(s: String, nested: NestedRecord)
   case class SeqOfRecord(records: Seq[Record])
   case class MapOfRecord(records: Map[String, Record])
   case class TemporalRecord(date: Date, timestamp: Timestamp)
