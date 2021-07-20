@@ -24,7 +24,7 @@ class DpTest extends SparkTestBase {
 
     val config = DpConfig.default.copy(pmf_buckets = 4)
     val dp = Dp.fromDataset(typedRecords.toDS()).config(config)
-    val dpResult = dp.computeDpResult().collect().head
+    val dpResult = dp.computeDpResult().first()
     assert(dpResult.table === DpTable(5))
     assert(dpResult.columns.map(_.name) === Seq("b", "i", "s", "f", "dt", "bd"))
     val fColumn = dpResult.columns.find(_.name == "f").get
@@ -74,7 +74,7 @@ class DpTest extends SparkTestBase {
       type_inference_config = typeInferenceConfig
     )
     val dp = Dp.fromDataset(stringRecords.toDS()).config(config)
-    val dpResult = dp.computeDpResult().collect().head
+    val dpResult = dp.computeDpResult().first()
     assert(dpResult.columns.map(DpColumnSimplified.apply) === Seq(
       DpColumnSimplified("b", "boolean", nullable = false).copy(enum_values = Seq("NO", "YES")),
       DpColumnSimplified("i", "integer", nullable = false),
@@ -101,7 +101,7 @@ class DpTest extends SparkTestBase {
     )
 
     val dp = Dp.fromDataset(collectionRecords.toDS())
-    val dpResult = dp.computeDpResult().collect().head
+    val dpResult = dp.computeDpResult().first()
     assert(dpResult.table === DpTable(5))
     assert(dpResult.columns.map(_.name) === Seq("a", "m", "n"))
     val aColumn = dpResult.columns.find(_.name == "a").get
@@ -133,7 +133,7 @@ class DpTest extends SparkTestBase {
 
   test("pmf - discrete") {
     val dp = Dp.fromDataset(0.until(42).map(i => (i % 3).toFloat).toDS())
-    val dpResult = dp.computeDpResult().collect().head
+    val dpResult = dp.computeDpResult().first()
     val pmf = dpResult.columns.head.pmf
     assert(pmf === Seq(DpPmfBucket(-0.5, 0.5, 14), DpPmfBucket(0.5, 1.5, 14), DpPmfBucket(1.5, 2.5, 14)))
   }
@@ -141,7 +141,7 @@ class DpTest extends SparkTestBase {
   test("pmf - approximate") {
     val config = DpConfig.default.copy(pmf_buckets = 4, items = 2)
     val dp = Dp.fromDataset(0.until(1000).toDS()).config(config)
-    val dpResult = dp.computeDpResult().collect().head
+    val dpResult = dp.computeDpResult().first()
     val pmf = dpResult.columns.head.pmf
     assert(pmf.size === 4)
     pmf.zipWithIndex.map {

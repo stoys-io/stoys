@@ -33,9 +33,9 @@ class DqAggregatorTest extends SparkTestBase {
 
     val emptyDqConfigAggregator =
       new DqAggregator(columnCount, existingReferencedColumnIndexes, Arbitrary.empty[DqConfig])
-    assert(input.toDS().select(emptyDqConfigAggregator.toColumn).collect().head.rowSample.length === 0)
+    assert(input.toDS().select(emptyDqConfigAggregator.toColumn).first().rowSample.length === 0)
     val singleRowSamplingAggregator =
       new DqAggregator(columnCount, existingReferencedColumnIndexes, DqConfig.default.copy(max_rows_per_rule = 1))
-    assert(input.toDS().select(singleRowSamplingAggregator.toColumn).collect().head.rowSample.length === 2)
+    assert(input.toDS().select(singleRowSamplingAggregator.toColumn).first().rowSample.length === 2)
   }
 }

@@ -34,7 +34,7 @@ class TaxiDqExample extends SparkExampleBase {
          |""".stripMargin.trim
 
     val dq = Dq.fromDqSql(sparkSession, dqSql)
-    val dqResult = dq.computeDqResult().collect().head
+    val dqResult = dq.computeDqResult().first()
     val dqResultJsonPath = writeValueAsJsonTmpFile("dq_result.json", dqResult, logFullContent = true)
     assert(dqResultJsonPath.toFile.exists())
   }

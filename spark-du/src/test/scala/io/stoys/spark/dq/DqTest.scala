@@ -48,7 +48,7 @@ class DqTest extends SparkTestBase {
       Map.empty
     )
 
-    val dqResult = Dq.fromDqSql(sparkSession, dqSql).computeDqResult().collect().head
+    val dqResult = Dq.fromDqSql(sparkSession, dqSql).computeDqResult().first()
     assert(dqResult === expectedDqResult)
   }
 
@@ -75,7 +75,7 @@ class DqTest extends SparkTestBase {
          |LIMIT 42
          |""".stripMargin.trim
 
-    val dqResult = Dq.fromDqSql(sparkSession, dqSql).computeDqResult().collect().head
+    val dqResult = Dq.fromDqSql(sparkSession, dqSql).computeDqResult().first()
     assert(dqResult.statistics.table.violations === 2)
     assert(dqResult.statistics.rule.map(_.violations) === Seq(0, 2, 2))
   }
@@ -91,7 +91,7 @@ class DqTest extends SparkTestBase {
 
     val dq = Dq.fromFileInputPath(sparkSession, recordsCsvInputPath).rules(rules).fields(fields)
 
-    val dqResult = dq.computeDqResult().collect().head
+    val dqResult = dq.computeDqResult().first()
     assert(dqResult.statistics.table.violations === 2)
     assert(dqResult.metadata.get("size") === Some("66"))
     assert(Duration.between(Instant.parse(dqResult.metadata("modification_timestamp")), Instant.now()).getSeconds < 60)
@@ -120,7 +120,7 @@ class DqTest extends SparkTestBase {
     val dq = Dq.fromDataset(records.take(2).toDS())
         .rules(rules).fields(fields).primaryKeyFieldNames(primaryKeyFieldNames)
 
-    val dqResult = dq.computeDqResult().collect().head
+    val dqResult = dq.computeDqResult().first()
     assert(dqResult.statistics.table.violations === 2)
 
     val dqViolationPerRowDs = dq.computeDqViolationPerRow()

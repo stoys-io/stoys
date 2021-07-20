@@ -111,7 +111,7 @@ class DqRulesTest extends SparkTestBase {
 
   // TODO: Find better (and faster) way to test expressions.
   private def eval(rule: DqRule, df: DataFrame): Boolean = {
-    df.selectExpr(rule.expression).collect().head.get(0).asInstanceOf[Boolean]
+    df.selectExpr(rule.expression).first().get(0).asInstanceOf[Boolean]
   }
 
   private def eval[V: TypeTag](rule: DqRule, key: String, value: V): Boolean = {

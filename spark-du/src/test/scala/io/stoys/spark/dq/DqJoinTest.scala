@@ -20,14 +20,14 @@ class DqJoinTest extends SparkTestBase {
 
   test("computeJoinStatistics") {
     val join = DqJoin.equiJoin(orderDs, itemDs, Seq("item_id"), Seq("id"))
-    assert(join.computeDqJoinStatistics().collect().head === DqJoinStatistics(
+    assert(join.computeDqJoinStatistics().first() === DqJoinStatistics(
       left_rows = 5, right_rows = 4, left_nulls = 1, right_nulls = 0, left_distinct = 2, right_distinct = 3,
       inner = 4, left = 5, right = 6, full = 7, cross = 20))
   }
 
   test("computeDqResult") {
     val join = DqJoin.equiJoin(orderDs, itemDs, Seq("item_id"), Seq("id")).joinType(DqJoinType.LEFT)
-    val dqResult = join.computeDqResult().collect().head
+    val dqResult = join.computeDqResult().first()
     assert(dqResult.columns.map(_.name)
         === Seq("key", "key_contains_null", "left_rows", "right_rows", "inner", "left", "right", "full"))
     assert(dqResult.statistics.table === DqTableStatistic(4, 2))
@@ -41,17 +41,17 @@ class DqJoinTest extends SparkTestBase {
 
   test("computeDqJoinResult") {
     val join = DqJoin.equiJoin(orderDs, itemDs, Seq("item_id"), Seq("id"))
-    val dqJoinResult = join.computeDqJoinResult().collect().head
+    val dqJoinResult = join.computeDqJoinResult().first()
     assert(dqJoinResult.dq_join_statistics.left === 5)
     assert(dqJoinResult.dq_result.rules.size === 4)
   }
 
   test("expensiveArbitraryJoin") {
     val joinInCode = DqJoin.expensiveArbitraryJoin(orderDs, itemDs, hash(orderDs("item_id"), itemDs("id")) > 0)
-    assert(joinInCode.computeDqJoinStatistics().collect().head.cross === 54)
+    assert(joinInCode.computeDqJoinStatistics().first().cross === 54)
 
     val joinInString = DqJoin.expensiveArbitraryJoin(orderDs, itemDs.as("item"), expr("hash(item_id, item.id) > 0"))
-    assert(joinInString.computeDqJoinStatistics().collect().head.cross === 54)
+    assert(joinInString.computeDqJoinStatistics().first().cross === 54)
   }
 }
 

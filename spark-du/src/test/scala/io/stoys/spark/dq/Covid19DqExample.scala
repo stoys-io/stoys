@@ -11,14 +11,14 @@ class Covid19DqExample extends SparkExampleBase {
 
   test("covid19_dq") {
     val dq = Dq.fromDataset(epidemiologyDf).config(DqConfig.default).fields(Seq.empty).rules(Seq.empty)
-    val dqResult = dq.computeDqResult().collect().head
+    val dqResult = dq.computeDqResult().first()
     val dqResultJsonPath = writeValueAsJsonTmpFile("dq_result.json", dqResult, logFullContent = true)
     assert(dqResultJsonPath.toFile.exists())
   }
 
   test("covid19_dq_join") {
     val dqJoin = DqJoin.equiJoin(epidemiologyDf, demographicsDf, Seq("key"), Seq("key"))
-    val dqJoinResult = dqJoin.computeDqJoinResult().collect().head
+    val dqJoinResult = dqJoin.computeDqJoinResult().first()
     val dqJoinResultJsonPath = writeValueAsJsonTmpFile("dq_join_result.json", dqJoinResult, logFullContent = true)
     assert(dqJoinResultJsonPath.toFile.exists())
   }

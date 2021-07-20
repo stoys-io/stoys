@@ -14,7 +14,7 @@ class TaxiDpExample extends SparkExampleBase {
     // Note: You probably don't want to decrease the items and pmf_buckets! Higher numbers are better when viewed in ui.
     val config = DpConfig.default.copy(items = 4, pmf_buckets = 4, infer_types_from_strings = true)
     val dp = Dp.fromDataset(tripDataPlusDf).config(config)
-    val dpResult = dp.computeDpResult().collect().head
+    val dpResult = dp.computeDpResult().first()
     val dpResultJsonPath = writeValueAsJsonTmpFile("dp_result.json", dpResult, logFullContent = true)
     assert(dpResultJsonPath.toFile.exists())
 

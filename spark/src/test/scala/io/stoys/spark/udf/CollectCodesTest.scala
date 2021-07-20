@@ -8,7 +8,7 @@ class CollectCodesTest extends SparkTestBase {
   import sparkSession.implicits._
 
   private def selectSingleStringSeq(query: String): Seq[String] = {
-    sparkSession.sql(query).collect().head.getSeq[String](0)
+    sparkSession.sql(query).first().getSeq[String](0)
   }
 
   private def mapped(expression: String): Seq[String] = {
