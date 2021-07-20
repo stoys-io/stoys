@@ -122,7 +122,7 @@ object SparkTestBase {
 
   def createTemporaryDirectoryAndCleanupOldVersions(clazz: Class[_]): Path = {
     val tmpDirName = s"${clazz.getSimpleName}.${TIMESTAMP_FORMATTER.format(LocalDateTime.now())}"
-    val tmpDirPath = BASE_TMP_DIRECTORY.resolve(tmpDirName)
+    val tmpDirPath = BASE_TMP_DIRECTORY.resolve(tmpDirName).toAbsolutePath
     tmpDirPath.toFile.mkdirs()
 
     val currentTmpDirNames = BASE_TMP_DIRECTORY.toFile.list().filter(_.startsWith(clazz.getSimpleName))

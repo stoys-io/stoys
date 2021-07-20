@@ -23,11 +23,10 @@ class SparkIOTest extends SparkTestBase {
   }
 
   test("resolveInputs.fails") {
-    val tmp = s"${tmpDir.toAbsolutePath}/resolveInputs.fails"
     val sparkIO = new SparkIO(sparkSession, emptySparkIOConfig)
 
     def im(path: String): String = {
-      intercept[SToysException](sparkIO.resolveInputs(s"$tmp/$path")).getMessage
+      intercept[SToysException](sparkIO.resolveInputs(s"$tmpDir/$path")).getMessage
     }
 
     assert(im("foo.list?sos-table_name=bar").contains("not supported on *.list"))
@@ -38,80 +37,76 @@ class SparkIOTest extends SparkTestBase {
   }
 
   test("resolveInputs") {
-    val tmp = s"${tmpDir.toAbsolutePath}/resolveInputs"
+    writeTmpDagLists("aa", Seq.empty, Seq.empty, Seq("aa/aa"))
+    writeTmpDagLists("a", Seq("aa"), Seq("aa/aa"), Seq("a/a"))
+    writeTmpDagLists("b", Seq.empty, Seq("non_dag_table"), Seq("b/b"))
+    writeTmpDagLists("dag", Seq("a", "b"), Seq("a/a", "b/b"), Seq("dag/foo", "dag/bar"))
+    dfs.mkdirs(s"$tmpDir/dag/foo")
+    dfs.mkdirs(s"$tmpDir/dag/bar")
 
-    writeDagLists(tmp, "aa", Seq.empty, Seq.empty, Seq("aa/aa"))
-    writeDagLists(tmp, "a", Seq("aa"), Seq("aa/aa"), Seq("a/a"))
-    writeDagLists(tmp, "b", Seq.empty, Seq("non_dag_table"), Seq("b/b"))
-    writeDagLists(tmp, "dag", Seq("a", "b"), Seq("a/a", "b/b"), Seq("dag/foo", "dag/bar"))
-    dfs.mkdirs(s"$tmp/dag/foo")
-    dfs.mkdirs(s"$tmp/dag/bar")
-
-    val dagAA = SosDag(s"$tmp/aa")
-    val aa = emptySosTable.copy(table_name = "aa", path = s"$tmp/aa/aa")
-    val dagA = SosDag(s"$tmp/a")
-    val a = emptySosTable.copy(table_name = "a", path = s"$tmp/a/a")
-    val dagB = SosDag(s"$tmp/b")
-    val b = emptySosTable.copy(table_name = "b", path = s"$tmp/b/b")
-    val nonDagTable = emptySosTable.copy(table_name = "non_dag_table", path = s"$tmp/non_dag_table")
-    val dagDag = SosDag(s"$tmp/dag")
-    val foo = emptySosTable.copy(table_name = "foo", path = s"$tmp/dag/foo")
-    val bar = emptySosTable.copy(table_name = "bar", path = s"$tmp/dag/bar")
+    val dagAA = SosDag(s"$tmpDir/aa")
+    val aa = emptySosTable.copy(table_name = "aa", path = s"$tmpDir/aa/aa")
+    val dagA = SosDag(s"$tmpDir/a")
+    val a = emptySosTable.copy(table_name = "a", path = s"$tmpDir/a/a")
+    val dagB = SosDag(s"$tmpDir/b")
+    val b = emptySosTable.copy(table_name = "b", path = s"$tmpDir/b/b")
+    val nonDagTable = emptySosTable.copy(table_name = "non_dag_table", path = s"$tmpDir/non_dag_table")
+    val dagDag = SosDag(s"$tmpDir/dag")
+    val foo = emptySosTable.copy(table_name = "foo", path = s"$tmpDir/dag/foo")
+    val bar = emptySosTable.copy(table_name = "bar", path = s"$tmpDir/dag/bar")
 
     val sparkIO = new SparkIO(sparkSession, emptySparkIOConfig)
-    assert(sparkIO.resolveInputs(s"$tmp/dag/foo").toSet === Set(foo))
-    assert(sparkIO.resolveInputs(s"$tmp/dag/foo?sos-table_name=renamed").toSet
+    assert(sparkIO.resolveInputs(s"$tmpDir/dag/foo").toSet === Set(foo))
+    assert(sparkIO.resolveInputs(s"$tmpDir/dag/foo?sos-table_name=renamed").toSet
         === Set(foo.copy(table_name = "renamed")))
-    assert(sparkIO.resolveInputs(s"$tmp/dag/.dag").toSet === Set(dagDag, bar, foo))
-    assert(sparkIO.resolveInputs(s"$tmp/dag/.dag/output_tables.list").toSet === Set(bar, foo))
-    assert(sparkIO.resolveInputs(s"$tmp/dag?sos-listing_strategy=tables").toSet
+    assert(sparkIO.resolveInputs(s"$tmpDir/dag/.dag").toSet === Set(dagDag, bar, foo))
+    assert(sparkIO.resolveInputs(s"$tmpDir/dag/.dag/output_tables.list").toSet === Set(bar, foo))
+    assert(sparkIO.resolveInputs(s"$tmpDir/dag?sos-listing_strategy=tables").toSet
         === Set(foo, bar).map(t => t.copy(path = s"file:${t.path}")))
-    assert(sparkIO.resolveInputs(s"$tmp/dag?sos-listing_strategy=dag").toSet === Set(dagDag, bar, foo))
-    assert(sparkIO.resolveInputs(s"$tmp/dag?sos-listing_strategy=dag_io").toSet === Set(dagDag, a, b, bar, foo))
-    assert(sparkIO.resolveInputs(s"$tmp/dag?sos-listing_strategy=dag_io_recursive").toSet
+    assert(sparkIO.resolveInputs(s"$tmpDir/dag?sos-listing_strategy=dag").toSet === Set(dagDag, bar, foo))
+    assert(sparkIO.resolveInputs(s"$tmpDir/dag?sos-listing_strategy=dag_io").toSet === Set(dagDag, a, b, bar, foo))
+    assert(sparkIO.resolveInputs(s"$tmpDir/dag?sos-listing_strategy=dag_io_recursive").toSet
         === Set(dagAA, aa, dagA, a, dagB, b, dagDag, bar, foo, nonDagTable))
   }
 
   test("addInputPaths") {
-    val tmp = s"${tmpDir.toAbsolutePath}/addInputPaths"
+    writeTmpDagLists("dag", Seq.empty, Seq.empty, Seq("dag/foo"))
+    writeTmpData("dag/foo", Seq.empty[Option[Int]])
+    writeTmpData("non_dag_table", Seq.empty[Option[Int]])
 
-    writeDagLists(tmp, "dag", Seq.empty, Seq.empty, Seq("dag/foo"))
-    writeTmpData("addInputPaths/dag/foo", Seq.empty[Option[Int]])
-    writeTmpData("addInputPaths/non_dag_table", Seq.empty[Option[Int]])
-
-    val sparkIOConfig = emptySparkIOConfig.copy(inputPaths = Seq(s"$tmp/dag/.dag"), outputPath = Some(s"$tmp/out"))
+    val sparkIOConfig = emptySparkIOConfig.copy(inputPaths = Seq(s"$tmpDir/dag/.dag"), outputPath = Some(s"$tmpDir/out"))
     IO.using(new SparkIO(sparkSession, sparkIOConfig)) { sparkIO =>
       assert(sparkIO.getInputTable("foo").isEmpty)
       sparkIO.init()
       assert(sparkIO.getInputTable("foo").isDefined)
 
       assert(sparkIO.getInputTable("non_dag_table").isEmpty)
-      sparkIO.addInputPaths(s"$tmp/non_dag_table")
+      sparkIO.addInputPaths(s"$tmpDir/non_dag_table")
       assert(sparkIO.getInputTable("non_dag_table").isDefined)
 
       assert(sparkIO.getInputTable("bar").isEmpty)
-      sparkIO.addInputPaths(s"$tmp/non_dag_table?sos-table_name=bar")
+      sparkIO.addInputPaths(s"$tmpDir/non_dag_table?sos-table_name=bar")
       assert(sparkIO.getInputTable("bar").isDefined)
 
-      val conflictingException = intercept[SToysException](sparkIO.addInputPaths(s"$tmp/dag/foo?sos-table_name=bar"))
+      val conflictingException = intercept[SToysException](sparkIO.addInputPaths(s"$tmpDir/dag/foo?sos-table_name=bar"))
       assert(conflictingException.getMessage.contains("conflicting tables"))
 
       // It is fine to add path that will resolve to the same table (including all options).
-      sparkIO.addInputPaths(s"$tmp/dag/foo?sos-table_name=foo")
+      sparkIO.addInputPaths(s"$tmpDir/dag/foo?sos-table_name=foo")
 
-      assert(!dfs.exists(s"$tmp/out/.dag"))
+      assert(!dfs.exists(s"$tmpDir/out/.dag"))
     }
 
-    assert(dfs.exists(s"$tmp/out/.dag"))
+    assert(dfs.exists(s"$tmpDir/out/.dag"))
   }
 
-  private def writeDagLists(tmp: String, dagName: String,
+  private def writeTmpDagLists(dagName: String,
       inputDags: Seq[String], inputTables: Seq[String], outputTables: Seq[String]): Unit = {
-    dfs.writeString(s"$tmp/$dagName/.dag/input_dags.list",
-      inputDags.map(d => s"$tmp/$d?sos-listing_strategy=dag").mkString("\n"))
-    dfs.writeString(s"$tmp/$dagName/.dag/input_tables.list",
-      inputTables.map(t => s"$tmp/$t").sorted.mkString("\n"))
-    dfs.writeString(s"$tmp/$dagName/.dag/output_tables.list",
-      outputTables.map(t => s"$tmp/$t").sorted.mkString("\n"))
+    dfs.writeString(s"$tmpDir/$dagName/.dag/input_dags.list",
+      inputDags.map(d => s"$tmpDir/$d?sos-listing_strategy=dag").mkString("\n"))
+    dfs.writeString(s"$tmpDir/$dagName/.dag/input_tables.list",
+      inputTables.map(t => s"$tmpDir/$t").sorted.mkString("\n"))
+    dfs.writeString(s"$tmpDir/$dagName/.dag/output_tables.list",
+      outputTables.map(t => s"$tmpDir/$t").sorted.mkString("\n"))
   }
 }

@@ -15,9 +15,9 @@ class SparkDagRunnerTest extends SparkTestBase {
 
   test("main") {
     val runTimestamp = "2020-02-02T02:22:20"
-    val inputPath = s"${tmpDir.toAbsolutePath}/input"
-    val outputPath = s"${tmpDir.toAbsolutePath}/output"
-    val sharedOutputPath = s"${tmpDir.toAbsolutePath}/shared_output_path"
+    val inputDir = tmpDir.resolve("input")
+    val outputDir = tmpDir.resolve("output")
+    val sharedOutputDir = tmpDir.resolve("shared_output")
 
     writeTmpData("input/foo", Seq(Foo(1, 11), Foo(2, 21)))
     writeTmpData("input/bar", Seq(Bar(1, 12), Bar(2, 22)))
@@ -26,9 +26,9 @@ class SparkDagRunnerTest extends SparkTestBase {
       s"spark_dag_runner_config__main_dag_class=${classOf[MainDag].getName}",
       s"spark_dag_runner_config__run_timestamp=$runTimestamp",
       s"spark_dag_runner_config__compute_collections__0=pack",
-      s"spark_dag_runner_config__shared_output_path=$sharedOutputPath",
-      s"spark_io_config__input_paths__0=$inputPath?sos-listing_strategy=tables",
-      s"spark_io_config__output_path=$outputPath"
+      s"spark_dag_runner_config__shared_output_path=$sharedOutputDir",
+      s"spark_io_config__input_paths__0=$inputDir?sos-listing_strategy=tables",
+      s"spark_io_config__output_path=$outputDir"
     )
     val insightArgs = Array(
       "pack_insight_params__add_multiplier=1",
@@ -40,18 +40,18 @@ class SparkDagRunnerTest extends SparkTestBase {
 
     // TODO: Do we want to have shared metrics optional or mandatory again once delta is published for Scala 2.13.
     if (SparkUtils.isDeltaSupported) {
-      val sharedMetrics = sparkSession.read.format("delta").load(s"$sharedOutputPath/metric")
+      val sharedMetrics = sparkSession.read.format("delta").load(s"$sharedOutputDir/metric")
       val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp))
       assert(sharedMetrics.collect() === Array(Row("add_metric", 42.0, Map("foo" -> "bar"), ts)))
     }
 
-    assert(readListLines(s"$outputPath/.dag/input_tables.list")
-        === Set(s"file:$inputPath/bar?sos-table_name=bar", s"file:$inputPath/foo?sos-table_name=foo"))
-    assert(readListLines(s"$outputPath/.dag/output_tables.list") === Set(
-      s"$outputPath/pack?sos-table_name=pack&sos-format=parquet",
-      s"$outputPath/metric?sos-table_name=metric&sos-format=parquet"))
-    assert(readListLines(s"$sharedOutputPath/latest.list")
-        === Set(s"$outputPath?sos-listing_strategy=dag"))
+    assert(readListLines(s"$outputDir/.dag/input_tables.list")
+        === Set(s"file:$inputDir/bar?sos-table_name=bar", s"file:$inputDir/foo?sos-table_name=foo"))
+    assert(readListLines(s"$outputDir/.dag/output_tables.list") === Set(
+      s"$outputDir/pack?sos-table_name=pack&sos-format=parquet",
+      s"$outputDir/metric?sos-table_name=metric&sos-format=parquet"))
+    assert(readListLines(s"$sharedOutputDir/latest.list")
+        === Set(s"$outputDir?sos-listing_strategy=dag"))
   }
 
   private def readListLines(path: String): Set[String] = {
