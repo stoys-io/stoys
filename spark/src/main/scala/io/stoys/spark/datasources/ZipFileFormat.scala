@@ -10,7 +10,6 @@ import org.apache.spark.sql.execution.datasources.{FileFormat, OutputWriter, Out
 import org.apache.spark.sql.sources.DataSourceRegister
 import org.apache.spark.sql.types.StructType
 
-import java.util.Locale
 import java.util.zip.{CRC32, ZipEntry, ZipOutputStream}
 import scala.util.Try
 
@@ -44,8 +43,8 @@ object ZipFileFormat {
 
   private[datasources] def parseZipOptions(options: Map[String, String]): ZipOptions = {
     val method = options.get("zip_method").map {
-      case m if m.toUpperCase(Locale.ROOT) == "STORED" => ZipEntry.STORED
-      case m if m.toUpperCase(Locale.ROOT) == "DEFLATED" => ZipEntry.DEFLATED
+      case m if m.toUpperCase == "STORED" => ZipEntry.STORED
+      case m if m.toUpperCase == "DEFLATED" => ZipEntry.DEFLATED
       case m => throw new SToysException(s"Unsupported zip_method '$m'.")
     }
     val level = options.get("zip_level").map { zipLevel =>

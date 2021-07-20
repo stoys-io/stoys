@@ -6,7 +6,6 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{BooleanType, StringType, StructType}
 import org.apache.spark.sql.{Column, DataFrame, Dataset, SparkSession}
 
-import java.util.Locale
 import scala.collection.mutable
 
 private[dq] object DqFramework {
@@ -26,10 +25,10 @@ private[dq] object DqFramework {
   )
 
   private def getColumnNamesInfo(columnNames: Seq[String], referencedColumnNames: Seq[String]): ColumnNamesInfo = {
-    val indexesByNormalizedNames = columnNames.zipWithIndex.map(ci => ci._1.toLowerCase(Locale.ROOT) -> ci._2).toMap
+    val indexesByNormalizedNames = columnNames.zipWithIndex.map(ci => ci._1.toLowerCase -> ci._2).toMap
     val visitedNames = mutable.Set.empty[String]
     val (missingNames, existingNames, existingIndexes) = referencedColumnNames.map({ name =>
-      val normalizedName = name.toLowerCase(Locale.ROOT)
+      val normalizedName = name.toLowerCase
       if (visitedNames.contains(normalizedName)) {
         (None, None, None)
       } else {
@@ -65,7 +64,7 @@ private[dq] object DqFramework {
       throw new SToysException(s"Dq rules have to return boolean values! Not true for: $nonBooleanRulesMsg.")
     }
 
-    val nonUniqueFields = wideDqSchema.fields.map(_.name).groupBy(_.toLowerCase(Locale.ROOT)).filter(_._2.length > 1)
+    val nonUniqueFields = wideDqSchema.fields.map(_.name).groupBy(_.toLowerCase).filter(_._2.length > 1)
     if (nonUniqueFields.nonEmpty) {
       val nonUniqueRulesMsg = nonUniqueFields.toSeq.map(kv => s"${kv._1}: ${kv._2.length}x").sorted.mkString(", ")
       throw new SToysException(s"Dq rules and fields have to have unique names! Not true for: $nonUniqueRulesMsg.")

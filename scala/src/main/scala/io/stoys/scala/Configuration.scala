@@ -111,8 +111,8 @@ object Configuration {
   )
 
   def parseConfigurationConfig(args: Array[String]): ConfigurationConfig = {
-    val (environmentArgs, remainingArgs) = args.partition(_.startsWith(ENVIRONMENT_ARGS_PREFIX))
-    val environments = environmentArgs.flatMap(_.stripPrefix(ENVIRONMENT_ARGS_PREFIX).split(','))
+    val (environmentArgs, remainingArgs) = args.partition(_.toLowerCase.startsWith(ENVIRONMENT_ARGS_PREFIX))
+    val environments = environmentArgs.flatMap(_.toLowerCase.stripPrefix(ENVIRONMENT_ARGS_PREFIX).split(','))
     ConfigurationConfig(environments.toSeq ++ DEFAULT_ENVIRONMENTS, remainingArgs.toSeq)
   }
 

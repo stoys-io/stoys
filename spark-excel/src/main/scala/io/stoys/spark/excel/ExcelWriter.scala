@@ -1,7 +1,6 @@
 package io.stoys.spark.excel
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import java.util.Locale
 
 import io.stoys.scala.IO
 import io.stoys.spark.SToysException
@@ -64,7 +63,7 @@ object ExcelWriter {
     val stringCells = cellIterator.filter(_.getCellType == CellType.STRING)
     var sheetConfig = SheetConfig.fromSheetName(sheet.getSheetName)
     stringCells.toArray.foreach { cell =>
-      cell.getStringCellValue.toUpperCase(Locale.ROOT) match {
+      cell.getStringCellValue.toUpperCase match {
         case CONFIG_CELL_PATTERN(key, params) =>
           val cellAddress = cell.getAddress
           val conditionalFormatting = conditionalFormattingByCellAddress.get(cellAddress)
@@ -129,7 +128,7 @@ object ExcelWriter {
     val headerRowsCount = if (config.use_header) 1 else 0
     val dataStartAddress = new CellAddress(startAddress.getRow + headerRowsCount, startAddress.getColumn)
     val columnStyles = processedColumnInfo.map { ci =>
-      val columnName = ci.columnName.toUpperCase(Locale.ROOT)
+      val columnName = ci.columnName.toUpperCase
       val columnStyle = sheetConfig.columnStyles.get(columnName).orElse(sheetConfig.cellStyle)
       val cellStyle = workbook.createCellStyle()
       columnStyle.foreach(cs => cellStyle.cloneStyleFrom(cs.cellStyle))
@@ -247,7 +246,7 @@ object ExcelWriter {
       case (columnInfo, index) =>
         columnInfo.columnName match {
           case SPECIAL_COLUMN_NAME_PATTERN(key) =>
-            Some(SpecialColumnInfo(key.toUpperCase(Locale.ROOT), index, columnInfo))
+            Some(SpecialColumnInfo(key.toUpperCase, index, columnInfo))
           case _ => None
         }
     }

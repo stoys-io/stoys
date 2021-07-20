@@ -4,7 +4,6 @@ import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
 import java.net.{URI, URLDecoder, URLEncoder}
 import java.nio.charset.StandardCharsets
-import java.util.Locale
 import scala.collection.mutable
 import scala.reflect.runtime.universe
 import scala.util.matching.Regex
@@ -226,16 +225,16 @@ object SparkIO {
         case Array(key) => key -> null
       }
     })
-    val (rawSosOptions, options) = params.toMap.partition(_._1.toLowerCase(Locale.ROOT).startsWith(SOS_PREFIX))
+    val (rawSosOptions, options) = params.toMap.partition(_._1.toLowerCase.startsWith(SOS_PREFIX))
     val sosOptions = toSosOptions(rawSosOptions)
     ParsedInputPath(path, sosOptions, options)
   }
 
   private def toSosOptions(params: Map[String, String]): SosOptions = {
-    val normalizedSosParams = params.map(kv => (kv._1.toLowerCase(Locale.ROOT).stripPrefix(SOS_PREFIX), kv._2))
+    val normalizedSosParams = params.map(kv => (kv._1.toLowerCase.stripPrefix(SOS_PREFIX), kv._2))
     SosOptions(
       format = normalizedSosParams.get("format"),
       tableName = normalizedSosParams.get("table_name"),
-      listingStrategy = normalizedSosParams.get("listing_strategy").map(_.toLowerCase(Locale.ROOT)))
+      listingStrategy = normalizedSosParams.get("listing_strategy").map(_.toLowerCase))
   }
 }

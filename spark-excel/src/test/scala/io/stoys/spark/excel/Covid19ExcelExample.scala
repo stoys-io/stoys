@@ -6,7 +6,6 @@ import io.stoys.spark.test.datasets.Covid19Dataset
 import io.stoys.spark.{Reshape, ReshapeConfig}
 import org.apache.spark.sql.Dataset
 
-import java.util.Locale
 import scala.reflect.runtime.universe.TypeTag
 
 class Covid19ExcelExample extends SparkExampleBase {
@@ -43,7 +42,7 @@ class Covid19ExcelExample extends SparkExampleBase {
   }
 
   private def readAndRegisterCachedCovid19Csv[T <: Product : TypeTag]: Dataset[T] = {
-    val tableName = Reflection.typeNameOf[T].toLowerCase(Locale.ROOT)
+    val tableName = Reflection.typeNameOf[T].toLowerCase
     val fileName = s"$tableName.csv"
     val df = covid19Dataset.readCachedCovid19Csv(fileName)
     val ds = Reshape.reshape[T](df, ReshapeConfig.dangerous)

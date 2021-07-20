@@ -3,17 +3,16 @@ package io.stoys.spark.dq
 import io.stoys.spark.dq.DqRules._
 import org.apache.spark.sql.types.{DataType, StructType}
 
-import java.util.Locale
 import scala.collection.mutable
 
 private[dq] object DqSchema {
   def generateSchemaRules(existingSchema: StructType, expectedFields: Seq[DqField], primaryKeyFieldNames: Seq[String],
       config: DqConfig): Seq[DqRule] = {
     val rules = mutable.Buffer.empty[DqRule]
-    val existingFieldNames = existingSchema.map(_.name.toLowerCase(Locale.ROOT))
-    val expectedFieldNames = expectedFields.map(_.name.toLowerCase(Locale.ROOT))
+    val existingFieldNames = existingSchema.map(_.name.toLowerCase)
+    val expectedFieldNames = expectedFields.map(_.name.toLowerCase)
     val missingFieldNames = expectedFieldNames.filterNot(existingFieldNames.toSet)
-    val expectedPrimaryKeyFieldNames = primaryKeyFieldNames.map(_.toLowerCase(Locale.ROOT))
+    val expectedPrimaryKeyFieldNames = primaryKeyFieldNames.map(_.toLowerCase)
     val missingPrimaryKeyFieldNames = expectedPrimaryKeyFieldNames.filterNot(existingFieldNames.toSet)
     val allMissingFieldNames = missingFieldNames ++ missingPrimaryKeyFieldNames.filterNot(missingFieldNames.toSet)
     if (allMissingFieldNames.nonEmpty) {
@@ -31,9 +30,9 @@ private[dq] object DqSchema {
       rules += namedRule("_primary_key", "not_null", primaryKeyNotNullExpr)
       rules += uniqueRule("_primary_key", expectedPrimaryKeyFieldNames)
     }
-    val existingFieldsByName = existingSchema.map(f => f.name.toLowerCase(Locale.ROOT) -> f).toMap
+    val existingFieldsByName = existingSchema.map(f => f.name.toLowerCase -> f).toMap
     expectedFields.foreach { expectedField =>
-      existingFieldsByName.get(expectedField.name.toLowerCase(Locale.ROOT)).foreach { existingField =>
+      existingFieldsByName.get(expectedField.name.toLowerCase).foreach { existingField =>
         val fieldName = expectedField.name
         val expectedType = DataType.fromJson(s""""${expectedField.typ}"""")
         val format = Option(expectedField.format).flatten.orNull
