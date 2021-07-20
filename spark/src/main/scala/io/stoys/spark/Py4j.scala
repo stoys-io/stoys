@@ -1,7 +1,5 @@
 package io.stoys.spark
 
-import io.stoys.scala.Reflection
-
 import java.util.{List => JList, Map => JMap}
 import scala.jdk.CollectionConverters._
 
@@ -32,9 +30,5 @@ object Py4j {
 
   def toSet[T](list: JList[T]): Set[T] = {
     list.asScala.toSet
-  }
-
-  def copyCaseClass[T <: Product, V](originalValue: T, map: JMap[String, V]): T = {
-    Reflection.copyCaseClass(originalValue, toMap(map))
   }
 }
