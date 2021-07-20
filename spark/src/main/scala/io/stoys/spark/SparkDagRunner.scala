@@ -6,7 +6,6 @@ import org.apache.spark.sql.{Dataset, SparkSession}
 
 import java.sql.Timestamp
 import scala.collection.mutable
-import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
 class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: SparkDagRunnerConfig) {
@@ -19,7 +18,6 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
   }
 
   def read[T <: Product](tableName: TableName[T]): Dataset[T] = {
-    implicit val typeTagT: universe.TypeTag[T] = tableName.typeTag
     sparkIO.ds[T](tableName)
   }
 

@@ -5,7 +5,6 @@ import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import java.net.{URI, URLDecoder, URLEncoder}
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable
-import scala.reflect.runtime.universe
 import scala.util.matching.Regex
 
 // Note: Do not forget to call init() first to register config.inputPaths!
@@ -26,15 +25,15 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   private def addInputTable(table: SosTable): Unit = {
-    inputTables.get(table.name) match {
+    inputTables.get(table.table_name) match {
       case Some(existingTable) if existingTable == table =>
         logger.debug(s"Resolved the same table again ($table).")
       case Some(existingTable) =>
-        val msg = s"Resolved conflicting tables for table_name ${table.name} ($existingTable and $table)!"
+        val msg = s"Resolved conflicting tables for table_name ${table.table_name} ($existingTable and $table)!"
         logger.error(msg)
         throw new SToysException(msg)
       case None =>
-        inputTables.put(table.name, table)
+        inputTables.put(table.table_name, table)
         registerInputTable(table)
     }
   }
@@ -54,16 +53,15 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   def ds[T <: Product](tableName: TableName[T]): Dataset[T] = {
-    implicit val typeTagT: universe.TypeTag[T] = tableName.typeTag
-    Reshape.reshape[T](df(tableName), config.inputReshapeConfig)
+    Reshape.reshape[T](df(tableName), config.inputReshapeConfig)(tableName.typeTag)
   }
 
   private def writeDF(df: DataFrame, fullTableName: String,
       format: Option[String], writeMode: Option[String], options: Map[String, String]): Unit = {
     val path = s"${config.outputPath.get}/$fullTableName"
     val table = SosTable(fullTableName, path, format, options)
-    if (outputTables.contains(table.name)) {
-      val msg = s"Writing table with the same table_name ${table.name} multiple times!"
+    if (outputTables.contains(table.table_name)) {
+      val msg = s"Writing table with the same table_name ${table.table_name} multiple times!"
       logger.error(msg)
       throw new SToysException(msg)
     } else {
@@ -73,7 +71,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
       writeMode.foreach(writer.mode)
       writer.options(table.options)
       writer.save(path)
-      outputTables.put(table.name, table)
+      outputTables.put(table.table_name, table)
     }
   }
 
@@ -92,7 +90,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     val defaultTable = SosTable(null, path, sosOptions.format, options)
 
     val tnAndLsMsg = s"${SOS_PREFIX}table_name and ${SOS_PREFIX}listing_strategy"
-    val inputs = (dfs.path(path).getName, sosOptions.tableName, sosOptions.listingStrategy) match {
+    val inputs = (dfs.path(path).getName, sosOptions.table_name, sosOptions.listing_strategy) match {
       case (_, Some(_), Some(_)) =>
         throw new SToysException(s"Having both $tnAndLsMsg at the same time are not supported ($inputPath).")
       case (SOS_LIST_PATTERN(_), Some(_), _) | (SOS_LIST_PATTERN(_), _, Some(_)) =>
@@ -101,14 +99,14 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
         dfs.readString(path).split('\n').filterNot(_.startsWith("#")).filterNot(_.isEmpty).flatMap(resolveInputs).toSeq
       case (_, None, Some("tables")) =>
         val fileStatuses = dfs.listStatus(path).filter(s => s.isDirectory && !s.getPath.getName.startsWith("."))
-        fileStatuses.map(s => defaultTable.copy(name = s.getPath.getName, path = s.getPath.toString)).toSeq
+        fileStatuses.map(s => defaultTable.copy(table_name = s.getPath.getName, path = s.getPath.toString)).toSeq
       case (_, None, Some(strategy)) if strategy.startsWith("dag") => resolveDagInputs(path, sosOptions, options)
       case (_, None, Some(strategy)) => throw new SToysException(s"Unsupported listing strategy '$strategy'.")
       case (DAG_DIR, None, None) =>
-        resolveDagInputs(dfs.path(path).getParent.toString, sosOptions.copy(listingStrategy = Some("dag")), options)
+        resolveDagInputs(dfs.path(path).getParent.toString, sosOptions.copy(listing_strategy = Some("dag")), options)
       case (lastPathSegment, None, None) if !lastPathSegment.startsWith(".") =>
-        Seq(defaultTable.copy(name = lastPathSegment))
-      case (_, Some(tableName), None) => Seq(defaultTable.copy(name = tableName))
+        Seq(defaultTable.copy(table_name = lastPathSegment))
+      case (_, Some(tableName), None) => Seq(defaultTable.copy(table_name = tableName))
       case (lastPathSegment, None, None) if lastPathSegment.startsWith(".") =>
         throw new SToysException(s"Unsupported path starting with dot '$lastPathSegment'.")
     }
@@ -123,7 +121,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     lazy val inputTables = resolveDagList(s"$path/$DAG_DIR/input_tables.list")
     lazy val outputTables = resolveDagList(s"$path/$DAG_DIR/output_tables.list")
     lazy val inputDags = resolveDagList(s"$path/$DAG_DIR/input_dags.list")
-    val inputs = sosOptions.listingStrategy match {
+    val inputs = sosOptions.listing_strategy match {
       case Some("dag") => outputTables
       case Some("dag_io") => outputTables ++ inputTables
       case Some("dag_io_recursive") =>
@@ -143,7 +141,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     inputTable.format.foreach(f => reader = reader.format(f))
     reader = reader.options(inputTable.options)
     val table = reader.load(inputTable.path)
-    table.createOrReplaceTempView(inputTable.name)
+    table.createOrReplaceTempView(inputTable.table_name)
     table
   }
 
@@ -158,8 +156,8 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     }
   }
 
-  def getInputTable(tableName: String): Option[SosTable] = {
-    inputTables.get(tableName)
+  def getInputTable(fullTableName: String): Option[SosTable] = {
+    inputTables.get(fullTableName)
   }
 
   def writeSymLink(path: String): Unit = {
@@ -173,9 +171,9 @@ object SparkIO {
   val SOS_LIST_PATTERN: Regex = "(?i)(.*)\\.list".r
 
   case class SosOptions(
+      table_name: Option[String],
       format: Option[String],
-      tableName: Option[String],
-      listingStrategy: Option[String]
+      listing_strategy: Option[String]
   )
 
   sealed trait SosInput {
@@ -183,16 +181,16 @@ object SparkIO {
   }
 
   case class SosTable(
-      name: String,
+      table_name: String,
       path: String,
       format: Option[String],
       options: Map[String, String]
   ) extends SosInput {
     override def toUrlString: String = {
+      val tableNameParam = Option(table_name).map(n => s"${SOS_PREFIX}table_name" -> n)
       val formatParam = format.map(f => s"${SOS_PREFIX}format" -> f).toSeq
-      val nameParam = Option(name).map(n => s"${SOS_PREFIX}table_name" -> n)
       val optionParams = options.toSeq
-      val allParams = formatParam ++ nameParam ++ optionParams
+      val allParams = tableNameParam ++ formatParam ++ optionParams
       val allEncodedParams = allParams.map {
         case (key, null) => key
         case (key, value) => s"$key=${URLEncoder.encode(value, StandardCharsets.UTF_8.toString)}"
@@ -233,8 +231,8 @@ object SparkIO {
   private def toSosOptions(params: Map[String, String]): SosOptions = {
     val normalizedSosParams = params.map(kv => (kv._1.toLowerCase.stripPrefix(SOS_PREFIX), kv._2))
     SosOptions(
+      table_name = normalizedSosParams.get("table_name"),
       format = normalizedSosParams.get("format"),
-      tableName = normalizedSosParams.get("table_name"),
-      listingStrategy = normalizedSosParams.get("listing_strategy").map(_.toLowerCase))
+      listing_strategy = normalizedSosParams.get("listing_strategy").map(_.toLowerCase))
   }
 }

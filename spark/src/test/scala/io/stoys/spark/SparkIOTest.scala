@@ -19,7 +19,7 @@ class SparkIOTest extends SparkTestBase {
     assert(parseInputPath("dir/file?param1=value1&param2=&param3=value3&param3")
         === ParsedInputPath("dir/file", emptySosOptions, Map("param1" -> "value1", "param2" -> "", "param3" -> null)))
     assert(parseInputPath("dir?sos-listing_strategy=*~42/@&foo=foo")
-        === ParsedInputPath("dir", emptySosOptions.copy(listingStrategy = Some("*~42/@")), Map("foo" -> "foo")))
+        === ParsedInputPath("dir", emptySosOptions.copy(listing_strategy = Some("*~42/@")), Map("foo" -> "foo")))
   }
 
   test("resolveInputs.fails") {
@@ -48,19 +48,20 @@ class SparkIOTest extends SparkTestBase {
     dfs.mkdirs(s"$tmp/dag/bar")
 
     val dagAA = SosDag(s"$tmp/aa")
-    val aa = emptySosTable.copy(name = "aa", path = s"$tmp/aa/aa")
+    val aa = emptySosTable.copy(table_name = "aa", path = s"$tmp/aa/aa")
     val dagA = SosDag(s"$tmp/a")
-    val a = emptySosTable.copy(name = "a", path = s"$tmp/a/a")
+    val a = emptySosTable.copy(table_name = "a", path = s"$tmp/a/a")
     val dagB = SosDag(s"$tmp/b")
-    val b = emptySosTable.copy(name = "b", path = s"$tmp/b/b")
-    val nonDagTable = emptySosTable.copy(name = "non_dag_table", path = s"$tmp/non_dag_table")
+    val b = emptySosTable.copy(table_name = "b", path = s"$tmp/b/b")
+    val nonDagTable = emptySosTable.copy(table_name = "non_dag_table", path = s"$tmp/non_dag_table")
     val dagDag = SosDag(s"$tmp/dag")
-    val foo = emptySosTable.copy(name = "foo", path = s"$tmp/dag/foo")
-    val bar = emptySosTable.copy(name = "bar", path = s"$tmp/dag/bar")
+    val foo = emptySosTable.copy(table_name = "foo", path = s"$tmp/dag/foo")
+    val bar = emptySosTable.copy(table_name = "bar", path = s"$tmp/dag/bar")
 
     val sparkIO = new SparkIO(sparkSession, emptySparkIOConfig)
     assert(sparkIO.resolveInputs(s"$tmp/dag/foo").toSet === Set(foo))
-    assert(sparkIO.resolveInputs(s"$tmp/dag/foo?sos-table_name=renamed").toSet === Set(foo.copy(name = "renamed")))
+    assert(sparkIO.resolveInputs(s"$tmp/dag/foo?sos-table_name=renamed").toSet
+        === Set(foo.copy(table_name = "renamed")))
     assert(sparkIO.resolveInputs(s"$tmp/dag/.dag").toSet === Set(dagDag, bar, foo))
     assert(sparkIO.resolveInputs(s"$tmp/dag/.dag/output_tables.list").toSet === Set(bar, foo))
     assert(sparkIO.resolveInputs(s"$tmp/dag?sos-listing_strategy=tables").toSet
