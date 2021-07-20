@@ -80,7 +80,10 @@ object DpTypeInferenceConfig {
     )
   )
 
-  case class EnumValues(name: String, values: Seq[String])
+  case class EnumValues(
+      name: String,
+      values: Seq[String]
+  )
 
   object EnumValues {
     val BOOLEAN_NAME = "Boolean"

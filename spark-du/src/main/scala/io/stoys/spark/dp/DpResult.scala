@@ -1,8 +1,15 @@
 package io.stoys.spark.dp
 
-case class DpPmfBucket(low: Double, high: Double, count: Long)
+case class DpPmfBucket(
+    low: Double,
+    high: Double,
+    count: Long
+)
 
-case class DpItem(item: String, count: Long)
+case class DpItem(
+    item: String,
+    count: Long
+)
 
 case class DpColumn(
     name: String,

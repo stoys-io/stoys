@@ -4,12 +4,21 @@ import io.stoys.spark.SToysException
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.types._
 
-case class BinaryFilePerRow(path: String, content: Array[Byte])
+case class BinaryFilePerRow(
+    path: String,
+    content: Array[Byte]
+)
 
-case class TextFilePerRow(path: String, content: String)
+case class TextFilePerRow(
+    path: String,
+    content: String
+)
 
 object FilePerRow {
-  private[datasources] case class FieldIndexes(path: Int, content: Int)
+  private[datasources] case class FieldIndexes(
+      path: Int,
+      content: Int
+  )
 
   private[datasources] def findFieldIndexesOption(schema: StructType): Option[FieldIndexes] = {
     val pathFieldIndexes = collectFieldIndexes(schema, "path", StringType)

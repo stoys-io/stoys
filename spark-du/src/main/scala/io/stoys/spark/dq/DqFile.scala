@@ -10,7 +10,11 @@ import scala.util.{Failure, Success, Try}
 private[dq] object DqFile {
   val corruptRecordField: StructField = StructField("__corrupt_record__", StringType, nullable = true)
 
-  case class FileInput(df: DataFrame, rules: Seq[DqRule], metadata: Map[String, String])
+  case class FileInput(
+      df: DataFrame,
+      rules: Seq[DqRule],
+      metadata: Map[String, String]
+  )
 
   def openFileInputPath(sparkSession: SparkSession, inputPath: String): FileInput = {
     val dfs = Dfs(sparkSession)

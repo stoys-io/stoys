@@ -157,7 +157,11 @@ private[dp] object DpLegacy {
     }
   }
 
-  case class FieldPath(field: StructField, private val column: Option[Column], private val path: Seq[String]) {
+  case class FieldPath(
+      field: StructField,
+      private val column: Option[Column],
+      private val path: Seq[String]
+  ) {
     def isRoot: Boolean = {
       column.isEmpty
     }

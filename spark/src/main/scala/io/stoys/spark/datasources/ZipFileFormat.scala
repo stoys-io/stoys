@@ -36,7 +36,11 @@ class ZipFileFormat extends FileFormat with DataSourceRegister with Serializable
 object ZipFileFormat {
   import FilePerRow._
 
-  private[datasources] case class ZipOptions(method: Option[Int], level: Option[Int], fileName: Option[String])
+  private[datasources] case class ZipOptions(
+      method: Option[Int],
+      level: Option[Int],
+      fileName: Option[String]
+  )
 
   private[datasources] def parseZipOptions(options: Map[String, String]): ZipOptions = {
     val method = options.get("zip_method").map {

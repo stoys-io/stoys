@@ -173,14 +173,22 @@ object SparkIO {
   val SOS_PREFIX = "sos-"
   val SOS_LIST_PATTERN: Regex = "(?i)(.*)\\.list".r
 
-  case class SosOptions(format: Option[String], tableName: Option[String], listingStrategy: Option[String])
+  case class SosOptions(
+      format: Option[String],
+      tableName: Option[String],
+      listingStrategy: Option[String]
+  )
 
   sealed trait SosInput {
     def toUrlString: String
   }
 
-  case class SosTable(name: String, path: String, format: Option[String],
-      options: Map[String, String]) extends SosInput {
+  case class SosTable(
+      name: String,
+      path: String,
+      format: Option[String],
+      options: Map[String, String]
+  ) extends SosInput {
     override def toUrlString: String = {
       val formatParam = format.map(f => s"${SOS_PREFIX}format" -> f).toSeq
       val nameParam = Option(name).map(n => s"${SOS_PREFIX}table_name" -> n)
@@ -194,13 +202,19 @@ object SparkIO {
     }
   }
 
-  case class SosDag(path: String) extends SosInput {
+  case class SosDag(
+      path: String
+  ) extends SosInput {
     override def toUrlString: String = {
       s"$path?sos-listing_strategy=dag"
     }
   }
 
-  case class ParsedInputPath(path: String, sosOptions: SosOptions, options: Map[String, String])
+  case class ParsedInputPath(
+      path: String,
+      sosOptions: SosOptions,
+      options: Map[String, String]
+  )
 
   private[stoys] def parseInputPath(inputPath: String): ParsedInputPath = {
     val pathParamsUri = new URI(inputPath)

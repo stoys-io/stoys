@@ -13,9 +13,17 @@ private[dq] object DqFramework {
   val MISSING_TOKEN = "__MISSING__"
   val NULL_TOKEN = "__NULL__"
 
-  case class ColumnNamesInfo(all: Seq[String], existing: Seq[String], existingIndexes: Seq[Int], missing: Seq[String])
+  case class ColumnNamesInfo(
+      all: Seq[String],
+      existing: Seq[String],
+      existingIndexes: Seq[Int],
+      missing: Seq[String]
+  )
 
-  case class RuleInfo(rule: DqRule, columnNamesInfo: ColumnNamesInfo)
+  case class RuleInfo(
+      rule: DqRule,
+      columnNamesInfo: ColumnNamesInfo
+  )
 
   private def getColumnNamesInfo(columnNames: Seq[String], referencedColumnNames: Seq[String]): ColumnNamesInfo = {
     val indexesByNormalizedNames = columnNames.zipWithIndex.map(ci => ci._1.toLowerCase(Locale.ROOT) -> ci._2).toMap
@@ -66,7 +74,11 @@ private[dq] object DqFramework {
     true
   }
 
-  case class WideDqDfInfo(wideDqDf: DataFrame, columnNames: Seq[String], ruleInfo: Seq[RuleInfo])
+  case class WideDqDfInfo(
+      wideDqDf: DataFrame,
+      columnNames: Seq[String],
+      ruleInfo: Seq[RuleInfo]
+  )
 
   def computeWideDqDfInfo[T](ds: Dataset[T], rulesWithinDs: Seq[DqRule], rules: Seq[DqRule]): WideDqDfInfo = {
     val columnNames = ds.columns.toSeq.dropRight(rulesWithinDs.size)

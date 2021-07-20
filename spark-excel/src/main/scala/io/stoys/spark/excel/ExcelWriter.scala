@@ -236,7 +236,11 @@ object ExcelWriter {
     tableData.map(row => row.zip(converters).map(rc => rc._2.map(c => c(rc._1)).getOrElse(rc._1)))
   }
 
-  private case class SpecialColumnInfo(key: String, index: Int, columnInfo: ColumnInfo)
+  private case class SpecialColumnInfo(
+      key: String,
+      index: Int,
+      columnInfo: ColumnInfo
+  )
 
   private def getSpecialColumnInfo(columnInfo: Seq[ColumnInfo]): Seq[SpecialColumnInfo] = {
     columnInfo.zipWithIndex.flatMap {

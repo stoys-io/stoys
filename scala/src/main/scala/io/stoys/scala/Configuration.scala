@@ -105,7 +105,10 @@ object Configuration {
     Configuration(parseConfigurationConfig(args))
   }
 
-  case class ConfigurationConfig(environments: Seq[String], args: Seq[String])
+  case class ConfigurationConfig(
+      environments: Seq[String],
+      args: Seq[String]
+  )
 
   def parseConfigurationConfig(args: Array[String]): ConfigurationConfig = {
     val (environmentArgs, remainingArgs) = args.partition(_.startsWith(ENVIRONMENT_ARGS_PREFIX))

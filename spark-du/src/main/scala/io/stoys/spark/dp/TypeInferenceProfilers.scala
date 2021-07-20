@@ -239,7 +239,10 @@ private[dp] object TypeInferenceStringProfiler {
     )
   }
 
-  private case class EnumInfo(item: DpItem, index: Int)
+  private case class EnumInfo(
+      item: DpItem,
+      index: Int
+  )
 
   def matchEnumValues(profile: DpColumn, config: DpConfig): Option[DpColumn] = {
     val items = profile.items

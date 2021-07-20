@@ -56,12 +56,28 @@ class DqJoin private(leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Col
 }
 
 object DqJoin {
-  private case class JoinKeyColumnNames(left: Seq[String], right: Seq[String])
+  private case class JoinKeyColumnNames(
+      left: Seq[String],
+      right: Seq[String]
+  )
 
-  private case class JoinKeyCounts(key: Seq[String], key_contains_null: Boolean, left_rows: Long, right_rows: Long)
+  private case class JoinKeyCounts(
+      key: Seq[String],
+      key_contains_null: Boolean,
+      left_rows: Long,
+      right_rows: Long
+  )
 
-  private case class JoinTypeCounts(key: Seq[String], key_contains_null: Boolean, left_rows: Long, right_rows: Long,
-      inner: Long, left: Long, right: Long, full: Long)
+  private case class JoinTypeCounts(
+      key: Seq[String],
+      key_contains_null: Boolean,
+      left_rows: Long,
+      right_rows: Long,
+      inner: Long,
+      left: Long,
+      right: Long,
+      full: Long
+  )
 
   def equiJoin(leftDs: Dataset[_], rightDs: Dataset[_],
       leftColumnNames: Seq[String], rightColumnNames: Seq[String]): DqJoin = {
