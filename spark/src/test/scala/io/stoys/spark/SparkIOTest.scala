@@ -2,9 +2,11 @@ package io.stoys.spark
 
 import io.stoys.scala.{Arbitrary, IO}
 import io.stoys.spark.test.SparkTestBase
+import org.apache.spark.sql.AnalysisException
 
 class SparkIOTest extends SparkTestBase {
   import SparkIO._
+  import SparkIOTest._
 
   private lazy val dfs = Dfs(sparkSession)
 
@@ -100,6 +102,23 @@ class SparkIOTest extends SparkTestBase {
     assert(dfs.exists(s"$tmpDir/out/.dag"))
   }
 
+  test("Datasets.getAlias") {
+    writeTmpData("record", Seq.empty[Record])
+
+    val sparkIOConfig = emptySparkIOConfig.copy(inputPaths = Seq(s"$tmpDir/record"), outputPath = Some(s"$tmpDir/out"))
+    IO.using(new SparkIO(sparkSession, sparkIOConfig)) { sparkIO =>
+      intercept[AnalysisException](sparkSession.table("record"))
+      sparkIO.init()
+      assert(Datasets.getAlias(sparkSession.table("record")) === Some("record"))
+      assert(Datasets.getAlias(sparkIO.ds(TableName[Record])) === Some("record"))
+
+      intercept[AnalysisException](sparkSession.table("record__renamed"))
+      sparkIO.addInputPaths(s"$tmpDir/record?sos-table_name=record__renamed")
+      assert(Datasets.getAlias(sparkSession.table("record__renamed")) === Some("record__renamed"))
+      assert(Datasets.getAlias(sparkIO.ds(TableName[Record]("renamed"))) === Some("record__renamed"))
+    }
+  }
+
   private def writeTmpDagLists(dagName: String,
       inputDags: Seq[String], inputTables: Seq[String], outputTables: Seq[String]): Unit = {
     dfs.writeString(s"$tmpDir/$dagName/.dag/input_dags.list",
@@ -109,4 +128,8 @@ class SparkIOTest extends SparkTestBase {
     dfs.writeString(s"$tmpDir/$dagName/.dag/output_tables.list",
       outputTables.map(t => s"$tmpDir/$t").sorted.mkString("\n"))
   }
+}
+
+object SparkIOTest {
+  case class Record(s: String)
 }
