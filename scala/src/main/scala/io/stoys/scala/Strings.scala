@@ -1,7 +1,7 @@
 package io.stoys.scala
 
 object Strings {
-  private val PARAM_PATTERN = """\$\{([^}]*)}""".r("param")
+  private val PARAM_PATTERN = "\\$\\{([^}]*)}".r("param")
 
   def replaceParams(text: String, params: Option[Product]): String = {
     params.map(p => PARAM_PATTERN.replaceAllIn(text, m => Reflection.getFieldValue(p, m.group("param")).toString))

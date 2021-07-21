@@ -11,11 +11,10 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 import scala.jdk.CollectionConverters._
 import scala.util.Try
-import scala.util.matching.Regex
 
 object ExcelWriter {
-  private[excel] val CONFIG_CELL_PATTERN: Regex = "^<<([^:]*)(?::(.*))?>>$".r("key", "params")
-  private[excel] val SPECIAL_COLUMN_NAME_PATTERN: Regex = "^__(.*)__$".r("key")
+  private[excel] val CONFIG_CELL_PATTERN = "^<<([^:]*)(?::(.*))?>>$".r("key", "params")
+  private[excel] val SPECIAL_COLUMN_NAME_PATTERN = "^__(.*)__$".r("key")
   private val UNITS_PER_CHARACTER_WIDTH = 256
 
   private object ConfigCellType extends Enumeration {

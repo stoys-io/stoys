@@ -76,7 +76,7 @@ private[dq] object DqSql {
     import SqlCommentsExtractor._
 
     private val lines = Option(sql).toSeq.flatMap(_.linesIterator.toSeq)
-    private val lineComments = lines.map(l => SqlLineCommentPattern.findFirstMatchIn(l).map(_.group("comment")))
+    private val lineComments = lines.map(l => SQL_LINE_COMMENT_PATTERN.findFirstMatchIn(l).map(_.group("comment")))
 
     def getLineCommentsBefore(line: Int): Option[String] = {
       if (line <= 1 || line >= lineComments.length) {
@@ -91,6 +91,6 @@ private[dq] object DqSql {
   }
 
   private object SqlCommentsExtractor {
-    val SqlLineCommentPattern: Regex = "^\\s*--\\s*(.*)\\s*$".r("comment")
+    val SQL_LINE_COMMENT_PATTERN: Regex = "^\\s*--\\s*(.*)\\s*$".r("comment")
   }
 }

@@ -5,7 +5,6 @@ import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import java.net.{URI, URLDecoder, URLEncoder}
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable
-import scala.util.matching.Regex
 
 // Note: Do not forget to call init() first to register config.inputPaths!
 class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoCloseable {
@@ -89,7 +88,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     val ParsedInputPath(path, sosOptions, options) = parseInputPath(inputPath)
     val defaultTable = SosTable(null, path, sosOptions.format, options)
 
-    val tnAndLsMsg = s"${SOS_PREFIX}table_name and ${SOS_PREFIX}listing_strategy"
+    val tnAndLsMsg = s"${SOS_OPTION_PREFIX}table_name and ${SOS_OPTION_PREFIX}listing_strategy"
     val inputs = (dfs.path(path).getName, sosOptions.table_name, sosOptions.listing_strategy) match {
       case (_, Some(_), Some(_)) =>
         throw new SToysException(s"Having both $tnAndLsMsg at the same time are not supported ($inputPath).")
@@ -167,8 +166,8 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
 
 object SparkIO {
   val DAG_DIR = ".dag"
-  val SOS_PREFIX = "sos-"
-  val SOS_LIST_PATTERN: Regex = "(?i)(.*)\\.list".r
+  val SOS_OPTION_PREFIX = "sos-"
+  private val SOS_LIST_PATTERN = "^(?i)(.*)\\.list$".r("name")
 
   case class SosOptions(
       table_name: Option[String],
@@ -187,8 +186,8 @@ object SparkIO {
       options: Map[String, String]
   ) extends SosInput {
     override def toUrlString: String = {
-      val tableNameParam = Option(table_name).map(n => s"${SOS_PREFIX}table_name" -> n)
-      val formatParam = format.map(f => s"${SOS_PREFIX}format" -> f).toSeq
+      val tableNameParam = Option(table_name).map(n => s"${SOS_OPTION_PREFIX}table_name" -> n)
+      val formatParam = format.map(f => s"${SOS_OPTION_PREFIX}format" -> f).toSeq
       val optionParams = options.toSeq
       val allParams = tableNameParam ++ formatParam ++ optionParams
       val allEncodedParams = allParams.map {
@@ -213,7 +212,7 @@ object SparkIO {
       options: Map[String, String]
   )
 
-  private[stoys] def parseInputPath(inputPath: String): ParsedInputPath = {
+  private[spark] def parseInputPath(inputPath: String): ParsedInputPath = {
     val pathParamsUri = new URI(inputPath)
     val path = pathParamsUri.getPath
     val params = Option(pathParamsUri.getRawQuery).toSeq.flatMap(_.split("&").map { rawParam =>
@@ -223,13 +222,13 @@ object SparkIO {
         case Array(key) => key -> null
       }
     })
-    val (rawSosOptions, options) = params.toMap.partition(_._1.toLowerCase.startsWith(SOS_PREFIX))
+    val (rawSosOptions, options) = params.toMap.partition(_._1.toLowerCase.startsWith(SOS_OPTION_PREFIX))
     val sosOptions = toSosOptions(rawSosOptions)
     ParsedInputPath(path, sosOptions, options)
   }
 
   private def toSosOptions(params: Map[String, String]): SosOptions = {
-    val normalizedSosParams = params.map(kv => (kv._1.toLowerCase.stripPrefix(SOS_PREFIX), kv._2))
+    val normalizedSosParams = params.map(kv => (kv._1.toLowerCase.stripPrefix(SOS_OPTION_PREFIX), kv._2))
     SosOptions(
       table_name = normalizedSosParams.get("table_name"),
       format = normalizedSosParams.get("format"),

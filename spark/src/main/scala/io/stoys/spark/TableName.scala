@@ -2,11 +2,10 @@ package io.stoys.spark
 
 import io.stoys.scala.{Reflection, Strings}
 
-import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
 case class TableName[T <: Product : TypeTag] private(entityName: String, logicalName: Option[String]) {
-  val typeTag: universe.TypeTag[T] = implicitly[TypeTag[T]]
+  val typeTag: TypeTag[T] = implicitly[TypeTag[T]]
 
   def fullTableName(): String = {
     import TableName.LOGICAL_NAME_SEPARATOR
