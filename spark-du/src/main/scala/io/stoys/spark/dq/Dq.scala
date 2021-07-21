@@ -18,12 +18,12 @@ class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
   }
 
   def fields(fields: Seq[DqField]): Dq[T] = {
-    this.fields ++= fields
+    this.fields = fields
     this
   }
 
   def metadata(metadata: Map[String, String]): Dq[T] = {
-    this.metadata ++= metadata
+    this.metadata = metadata
     this
   }
 
@@ -33,7 +33,7 @@ class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
   }
 
   def rules(rules: Seq[DqRule]): Dq[T] = {
-    this.rules ++= rules
+    this.rules = rules
     this
   }
 

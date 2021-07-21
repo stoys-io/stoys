@@ -17,7 +17,7 @@ class DqJoin private(leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Col
   private var joinType: DqJoinType = DqJoinType.UNDEFINED
 
   def metadata(metadata: Map[String, String]): DqJoin = {
-    this.metadata ++= metadata
+    this.metadata = metadata
     this
   }
 
