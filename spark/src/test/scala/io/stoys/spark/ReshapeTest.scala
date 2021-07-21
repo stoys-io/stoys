@@ -183,7 +183,7 @@ class ReshapeTest extends SparkTestBase {
     // This is the issue. Should spark infer something else? ArrayType(NullType) maybe?
     assert(fixableDF.schema.fields.head.dataType === ArrayType(StringType))
     val caught = intercept[ReshapeException](Reshape.reshape[SeqOfRecord](fixableDF, ReshapeConfig.dangerous))
-    assert(caught.getMessage.contains("Column null of type StringType cannot be casted to StructType"))
+    assert(caught.getMessage.contains("Column records[] of type StringType cannot be casted to StructType"))
   }
 }
 

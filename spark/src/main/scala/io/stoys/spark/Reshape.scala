@@ -85,10 +85,14 @@ object Reshape {
     }
   }
 
-  private def reshapeStructField(sourceDataType: DataType, targetDataType: DataType, config: ReshapeConfig,
-      sourceExpression: Expression): Either[List[ReshapeError], List[Column]] = {
-    reshapeStructField(StructField(null, sourceDataType), StructField(null, targetDataType), config,
-      new Column(sourceExpression), sourceAttribute = None, normalizedFieldPath = null)
+  private def reshapeDataType(sourceDataType: DataType, targetDataType: DataType, config: ReshapeConfig,
+      sourceExpression: Expression, normalizedFieldPath: String): Either[List[ReshapeError], Column] = {
+    val reshapedField = reshapeStructField(StructField(null, sourceDataType), StructField(null, targetDataType),
+      config, new Column(sourceExpression), sourceAttribute = None, normalizedFieldPath)
+    reshapedField match {
+      case Left(errors) => Left(errors)
+      case Right(column) => Right(column.head)
+    }
   }
 
   private def reshapeStructField(sourceField: StructField, targetField: StructField, config: ReshapeConfig,
@@ -104,45 +108,48 @@ object Reshape {
       }
     }
     (sourceField.dataType, targetField.dataType) match {
-      case (sourceDataType, targetDataType) if sourceDataType == targetDataType => // same shape
+      case (sourceDT, targetDT) if sourceDT == targetDT => // same shape
 
-      case (sourceStructType: StructType, targetStructType: StructType) =>
-        reshapeStructType(sourceStructType, targetStructType, config, column, sourceAttributes = Seq.empty) match {
-          case Right(nestedColumns) => column = struct(nestedColumns: _*)
+      case (sourceST: StructType, targetST: StructType) =>
+        reshapeStructType(sourceST, targetST, config, column, sourceAttributes = Seq.empty) match {
           case Left(nestedErrors) => errors ++= nestedErrors
+          case Right(nestedColumns) => column = struct(nestedColumns: _*)
         }
-      case (sourceArrayType: ArrayType, targetArrayType: ArrayType) =>
-        val identifier = s"_${Strings.toWordCharactersCollapsing(normalizedFieldPath)}"
-        val lambdaVariable = NamedLambdaVariable(identifier, sourceArrayType.elementType, sourceArrayType.containsNull)
-        reshapeStructField(sourceArrayType.elementType, targetArrayType.elementType, config, lambdaVariable) match {
-          case Right(nestedColumns) =>
-            val lambdaFunction = LambdaFunction(nestedColumns.head.expr, Seq(lambdaVariable))
-            column = new Column(ArrayTransform(column.expr, lambdaFunction))
+      case (sourceAT: ArrayType, targetAT: ArrayType) =>
+        val elementFieldPath = s"$normalizedFieldPath[]"
+        val identifier = Strings.toWordCharactersCollapsing(elementFieldPath)
+        val lambdaVariable = NamedLambdaVariable(identifier, sourceAT.elementType, sourceAT.containsNull)
+        reshapeDataType(sourceAT.elementType, targetAT.elementType, config, lambdaVariable, elementFieldPath) match {
           case Left(nestedErrors) =>
             errors ++= nestedErrors
+          case Right(nestedColumn) =>
+            val lambdaFunction = LambdaFunction(nestedColumn.expr, Seq(lambdaVariable))
+            column = new Column(ArrayTransform(column.expr, lambdaFunction))
         }
       // TODO: Should we create multi version build? This works only in Spark 3+ (3.1 even has transform_key function).
-//      case (sourceMapType: MapType, targetMapType: MapType) =>
-//        val baseIdentifier = Strings.toWordCharactersCollapsing(normalizedFieldPath)
-//        val keyLambdaVar = NamedLambdaVariable(s"_${baseIdentifier}__key", sourceMapType.keyType, nullable = false)
-//        val valueLambdaVariable =
-//          NamedLambdaVariable(s"_${baseIdentifier}__value", sourceMapType.valueType, sourceMapType.valueContainsNull)
-//        if (sourceMapType.keyType != targetMapType.keyType) {
-//          reshapeStructField(sourceMapType.keyType, targetMapType.keyType, config, keyLambdaVar) match {
-//            case Right(nestedColumns) =>
-//              val lambdaFunction = LambdaFunction(nestedColumns.head.expr, Seq(keyLambdaVar, valueLambdaVariable))
-//              column = new Column(TransformKeys(column.expr, lambdaFunction))
+//      case (sourceMT: MapType, targetMT: MapType) =>
+//        val keyFieldPath = s"$normalizedFieldPath{K}"
+//        val valueFieldPath = s"$normalizedFieldPath{V}"
+//        val keyIdentifier = Strings.toWordCharactersCollapsing(keyFieldPath)
+//        val valueIdentifier = Strings.toWordCharactersCollapsing(valueFieldPath)
+//        val keyLambdaVariable = NamedLambdaVariable(keyIdentifier, sourceMT.keyType, nullable = false)
+//        val valueLambdaVariable = NamedLambdaVariable(valueIdentifier, sourceMT.valueType, sourceMT.valueContainsNull)
+//        if (sourceMT.keyType != targetMT.keyType) {
+//          reshapeDataType(sourceMT.keyType, targetMT.keyType, config, keyLambdaVariable, keyFieldPath) match {
 //            case Left(nestedErrors) =>
 //              errors ++= nestedErrors
+//            case Right(nestedColumn) =>
+//              val lambdaFunction = LambdaFunction(nestedColumn.expr, Seq(keyLambdaVariable, valueLambdaVariable))
+//              column = new Column(TransformKeys(column.expr, lambdaFunction))
 //          }
 //        }
-//        if (sourceMapType.valueType != targetMapType.valueType) {
-//          reshapeStructField(sourceMapType.valueType, targetMapType.valueType, config, valueLambdaVariable) match {
-//            case Right(nestedColumns) =>
-//              val lambdaFunction = LambdaFunction(nestedColumns.head.expr, Seq(keyLambdaVar, valueLambdaVariable))
-//              column = new Column(TransformValues(column.expr, lambdaFunction))
+//        if (sourceMT.valueType != targetMT.valueType) {
+//          reshapeDataType(sourceMT.valueType, targetMT.valueType, config, valueLambdaVariable, valueFieldPath) match {
 //            case Left(nestedErrors) =>
 //              errors ++= nestedErrors
+//            case Right(nestedColumn) =>
+//              val lambdaFunction = LambdaFunction(nestedColumn.expr, Seq(keyLambdaVariable, valueLambdaVariable))
+//              column = new Column(TransformValues(column.expr, lambdaFunction))
 //          }
 //        }
 
