@@ -173,6 +173,16 @@ private[dq] object DqFramework {
     }
   }
 
+  def selectPassingRows(wideDqDf: DataFrame, ruleCount: Int): DataFrame = {
+    if (ruleCount > 0) {
+      val columns = wideDqDf.columns
+      val (columnNames, ruleNames) = columns.splitAt(columns.length - ruleCount)
+      wideDqDf.where(ruleNames.map(col).reduce(_ and _)).select(columnNames.map(col): _*)
+    } else {
+      wideDqDf
+    }
+  }
+
   private def stack(columns: Seq[Column]): Column = {
     new Column(Stack(columns.map(_.expr)))
   }

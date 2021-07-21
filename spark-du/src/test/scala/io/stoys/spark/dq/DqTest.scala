@@ -139,6 +139,9 @@ class DqTest extends SparkTestBase {
 
     val failingRowsDs = dq.selectFailingRows()
     assert(failingRowsDs.collect() === Seq(Row(1, "foo", "extra"), Row(2, "bar", "extra")))
+
+    val passingRowsDs = dq.selectPassingRows()
+    assert(passingRowsDs.collect() === Seq.empty)
   }
 }
 

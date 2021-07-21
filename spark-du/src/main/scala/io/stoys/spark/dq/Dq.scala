@@ -58,6 +58,12 @@ class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
     DqFramework.selectFailingRows(cleanWideDqDf, wideDqDfInfo.ruleInfo.size - rulesWithinDs.size)
   }
 
+  def selectPassingRows(): DataFrame = {
+    val wideDqDfInfo = computeWideDqDfInfo()
+    val cleanWideDqDf = wideDqDfInfo.wideDqDf.drop(DqFile.corruptRecordField.name)
+    DqFramework.selectPassingRows(cleanWideDqDf, wideDqDfInfo.ruleInfo.size - rulesWithinDs.size)
+  }
+
   private def getSchemaRules: Seq[DqRule] = {
     DqSchema.generateSchemaRules(ds.schema, fields, primaryKeyFieldNames, config)
   }
