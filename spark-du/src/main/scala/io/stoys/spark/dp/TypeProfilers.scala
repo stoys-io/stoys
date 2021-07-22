@@ -27,7 +27,7 @@ private[dp] object TypeProfiler {
 
 private[dp] case class AnyProfiler(
     name: String,
-    simpleDataTypeName: String,
+    dataType: DataType,
     nullable: Boolean,
     var count: Long,
     var countNulls: Long,
@@ -44,7 +44,7 @@ private[dp] case class AnyProfiler(
       Double.NaN
     } else {
       val doubleValue = typeProfiler.update(value)
-      if (simpleDataTypeName != null) {
+      if (dataType != null) {
         cardinalitySketch.update(value)
         frequencySketch.update(value)
         quantileSketch.update(doubleValue)
@@ -61,7 +61,7 @@ private[dp] case class AnyProfiler(
         this.count += that.count
         this.countNulls += that.countNulls
         this.typeProfiler.merge(that.typeProfiler)
-        if (simpleDataTypeName != null) {
+        if (dataType != null) {
           this.cardinalitySketch.merge(that.cardinalitySketch)
           this.frequencySketch.merge(that.frequencySketch)
           this.quantileSketch.merge(that.quantileSketch)
@@ -80,7 +80,8 @@ private[dp] case class AnyProfiler(
       val approximateUnique = Option(cardinalitySketch).flatMap(_.getNumberOfUnique)
       val baseProfile = DpColumn(
         name = name,
-        data_type = simpleDataTypeName,
+        data_type = Option(dataType).map(_.typeName).orNull,
+        data_type_json = Option(dataType).map(_.json).orNull,
         nullable = nullable,
         enum_values = Seq.empty,
         format = None,
@@ -104,7 +105,7 @@ private[dp] case class AnyProfiler(
   }
 
   private def getExactExtras: Map[String, String] = {
-    if (simpleDataTypeName == null) {
+    if (dataType == null) {
       Map.empty
     } else {
       Map(TypeProfiler.IS_EXACT_EXTRAS_KEY -> Option(frequencySketch).exists(_.isExact).toString)
@@ -179,7 +180,7 @@ private[dp] object AnyProfiler {
   def zero(field: StructField, config: DpConfig): AnyProfiler = {
     val baseProfiler = AnyProfiler(
       name = field.name,
-      simpleDataTypeName = null,
+      dataType = null,
       nullable = field.nullable,
       count = 0L,
       countNulls = 0L,
@@ -192,7 +193,7 @@ private[dp] object AnyProfiler {
       case _: ArrayType | _: MapType | _: StructType => baseProfiler
       case _ =>
         baseProfiler.copy(
-          simpleDataTypeName = field.dataType.typeName,
+          dataType = field.dataType,
           cardinalitySketch = CardinalitySketch.create(config),
           frequencySketch = FrequencySketch.create(config),
           quantileSketch = QuantileSketch.create(config)
@@ -430,7 +431,7 @@ private[dp] class FractionalProfiler(
       profile.count - profile.count_nulls.getOrElse(0L) match {
         case 0L => profile
         case countNonNulls =>
-          val maxLength = DataType.fromJson(s""""${profile.data_type}"""") match {
+          val maxLength = DataType.fromJson(profile.data_type_json) match {
             case FloatType | StringType if !requiresDoublePrecision => Some(4L)
             case FloatType | DoubleType | StringType => Some(8L)
             case dt: DecimalType if DecimalType.is32BitDecimalType(dt) => Some(4L)

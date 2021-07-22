@@ -31,7 +31,7 @@ object DqReflection {
     } else {
       Try(ScalaReflection.schemaFor(field.typeSignature)) match {
         case Success(schema) =>
-          Some(DqField(getFieldName(field), schema.dataType.typeName, nullable, enumValues, format, regexp))
+          Some(DqField(getFieldName(field), schema.dataType.json, nullable, enumValues, format, regexp))
         case Failure(e) if !ignoreUnsupportedTypes =>
           throw new SToysException(s"Unsupported type ${renderAnnotatedType(field.typeSignature)}!", e)
         case Failure(_) => None

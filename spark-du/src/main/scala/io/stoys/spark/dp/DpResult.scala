@@ -14,6 +14,7 @@ case class DpItem(
 case class DpColumn(
     name: String,
     data_type: String,
+    data_type_json: String,
     nullable: Boolean,
     enum_values: Seq[String],
     format: Option[String],

@@ -46,9 +46,9 @@ object DqRules {
     }
   }
 
-  def field(name: String, typ: String, nullable: Boolean = true, enumValues: Seq[String] = Seq.empty,
+  def field(name: String, dataTypeJson: String, nullable: Boolean = true, enumValues: Seq[String] = Seq.empty,
       format: String = null, regexp: String = null): DqField = {
-    DqField(name, typ, nullable, enumValues, Option(format), Option(regexp))
+    DqField(name, dataTypeJson, nullable, enumValues, Option(format), Option(regexp))
   }
 
   // common rules
@@ -79,7 +79,7 @@ object DqRules {
       }
       nullSafeNamedRule(fieldName, "type", expression)
     } else {
-      val description = s"Field '$fieldName' type '$sourceType' has to be castable to type '$targetType'."
+      val description = s"Cannot cast `$fieldName` from '$sourceType' to '$targetType'."
       namedRule(fieldName, "type", "false", description)
     }
   }

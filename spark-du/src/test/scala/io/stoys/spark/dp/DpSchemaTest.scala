@@ -20,9 +20,10 @@ class DpSchemaTest extends SparkTestBase {
     val dpResult = DpResult(
       table = DpTable(42),
       columns = Seq(
-        emptyDpColumn.copy(name = "i", data_type = "integer", nullable = false),
-        emptyDpColumn.copy(name = "e", data_type = "string", nullable = true, enum_values = Seq("foo", "bar", "baz")),
-        emptyDpColumn.copy(name = "dt", data_type = "date", nullable = false, format = "yyyy 🐧 MM?dd")
+        emptyDpColumn.copy(name = "i", data_type_json = "\"integer\"", nullable = false),
+        emptyDpColumn.copy(
+          name = "e", data_type_json = "\"string\"", nullable = true, enum_values = Seq("foo", "bar", "baz")),
+        emptyDpColumn.copy(name = "dt", data_type_json = "\"date\"", nullable = false, format = "yyyy 🐧 MM?dd")
       )
     )
     val fooBarBazMetadata = Metadata.fromJson("""{"enum_values": ["foo", "bar", "baz"]}""")

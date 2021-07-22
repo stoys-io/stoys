@@ -34,7 +34,7 @@ private[dq] object DqSchema {
     expectedFields.foreach { expectedField =>
       existingFieldsByName.get(expectedField.name.toLowerCase).foreach { existingField =>
         val fieldName = expectedField.name
-        val expectedType = DataType.fromJson(s""""${expectedField.typ}"""")
+        val expectedType = DataType.fromJson(expectedField.data_type_json)
         val format = Option(expectedField.format).flatten.orNull
         rules += typeRule(fieldName, existingField.dataType, expectedType, format)
         if (!expectedField.nullable) {

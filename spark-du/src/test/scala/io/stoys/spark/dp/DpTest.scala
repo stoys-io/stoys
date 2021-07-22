@@ -31,6 +31,7 @@ class DpTest extends SparkTestBase {
     assert(fColumn.copy(mean = None, pmf = Seq.empty) === DpColumn(
       name = "f",
       data_type = "float",
+      data_type_json = "\"float\"",
       nullable = true,
       enum_values = Seq.empty,
       format = None,

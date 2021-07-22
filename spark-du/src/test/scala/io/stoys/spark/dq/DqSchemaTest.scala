@@ -4,8 +4,6 @@ import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.types.StructType
 
-import java.sql.Date
-
 class DqSchemaTest extends SparkTestBase {
   import DqRules._
   import DqSchema._
@@ -14,10 +12,12 @@ class DqSchemaTest extends SparkTestBase {
   test("generateSchemaRules") {
     val existingSchema = ScalaReflection.schemaFor[Record].dataType.asInstanceOf[StructType]
     val expectedFields = Seq(
-      field("i", "integer"),
-      field("s", "string", nullable = false, enumValues = Seq("foo", "bar", "baz"), regexp = "(foo|bar|baz)"),
-      field("d", "date", format = "MM/dd/yyyy"),
-      field("missing", "string")
+      field("b", "\"null\""),
+      field("i", "\"integer\""),
+      field("a", """{"type":"array","elementType":"integer","containsNull":true}"""),
+      field("s", "\"string\"", nullable = false, enumValues = Seq("foo", "bar", "baz"), regexp = "(foo|bar|baz)"),
+      field("d", "\"date\"", format = "MM/dd/yyyy"),
+      field("missing", "\"string\"")
     )
     val primaryKeyFieldNames = Seq("i", "s")
 
@@ -25,7 +25,9 @@ class DqSchemaTest extends SparkTestBase {
       DqRule("_expected_fields__exist", "false", Some("Expected fields should exist: missing"), Seq("missing")),
       DqRule("_primary_key__not_null", "i IS NOT NULL AND s IS NOT NULL", None, Seq.empty),
       DqRule("_primary_key__unique", "(COUNT(*) OVER (PARTITION BY i, s)) = 1", None, Seq.empty),
+      DqRule("b__type", "false", Some("Cannot cast `b` from 'StringType' to 'NullType'."), Seq.empty),
       DqRule("i__type", "i IS NULL OR (CAST(i AS INT) IS NOT NULL)", None, Seq.empty),
+      DqRule("a__type", "a IS NULL OR (CAST(a AS ARRAY<INT>) IS NOT NULL)", None, Seq.empty),
       DqRule("s__type", "s IS NULL OR (CAST(s AS STRING) IS NOT NULL)", None, Seq.empty),
       DqRule("s__not_null", "s IS NOT NULL", None, Seq.empty),
       DqRule("s__enum_values", "s IS NULL OR (CAST(s AS STRING) IN ('foo', 'bar', 'baz'))", None, Seq.empty),
@@ -38,11 +40,11 @@ class DqSchemaTest extends SparkTestBase {
     val extraColumnConfig = DqConfig.default.copy(report_extra_columns = true)
     val extraColumnRules = generateSchemaRules(existingSchema, expectedFields, primaryKeyFieldNames, extraColumnConfig)
     val expectedExtraColumnRule =
-      DqRule("_extra_fields__not_exist", "false", Some("Extra fields should not exist: b, f, a, extra"), Seq.empty)
+      DqRule("_extra_fields__not_exist", "false", Some("Extra fields should not exist: f, extra"), Seq.empty)
     assert(extraColumnRules.find(_.name.contains("extra")) === Some(expectedExtraColumnRule))
   }
 }
 
 object DqSchemaTest {
-  case class Record(b: Boolean, i: Int, f: Float, s: String, a: Array[String], d: Date, extra: String)
+  case class Record(b: String, i: String, f: String, s: String, a: Array[String], d: String, extra: String)
 }
