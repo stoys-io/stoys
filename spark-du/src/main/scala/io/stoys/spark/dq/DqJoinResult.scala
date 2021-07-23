@@ -1,8 +1,12 @@
 package io.stoys.spark.dq
 
-case class DqJoinResult(
-    dq_join_statistics: DqJoinStatistics,
-    dq_result: DqResult
+case class DqJoinInfo(
+    left_table_name: String,
+    right_table_name: String,
+    left_key_column_names: Seq[String],
+    right_key_column_names: Seq[String],
+    join_type: String,
+    join_condition: String
 )
 
 case class DqJoinStatistics(
@@ -17,4 +21,11 @@ case class DqJoinStatistics(
     right: Long,
     full: Long,
     cross: Long
+)
+
+case class DqJoinResult(
+    key: String,
+    dq_join_info: DqJoinInfo,
+    dq_join_statistics: DqJoinStatistics,
+    dq_result: DqResult
 )

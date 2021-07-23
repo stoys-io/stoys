@@ -1,12 +1,16 @@
 package io.stoys.spark.dq
 
+import io.stoys.scala.Jackson
+import io.stoys.spark.TableName
+import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, Dataset}
 
 import scala.collection.mutable
+import scala.reflect.runtime.universe.TypeTag
 
-class DqJoin private(leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Column) {
+class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Dataset[R], joinCondition: Column) {
   import DqJoin._
 
   private val joinKeyColumnNames = getJoinKeyColumnNames(leftDs, rightDs, joinCondition)
@@ -16,14 +20,25 @@ class DqJoin private(leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Col
   private var metadata: Map[String, String] = Map.empty
   private var joinType: DqJoinType = DqJoinType.UNDEFINED
 
-  def metadata(metadata: Map[String, String]): DqJoin = {
+  def metadata(metadata: Map[String, String]): DqJoin[L, R] = {
     this.metadata = metadata
     this
   }
 
-  def joinType(joinType: DqJoinType): DqJoin = {
+  def joinType(joinType: DqJoinType): DqJoin[L, R] = {
     this.joinType = joinType
     this
+  }
+
+  def getDqJoinInfo: DqJoinInfo = {
+    DqJoinInfo(
+      left_table_name = TableName.of(leftDs).fullTableName(),
+      right_table_name = TableName.of(rightDs).fullTableName(),
+      left_key_column_names = joinKeyColumnNames.left,
+      right_key_column_names = joinKeyColumnNames.right,
+      join_type = joinType.toString,
+      join_condition = joinCondition.expr.sql
+    )
   }
 
   def computeDqJoinStatistics(): Dataset[DqJoinStatistics] = {
@@ -32,26 +47,23 @@ class DqJoin private(leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Col
 
   def computeDqResult(): Dataset[DqResult] = {
     val rules = generateJoinTypeCountsDqRules(joinType)
-    Dq.fromDataset(joinTypeCountsDs).rules(rules).metadata(metadata ++ getJoinMetadata).computeDqResult()
+    Dq.fromDataset(joinTypeCountsDs).rules(rules).metadata(metadata).computeDqResult()
   }
 
   def computeDqJoinResult(): Dataset[DqJoinResult] = {
     import joinKeyCountsDs.sparkSession.implicits._
+    val key = DigestUtils.sha256Hex(Jackson.objectMapper.writeValueAsString(getDqJoinInfo)).take(7)
+    val dqJoinInfo = Seq(getDqJoinInfo).toDS()
     val dqJoinStatistics = computeDqJoinStatistics()
     val dqResult = computeDqResult()
-    val dqJoinResult = dqJoinStatistics.crossJoin(dqResult).select(
+    val dqJoinResult = dqJoinInfo.crossJoin(dqJoinStatistics).crossJoin(dqResult).select(
+//      substring(sha2(to_json(struct(dqJoinInfo("*"))), 256), 0, 7).as("key"),
+      lit(key).as("key"),
+      struct(dqJoinInfo("*")).as("dq_join_info"),
       struct(dqJoinStatistics("*")).as("dq_join_statistics"),
       struct(dqResult("*")).as("dq_result")
     )
     dqJoinResult.as[DqJoinResult]
-  }
-
-  def getJoinMetadata: Map[String, String] = {
-    Map(
-      "left_key_column_names" -> joinKeyColumnNames.left.mkString(", "),
-      "right_key_column_names" -> joinKeyColumnNames.right.mkString(", "),
-      "join_type" -> joinType.toString
-    )
   }
 }
 
@@ -79,15 +91,16 @@ object DqJoin {
       full: Long
   )
 
-  def equiJoin(leftDs: Dataset[_], rightDs: Dataset[_],
-      leftColumnNames: Seq[String], rightColumnNames: Seq[String]): DqJoin = {
+  def equiJoin[L: TypeTag, R: TypeTag](leftDs: Dataset[L], rightDs: Dataset[R],
+      leftColumnNames: Seq[String], rightColumnNames: Seq[String]): DqJoin[L, R] = {
     assert(leftColumnNames.nonEmpty && rightColumnNames.nonEmpty && leftColumnNames.size == rightColumnNames.size)
     val joinCondition = leftColumnNames.zip(rightColumnNames).map(lr => leftDs(lr._1) <=> rightDs(lr._2)).reduce(_ && _)
     new DqJoin(leftDs, rightDs, joinCondition)
   }
 
   // TODO: Add approximate version
-  def expensiveArbitraryJoin(leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Column): DqJoin = {
+  def expensiveArbitraryJoin[L: TypeTag, R: TypeTag](leftDs: Dataset[L], rightDs: Dataset[R],
+      joinCondition: Column): DqJoin[L, R] = {
     new DqJoin(leftDs, rightDs, joinCondition)
   }
 

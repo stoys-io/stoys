@@ -18,6 +18,18 @@ class DqJoinTest extends SparkTestBase {
   private lazy val orderDs = orders.toDS()
   private lazy val itemDs = items.toDS()
 
+  test("getDqJoinInfo") {
+    val join = DqJoin.equiJoin(orderDs, itemDs.alias("item__alias"), Seq("item_id"), Seq("id")).joinType(DqJoinType.LEFT)
+    assert(join.getDqJoinInfo === DqJoinInfo(
+      left_table_name = "order",
+      right_table_name = "item__alias",
+      left_key_column_names = Seq("item_id"),
+      right_key_column_names = Seq("id"),
+      join_type = "LEFT",
+      join_condition = "(`item_id` <=> item__alias.`id`)"
+    ))
+  }
+
   test("computeJoinStatistics") {
     val join = DqJoin.equiJoin(orderDs, itemDs, Seq("item_id"), Seq("id"))
     assert(join.computeDqJoinStatistics().first() === DqJoinStatistics(
@@ -35,13 +47,13 @@ class DqJoinTest extends SparkTestBase {
       DqRuleStatistics("right_key__missing", 1),
       DqRuleStatistics("right_key__multiplying", 1)
     ))
-    assert(dqResult.metadata
-        === Map("left_key_column_names" -> "item_id", "right_key_column_names" -> "id", "join_type" -> "LEFT"))
   }
 
   test("computeDqJoinResult") {
     val join = DqJoin.equiJoin(orderDs, itemDs, Seq("item_id"), Seq("id"))
     val dqJoinResult = join.computeDqJoinResult().first()
+    assert(dqJoinResult.key.size === 7)
+    assert(dqJoinResult.dq_join_info.join_condition === "(`item_id` <=> `id`)")
     assert(dqJoinResult.dq_join_statistics.left === 5)
     assert(dqJoinResult.dq_result.rules.size === 4)
   }
