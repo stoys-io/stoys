@@ -36,7 +36,7 @@ object FilePerRowFileFormat {
   private class FilePerRowOutputWriterFactory(
       fieldIndexes: FieldIndexes, fileFormatShortName: String) extends OutputWriterFactory {
     override def newInstance(path: String, dataSchema: StructType, context: TaskAttemptContext): OutputWriter = {
-      new FilePerRowOutputWriter(fieldIndexes, path, context)
+      new FilePerRowOutputWriter(path, fieldIndexes, context)
     }
 
     override def getFileExtension(context: TaskAttemptContext): String = {
@@ -45,7 +45,7 @@ object FilePerRowFileFormat {
   }
 
   private class FilePerRowOutputWriter(
-      fieldIndexes: FieldIndexes, path: String, context: TaskAttemptContext) extends OutputWriter {
+      val path: String, fieldIndexes: FieldIndexes, context: TaskAttemptContext) extends OutputWriter {
     override def write(row: InternalRow): Unit = {
       val fileDfsPath = getCustomFilePath(path, row.getString(fieldIndexes.path))
       IO.using(CodecStreams.createOutputStream(context, fileDfsPath)) { outputStream =>

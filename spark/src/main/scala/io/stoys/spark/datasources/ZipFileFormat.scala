@@ -60,7 +60,7 @@ object ZipFileFormat {
   private class ZipOutputWriterFactory(
       fieldIndexes: FieldIndexes, zipOptions: ZipOptions, fileFormatShortName: String) extends OutputWriterFactory {
     override def newInstance(path: String, dataSchema: StructType, context: TaskAttemptContext): OutputWriter = {
-      new ZipOutputWriter(fieldIndexes, zipOptions, path, context.getConfiguration)
+      new ZipOutputWriter(path, fieldIndexes, zipOptions, context.getConfiguration)
     }
 
     override def getFileExtension(context: TaskAttemptContext): String = {
@@ -68,7 +68,7 @@ object ZipFileFormat {
     }
   }
 
-  private class ZipOutputWriter(fieldIndexes: FieldIndexes, zipOptions: ZipOptions, path: String,
+  private class ZipOutputWriter(val path: String, fieldIndexes: FieldIndexes, zipOptions: ZipOptions,
       configuration: Configuration) extends OutputWriter {
     private val dfsPath = zipOptions.fileName.map(fn => getCustomFilePath(path, fn)).getOrElse(new Path(path))
     private val outputStream = dfsPath.getFileSystem(configuration).create(dfsPath, false)

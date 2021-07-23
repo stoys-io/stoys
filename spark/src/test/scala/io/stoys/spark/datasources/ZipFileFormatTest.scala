@@ -34,14 +34,14 @@ class ZipFileFormatTest extends SparkTestBase {
       "dir0/dir01/bar.txt" -> "bar"
     )
 
-    val binaryFilesZipPath = s"$tmpDir/zip.works/binary"
+    val binaryFilesZipPath = s"$tmpDir/binary"
     val binaryFilesPerRow = fileContents.map(kv => BinaryFilePerRow(kv._1, kv._2.getBytes(StandardCharsets.UTF_8)))
     binaryFilesPerRow.toSeq.toDS().coalesce(1).write.format("zip").save(binaryFilesZipPath)
     val binaryFilesInZipFiles = walkFilesInZipFiles(binaryFilesZipPath)
     assert(binaryFilesInZipFiles.keys.map(_.endsWith(".zip")).toSeq === Seq(true))
     assert(binaryFilesInZipFiles.values.toSeq === Seq(fileContents))
 
-    val partitionedFilesZipPath = s"$tmpDir/zip.works/partitioned"
+    val partitionedFilesZipPath = s"$tmpDir/partitioned"
     binaryFilesPerRow.toSeq.toDS().repartition(16).write.format("zip").save(partitionedFilesZipPath)
     assert(walkFilesInZipFiles(partitionedFilesZipPath).size > 1)
   }
@@ -50,12 +50,12 @@ class ZipFileFormatTest extends SparkTestBase {
     val compressibleContent = "~=[,,_,,]:3" * 1024
     val ds = Seq(TextFilePerRow("kilo_cat", compressibleContent)).toDS().coalesce(1)
 
-    val defaultOptionsZipPath = s"$tmpDir/compression/default"
+    val defaultOptionsZipPath = s"$tmpDir/default"
     ds.write.format("zip").save(defaultOptionsZipPath)
     val defaultFilesInZipFiles = walkFileStatuses(defaultOptionsZipPath)
     assert(defaultFilesInZipFiles.values.head.getLen < compressibleContent.length / 16)
 
-    val storedOptionsZipPath = s"$tmpDir/compression/stored"
+    val storedOptionsZipPath = s"$tmpDir/stored"
     ds.write.format("zip").option("zip_method", "stored").save(storedOptionsZipPath)
     val storedFilesInZipFiles = walkFileStatuses(storedOptionsZipPath)
     assert(storedFilesInZipFiles.values.head.getLen > compressibleContent.length)
