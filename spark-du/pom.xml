@@ -25,6 +25,12 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- commons -->
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+        </dependency>
+
         <!-- spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>

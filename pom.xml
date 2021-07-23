@@ -60,6 +60,7 @@
         <scala.version>${default.scala.version}</scala.version>
         <scala.compat.version>${default.scala.compat.version}</scala.compat.version>
 
+        <commons-codec.version>1.15</commons-codec.version>
         <commons-io.version>2.11.0</commons-io.version>
         <commons-text.version>1.9</commons-text.version>
         <delta.version>1.0.0</delta.version>
@@ -98,6 +99,11 @@
             </dependency>
 
             <!-- commons -->
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>${commons-codec.version}</version>
+            </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>

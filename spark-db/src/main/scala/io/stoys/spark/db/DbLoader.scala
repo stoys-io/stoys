@@ -52,7 +52,7 @@ class DbLoader(args: Array[String]) {
       }
       val tableNameLookup = new TableNameLookup(lookupClasses(config.caseClassNames))
       config.tableNames.foreach { fullTableName =>
-        tableNameLookup.parse(fullTableName) match {
+        tableNameLookup.lookupEntityTableName(fullTableName) match {
           case Some(tableName) => writeTable(tableName, sparkIO, connection)
           case None => logger.error(s"Unable to lookup TableName for '$fullTableName'")
         }
