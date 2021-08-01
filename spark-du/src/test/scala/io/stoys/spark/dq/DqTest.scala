@@ -10,6 +10,53 @@ class DqTest extends SparkTestBase {
   import DqTest._
   import sparkSession.implicits._
 
+  private val records = Seq(
+    Record(1, "foo", "extra"),
+    Record(2, "bar", "extra"),
+    Record(3, "invalid", "extra"),
+    Record(4, null, "extra")
+  )
+
+  private val recordsTableName = "record"
+
+  test("fromDataset.*") {
+    val rules = Seq(
+      namedRule("id", "even", "id IS NOT NULL AND (id % 2 = 0)"),
+      namedRule("id", "equal", "id = missing")
+    )
+    val fields = Seq(
+      field("id", "\"integer\"", nullable = false),
+      field("missing", "\"string\"")
+    )
+    val primaryKeyFieldNames = Seq("id", "missing_id")
+
+    val dq = Dq.fromDataset(records.take(2).toDS())
+        .rules(rules).fields(fields).primaryKeyFieldNames(primaryKeyFieldNames)
+
+    val dqResult = dq.computeDqResult().first()
+    assert(dqResult.statistics.table.violations === 2)
+
+    val dqViolationPerRowDs = dq.computeDqViolationPerRow()
+    assert(dqViolationPerRowDs.collect() === Seq(
+      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id"), Seq("1"),
+        "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
+      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id", "missing"), Seq("1", "__MISSING__"),
+        "id__equal", "id = missing"),
+      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
+        "__no_missing_fields", "false"),
+      DqViolationPerRow(Seq("2", "__MISSING__"), Seq("id", "missing"), Seq("2", "__MISSING__"),
+        "id__equal", "id = missing"),
+      DqViolationPerRow(Seq("2", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
+        "__no_missing_fields", "false")
+    ))
+
+    val failingRowsDs = dq.selectFailingRows()
+    assert(failingRowsDs.collect() === Seq(Row(1, "foo", "extra"), Row(2, "bar", "extra")))
+
+    val passingRowsDs = dq.selectPassingRows()
+    assert(passingRowsDs.collect() === Seq.empty)
+  }
+
   test("fromDqSql.computeDqResult") {
     records.toDS().createOrReplaceTempView(recordsTableName)
 
@@ -80,80 +127,24 @@ class DqTest extends SparkTestBase {
     assert(dqResult.statistics.rule.map(_.violations) === Seq(0, 2, 2))
   }
 
-  test("fromFileInputPath.*") {
-    val recordsCsvBasePath = writeTmpData("records.csv", records, "csv", Map("header" -> "true", "delimiter" -> "|"))
-    val recordsCsvRelativePath = walkFileStatuses(recordsCsvBasePath.toString).keys.head
-    val recordsCsvInputPath = s"$recordsCsvBasePath/$recordsCsvRelativePath?sos-format=csv&header=true&delimiter=%7C"
+  test("fromFileInputPath.computeDqResult") {
+    val fileBasePath = writeTmpData("records.csv", records, "csv", Map("header" -> "true", "delimiter" -> "|"))
+    val fileRelativePath = walkFileStatuses(fileBasePath.toString).keys.head
+    val fileInputPath = s"$fileBasePath/$fileRelativePath?sos-format=csv&header=true&delimiter=%7C"
 
     val rules = Seq(namedRule("id", "even", "id IS NOT NULL AND (id % 2 = 0)"))
     // TODO: Can we fix double escaping in regexp?
     val fields = Seq(field("id", "\"integer\"", nullable = false, regexp = "\\\\d+"))
 
-    val dq = Dq.fromFileInputPath(sparkSession, recordsCsvInputPath).rules(rules).fields(fields)
+    val dq = Dq.fromFileInputPath(sparkSession, fileInputPath).rules(rules).fields(fields)
 
     val dqResult = dq.computeDqResult().first()
     assert(dqResult.statistics.table.violations === 2)
     assert(dqResult.metadata.get("size") === Some("66"))
     assert(Duration.between(Instant.parse(dqResult.metadata("modification_timestamp")), Instant.now()).getSeconds < 60)
-
-    val dqViolationPerRowDs = dq.computeDqViolationPerRow()
-    assert(dqViolationPerRowDs.collect() === Seq(
-      DqViolationPerRow(Seq(), Seq("id"), Seq("1"), "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
-      DqViolationPerRow(Seq(), Seq("id"), Seq("3"), "id__even", "id IS NOT NULL AND (id % 2 = 0)")
-    ))
-
-    val failingRowsDs = dq.selectFailingRows()
-    assert(failingRowsDs.collect() === Seq(Row("1", "foo", "extra"), Row("3", "invalid", "extra")))
-  }
-
-  test("fromDataset.*") {
-    val rules = Seq(
-      namedRule("id", "even", "id IS NOT NULL AND (id % 2 = 0)"),
-      namedRule("id", "equal", "id = missing")
-    )
-    val fields = Seq(
-      field("id", "\"integer\"", nullable = false),
-      field("missing", "\"string\"")
-    )
-    val primaryKeyFieldNames = Seq("id", "missing_id")
-
-    val dq = Dq.fromDataset(records.take(2).toDS())
-        .rules(rules).fields(fields).primaryKeyFieldNames(primaryKeyFieldNames)
-
-    val dqResult = dq.computeDqResult().first()
-    assert(dqResult.statistics.table.violations === 2)
-
-    val dqViolationPerRowDs = dq.computeDqViolationPerRow()
-    assert(dqViolationPerRowDs.collect() === Seq(
-      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id"), Seq("1"),
-        "id__even", "id IS NOT NULL AND (id % 2 = 0)"),
-      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id", "missing"), Seq("1", "__MISSING__"),
-        "id__equal", "id = missing"),
-      DqViolationPerRow(Seq("1", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
-        "__no_missing_fields", "false"),
-      DqViolationPerRow(Seq("2", "__MISSING__"), Seq("id", "missing"), Seq("2", "__MISSING__"),
-        "id__equal", "id = missing"),
-      DqViolationPerRow(Seq("2", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
-        "__no_missing_fields", "false")
-    ))
-
-    val failingRowsDs = dq.selectFailingRows()
-    assert(failingRowsDs.collect() === Seq(Row(1, "foo", "extra"), Row(2, "bar", "extra")))
-
-    val passingRowsDs = dq.selectPassingRows()
-    assert(passingRowsDs.collect() === Seq.empty)
   }
 }
 
 object DqTest {
   case class Record(id: Int, value: String, extra: String)
-
-  val records: Seq[Record] = Seq(
-    Record(1, "foo", "extra"),
-    Record(2, "bar", "extra"),
-    Record(3, "invalid", "extra"),
-    Record(4, null, "extra")
-  )
-
-  val recordsTableName: String = "record"
 }
