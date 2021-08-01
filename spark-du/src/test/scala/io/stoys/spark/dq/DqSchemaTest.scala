@@ -36,12 +36,6 @@ class DqSchemaTest extends SparkTestBase {
     )
     val rules = generateSchemaRules(existingSchema, expectedFields, primaryKeyFieldNames, DqConfig.default)
     assert(rules === expectedRules)
-
-    val extraColumnConfig = DqConfig.default.copy(report_extra_columns = true)
-    val extraColumnRules = generateSchemaRules(existingSchema, expectedFields, primaryKeyFieldNames, extraColumnConfig)
-    val expectedExtraColumnRule =
-      DqRule("_extra_fields__not_exist", "false", Some("Extra fields should not exist: f, extra"), Seq.empty)
-    assert(extraColumnRules.find(_.name.contains("extra")) === Some(expectedExtraColumnRule))
   }
 
   test("generateSchemaRules - PoorlyNamedRecord") {
@@ -63,9 +57,22 @@ class DqSchemaTest extends SparkTestBase {
     val rules = generateSchemaRules(existingSchema, expectedFields, primaryKeyFieldNames, DqConfig.default)
     assert(rules === expectedRules)
   }
+
+  test("generateSchemaRules - report_extra_columns") {
+    val existingSchema = ScalaReflection.schemaFor[Record].dataType.asInstanceOf[StructType]
+
+    assert(generateSchemaRules(existingSchema, Seq.empty, Seq.empty, DqConfig.default) === Seq.empty)
+
+    val config = DqConfig.default.copy(report_extra_columns = true)
+    val rules = generateSchemaRules(existingSchema, Seq.empty, Seq.empty, config)
+    val expectedRules = Seq(
+      rule("_extra_fields__not_exist", "false", "Extra fields should not exist: b, i, s, a, d, extra")
+    )
+    assert(rules === expectedRules)
+  }
 }
 
 object DqSchemaTest {
-  case class Record(b: String, i: String, f: String, s: String, a: Array[String], d: String, extra: String)
+  case class Record(b: String, i: String, s: String, a: Array[String], d: String, extra: String)
   case class PoorlyNamedRecord(`space s`: String, `symbols  (*)_42`: String, mixed_CASE: String)
 }
