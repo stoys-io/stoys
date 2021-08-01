@@ -20,7 +20,7 @@ object DqRules {
 
   def nullSafeNamedRule(
       fieldName: String, logicalName: String, expression: String, description: String = null): DqRule = {
-    namedRule(fieldName, logicalName, s"$fieldName IS NULL OR ($expression)", description)
+    namedRule(fieldName, logicalName, s"`$fieldName` IS NULL OR ($expression)", description)
   }
 
   def rule(name: String, expression: String, description: String = null): DqRule = {
@@ -55,27 +55,27 @@ object DqRules {
 
   def enumValuesRule(fieldName: String, enumValues: Seq[String], caseInsensitive: Boolean = false): DqRule = {
     val expression = if (caseInsensitive) {
-      s"UPPER(CAST($fieldName AS STRING)) IN ${enumValues.map(_.toUpperCase()).mkString("('", "', '", "')")}"
+      s"UPPER(CAST(`$fieldName` AS STRING)) IN ${enumValues.map(_.toUpperCase()).mkString("('", "', '", "')")}"
     } else {
-      s"CAST($fieldName AS STRING) IN ${enumValues.mkString("('", "', '", "')")}"
+      s"CAST(`$fieldName` AS STRING) IN ${enumValues.mkString("('", "', '", "')")}"
     }
     nullSafeNamedRule(fieldName, "enum_values", expression)
   }
 
   def notNullRule(fieldName: String): DqRule = {
-    namedRule(fieldName, "not_null", s"$fieldName IS NOT NULL")
+    namedRule(fieldName, "not_null", s"`$fieldName` IS NOT NULL")
   }
 
   def regexpRule(fieldName: String, regexp: String): DqRule = {
-    nullSafeNamedRule(fieldName, "regexp", s"CAST($fieldName AS STRING) RLIKE '$regexp'")
+    nullSafeNamedRule(fieldName, "regexp", s"CAST(`$fieldName` AS STRING) RLIKE '$regexp'")
   }
 
   def typeRule(fieldName: String, sourceType: DataType, targetType: DataType, format: String = null): DqRule = {
     if (Cast.canCast(sourceType, targetType)) {
       val expression = (targetType, Option(format)) match {
-        case (DateType, Some(format)) => s"TO_DATE($fieldName, '$format') IS NOT NULL"
-        case (TimestampType, Some(format)) => s"TO_TIMESTAMP($fieldName, '$format') IS NOT NULL"
-        case (dataType, _) => s"CAST($fieldName AS ${dataType.sql}) IS NOT NULL"
+        case (DateType, Some(format)) => s"TO_DATE(`$fieldName`, '$format') IS NOT NULL"
+        case (TimestampType, Some(format)) => s"TO_TIMESTAMP(`$fieldName`, '$format') IS NOT NULL"
+        case (dataType, _) => s"CAST(`$fieldName` AS ${dataType.sql}) IS NOT NULL"
       }
       nullSafeNamedRule(fieldName, "type", expression)
     } else {
@@ -99,6 +99,6 @@ object DqRules {
   }
 
   def uniqueRule(baseRuleName: String, fieldNames: Seq[String]): DqRule = {
-    namedRule(baseRuleName, "unique", s"(COUNT(*) OVER (PARTITION BY ${fieldNames.mkString(", ")})) = 1")
+    namedRule(baseRuleName, "unique", s"(COUNT(*) OVER (PARTITION BY ${fieldNames.mkString("`", "`, `", "`")})) = 1")
   }
 }

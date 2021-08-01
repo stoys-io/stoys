@@ -26,7 +26,7 @@ private[dq] object DqSchema {
       rules += namedRule("_extra_fields", "not_exist", "false", description)
     }
     if (expectedPrimaryKeyFieldNames.nonEmpty && missingPrimaryKeyFieldNames.isEmpty) {
-      val primaryKeyNotNullExpr = expectedPrimaryKeyFieldNames.map(fn => s"$fn IS NOT NULL").mkString(" AND ")
+      val primaryKeyNotNullExpr = expectedPrimaryKeyFieldNames.map(fn => s"`$fn` IS NOT NULL").mkString(" AND ")
       rules += namedRule("_primary_key", "not_null", primaryKeyNotNullExpr)
       rules += uniqueRule("_primary_key", expectedPrimaryKeyFieldNames)
     }
