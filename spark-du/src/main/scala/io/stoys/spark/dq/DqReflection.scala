@@ -8,18 +8,16 @@ import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success, Try}
 
 object DqReflection {
-  import Reflection._
-
   def getDqFields[T <: Product : TypeTag]: Seq[DqField] = {
     getDqFields[T]()
   }
 
   def getDqFields[T <: Product : TypeTag](ignoreUnsupportedTypes: Boolean = false): Seq[DqField] = {
-    getCaseClassFields[T].flatMap(f => getDqField(f, ignoreUnsupportedTypes))
+    Reflection.getCaseClassFields[T].flatMap(f => getDqField(f, ignoreUnsupportedTypes))
   }
 
   private def getDqField(field: Symbol, ignoreUnsupportedTypes: Boolean): Option[DqField] = {
-    val dqField = getAnnotationParamsMap[annotation.DqField](field)
+    val dqField = Reflection.getAnnotationParamsMap[annotation.DqField](field)
     val ignore = dqField.getOrElse("ignore", false).asInstanceOf[Boolean]
     val nullable = dqField.getOrElse("nullable", true).asInstanceOf[Boolean]
     val enumValues = dqField.getOrElse("enumValues", Seq.empty[String]).asInstanceOf[Seq[String]]
@@ -33,13 +31,13 @@ object DqReflection {
         case Success(schema) =>
           Some(DqField(getFieldName(field), schema.dataType.json, nullable, enumValues, format, regexp))
         case Failure(e) if !ignoreUnsupportedTypes =>
-          throw new SToysException(s"Unsupported type ${renderAnnotatedType(field.typeSignature)}!", e)
+          throw new SToysException(s"Unsupported type ${Reflection.renderAnnotatedType(field.typeSignature)}!", e)
         case Failure(_) => None
       }
     }
   }
 
   private def getFieldName(field: Symbol): String = {
-    nameOf(field)
+    Reflection.nameOf(field)
   }
 }
