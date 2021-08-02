@@ -97,11 +97,11 @@ private[dq] object DqFramework {
     ds.select(col("*") +: rulesExprs: _*)
   }
 
-  def computeDqResult(wideDqDf: DataFrame, columnNames: Seq[String], ruleInfo: Seq[RuleInfo],
-      config: DqConfig, metadata: Map[String, String]): Dataset[DqResult] = {
-    import wideDqDf.sparkSession.implicits._
+  def computeDqResult(wideDqDfInfo: WideDqDfInfo, config: DqConfig,
+      metadata: Map[String, String]): Dataset[DqResult] = {
+    import wideDqDfInfo.wideDqDf.sparkSession.implicits._
 
-    val ruleHashesExprs = ruleInfo.map {
+    val ruleHashesExprs = wideDqDfInfo.ruleInfo.map {
       case ri if ri.columnNamesInfo.missing.nonEmpty => lit(42).as(ri.rule.name)
       case ri if ri.columnNamesInfo.existing.isEmpty =>
         when(col(ri.rule.name), lit(-1)).otherwise(lit(42)).as(ri.rule.name)
@@ -109,24 +109,24 @@ private[dq] object DqFramework {
         val hashExpr = hash(ri.columnNamesInfo.existing.map(col) :+ lit(42): _*)
         when(col(ri.rule.name), lit(-1)).otherwise(abs(hashExpr)).as(ri.rule.name)
     }
-    val dqAggInputRowDf = wideDqDf.select(
+    val dqAggInputRowDf = wideDqDfInfo.wideDqDf.select(
 //      col("*"),
-//      struct(columnNames.map(col): _*).as("row"),
-      array(columnNames.map(cn => col(cn).cast(StringType)): _*).as("rowSample"),
+//      struct(wideDqDfInfo.columnNames.map(col): _*).as("row"),
+      array(wideDqDfInfo.columnNames.map(cn => col(cn).cast(StringType)): _*).as("rowSample"),
       monotonically_increasing_id().as("rowId"),
       array(ruleHashesExprs: _*).as("ruleHashes")
     )
-    val existingReferencedColumnIndexes = ruleInfo.map(_.columnNamesInfo.existingIndexes)
-    val aggregator = new DqAggregator(columnNames.size, existingReferencedColumnIndexes, config)
+    val existingReferencedColumnIndexes = wideDqDfInfo.ruleInfo.map(_.columnNamesInfo.existingIndexes)
+    val aggregator = new DqAggregator(wideDqDfInfo.columnNames.size, existingReferencedColumnIndexes, config)
     val aggOutputRowDs = dqAggInputRowDf.as[DqAggregator.DqAggInputRow].select(aggregator.toColumn)
 
     aggOutputRowDs.map { aggOutputRow =>
-      val ruleNames = ruleInfo.map(_.rule.name)
-      val resultColumns = columnNames.map(cn => DqColumn(cn))
-      val resultRules = ruleInfo.map(ri => ri.rule.copy(referenced_column_names = ri.columnNamesInfo.all))
+      val ruleNames = wideDqDfInfo.ruleInfo.map(_.rule.name)
+      val resultColumns = wideDqDfInfo.columnNames.map(cn => DqColumn(cn))
+      val resultRules = wideDqDfInfo.ruleInfo.map(ri => ri.rule.copy(referenced_column_names = ri.columnNamesInfo.all))
       val statistics = DqStatistics(
         DqTableStatistic(aggOutputRow.rows, aggOutputRow.rowViolations),
-        columnNames.zip(aggOutputRow.columnViolations).map(DqColumnStatistics.tupled),
+        wideDqDfInfo.columnNames.zip(aggOutputRow.columnViolations).map(DqColumnStatistics.tupled),
         ruleNames.zip(aggOutputRow.ruleViolations).map(DqRuleStatistics.tupled)
       )
       val rowSample = aggOutputRow.rowSample.zip(aggOutputRow.ruleHashes).toSeq.map {
