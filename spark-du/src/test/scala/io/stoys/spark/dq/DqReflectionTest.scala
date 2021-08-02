@@ -43,6 +43,16 @@ class DqReflectionTest extends AnyFunSuite {
     assert(getDqFields[CollectionRecord] === expectedFields)
   }
 
+  test("poorly named") {
+    val emptyDqField = Arbitrary.empty[DqField]
+    val expectedFields = Seq(
+      emptyDqField.copy(name = "s +", data_type_json = "\"string\"", nullable = true),
+      emptyDqField.copy(name = "s -", data_type_json = "\"string\"", nullable = true),
+      emptyDqField.copy(name = "mixed_CASE", data_type_json = "\"string\"", nullable = true),
+    )
+    assert(getDqFields[PoorlyNamedRecord] === expectedFields)
+  }
+
   test("unsupported") {
     assertThrows[SToysException](getDqFields[UnsupportedRecord])
     assert(getDqFields[UnsupportedRecord](ignoreUnsupportedTypes = true) === Seq.empty)
@@ -55,9 +65,9 @@ object DqReflectionTest {
   case class Record(
       id: Int,
       @DqField(nullable = true, format = "MM/dd/yyyy")
-      customDate: Date,
+      custom_date: Date,
       @DqField(nullable = false, enumValues = Array("foo", "bar", "baz"))
-      customEnum: String,
+      custom_enum: String,
       @DqField(ignore = true)
       ignored: String
   )
@@ -65,18 +75,24 @@ object DqReflectionTest {
   case class NullableRecord(
       int: Int,
       str: String,
-      optionStr: Option[String],
+      option_str: Option[String],
       @DqField(nullable = false)
-      dqFieldNotNullableInt: Int,
+      dq_field_not_nullable_int: Int,
       @DqField(nullable = false)
-      dqFieldNotNullableStr: String,
+      dq_field_not_nullable_str: String,
       @DqField(nullable = false)
-      dqFieldNotNullableOptionStr: Option[String]
+      dq_field_not_nullable_option_str: Option[String]
   )
 
   case class CollectionRecord(
-      intSeq: Seq[Int],
-      strMap: Map[String, String]
+      int_seq: Seq[Int],
+      str_map: Map[String, String]
+  )
+
+  case class PoorlyNamedRecord(
+      `s +`: String,
+      `s -`: String,
+      mixed_CASE: String
   )
 
   case class UnsupportedRecord(

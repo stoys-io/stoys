@@ -1,6 +1,6 @@
 package io.stoys.spark.dq
 
-import io.stoys.scala.{Reflection, Strings}
+import io.stoys.scala.Reflection
 import io.stoys.spark.SToysException
 import org.apache.spark.sql.catalyst.ScalaReflection
 
@@ -40,6 +40,6 @@ object DqReflection {
   }
 
   private def getFieldName(field: Symbol): String = {
-    Strings.toSnakeCase(nameOf(field))
+    nameOf(field)
   }
 }
