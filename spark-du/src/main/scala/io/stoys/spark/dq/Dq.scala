@@ -1,7 +1,10 @@
 package io.stoys.spark.dq
 
-import io.stoys.spark.SToysException
+import io.stoys.spark.{SToysException, TableName}
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+
+import scala.reflect.runtime.universe._
 
 class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
   private val logger = org.log4s.getLogger
@@ -39,7 +42,8 @@ class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
 
   def computeDqResult(): Dataset[DqResult] = {
     val wideDqDfInfo = computeWideDqDfInfo()
-    DqFramework.computeDqResult(wideDqDfInfo, config, metadata)
+    val schema = StructType(wideDqDfInfo.wideDqDf.schema.fields.take(wideDqDfInfo.columnNames.size))
+    DqFramework.computeDqResult(wideDqDfInfo, config, metadata + ("data_type_json" -> schema.json))
   }
 
   def computeDqViolationPerRow(): Dataset[DqViolationPerRow] = {
@@ -77,8 +81,8 @@ object Dq {
     fromDataset(df)
   }
 
-  def fromDataset[T](ds: Dataset[T]): Dq[T] = {
-    new Dq(ds, Seq.empty)
+  def fromDataset[T: TypeTag](ds: Dataset[T]): Dq[T] = {
+    new Dq(ds, Seq.empty).metadata(Map("table_name" -> TableName.of(ds).fullTableName()))
   }
 
   def fromDqSql(sparkSession: SparkSession, dqSql: String): Dq[Row] = {
@@ -88,7 +92,7 @@ object Dq {
       throw new SToysException(s"Dq sql reference missing tables: ${missingReferencedTableNames.toList}")
     }
     val wideDqDf = sparkSession.sql(dqSql)
-    new Dq(wideDqDf, parsedDqSql.rules)
+    new Dq(wideDqDf, parsedDqSql.rules).metadata(Map("dq_sql" -> dqSql))
   }
 
   def fromFileInputPath(sparkSession: SparkSession, inputPath: String): Dq[Row] = {

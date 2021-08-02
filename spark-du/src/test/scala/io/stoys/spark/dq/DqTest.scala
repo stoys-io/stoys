@@ -58,7 +58,8 @@ class DqTest extends SparkTestBase {
   }
 
   test("fromDqSql.computeDqResult") {
-    records.toDS().createOrReplaceTempView(recordsTableName)
+    val recordsDs = records.toDS()
+    recordsDs.createOrReplaceTempView(recordsTableName)
 
     val dqSql: String =
       s"""
@@ -92,7 +93,10 @@ class DqTest extends SparkTestBase {
         DqRowSample(Seq("3", "invalid", "extra"), Seq("id__odd", "value__enum_value")),
         DqRowSample(Seq("4", null, "extra"), Seq("value__enum_value"))
       ),
-      Map.empty
+      Map(
+        "dq_sql" -> dqSql,
+        "data_type_json" -> recordsDs.schema.json
+      )
     )
 
     val dqResult = Dq.fromDqSql(sparkSession, dqSql).computeDqResult().first()

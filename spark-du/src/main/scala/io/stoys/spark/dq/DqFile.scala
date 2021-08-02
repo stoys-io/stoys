@@ -49,7 +49,8 @@ private[dq] object DqFile {
           "path" -> table.path,
           "file_name" -> dfs.path(table.path).getName,
           "size" -> dfs.getContentSummary(table.path).getLength.toString,
-          "modification_timestamp" -> Instant.ofEpochMilli(status.getModificationTime).toString
+          "modification_timestamp" -> Instant.ofEpochMilli(status.getModificationTime).toString,
+          "table_name" -> table.table_name
         )
         FileInput(df, Seq(corruptRecordRule), metadata)
     }
