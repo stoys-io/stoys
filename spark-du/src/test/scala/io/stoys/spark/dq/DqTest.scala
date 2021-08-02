@@ -1,5 +1,6 @@
 package io.stoys.spark.dq
 
+import io.stoys.spark.Dfs
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.Row
 
@@ -132,23 +133,72 @@ class DqTest extends SparkTestBase {
   }
 
   test("fromFileInputPath.computeDqResult") {
-    val fileBasePath = writeTmpData("records.csv", records, "csv", Map("header" -> "true", "delimiter" -> "|"))
-    val fileRelativePath = walkFileStatuses(fileBasePath.toString).keys.head
-    val fileInputPath = s"$fileBasePath/$fileRelativePath?sos-format=csv&header=true&delimiter=%7C"
+    val dfs = Dfs(sparkSession)
+    val filePath = tmpDir.resolve("complex_records.csv")
+    val fileInputPath = s"$filePath?sos-format=csv&header=true&delimiter=%3B"
+    val fileContent =
+      """
+        |fOO +;Foo -;extra
+        |foo;bar;baz
+        |;bar;baz
+        |foo;meh;baz
+        |foo;bar;
+        |foo;42;baz
+        |invalid
+        |""".stripMargin
+    dfs.writeString(filePath.toString, fileContent)
 
-    val rules = Seq(namedRule("id", "even", "id IS NOT NULL AND (id % 2 = 0)"))
-    // TODO: Can we fix double escaping in regexp?
-    val fields = Seq(field("id", "\"integer\"", nullable = false, regexp = "\\\\d+"))
-
-    val dq = Dq.fromFileInputPath(sparkSession, fileInputPath).rules(rules).fields(fields)
+    val fields = DqReflection.getDqFields[ComplexRecord]
+    val rules = Seq(namedRule("foo+-", "same_length", "LENGTH(`foo +`) = LENGTH(`foo -`)"))
+    val dq = Dq.fromFileInputPath(sparkSession, fileInputPath).fields(fields).rules(rules)
 
     val dqResult = dq.computeDqResult().first()
-    assert(dqResult.statistics.table.violations === 2)
-    assert(dqResult.metadata.get("size") === Some("66"))
+    assert(dqResult.columns.map(_.name) === Seq("fOO +", "Foo -", "extra", "__corrupt_record__", "__row_number__"))
+    assert(dqResult.rules.map(_.name) === Seq("__record_not_corrupted", "foo+-__same_length",
+      "fOO +__type", "fOO +__not_null", "fOO -__type", "fOO -__enum_values"))
+    assert(dqResult.statistics.table === DqTableStatistic(rows = 6, violations = 4))
+    assert(dqResult.statistics.column === Seq(
+      DqColumnStatistics("fOO +", 3),
+      DqColumnStatistics("Foo -", 4),
+      DqColumnStatistics("extra", 0),
+      DqColumnStatistics("__corrupt_record__", 1),
+      DqColumnStatistics("__row_number__", 0)
+    ))
+    assert(dqResult.statistics.rule === Seq(
+      DqRuleStatistics("__record_not_corrupted", 1),
+      DqRuleStatistics("foo+-__same_length", 3),
+      DqRuleStatistics("fOO +__type", 0),
+      DqRuleStatistics("fOO +__not_null", 1),
+      DqRuleStatistics("fOO -__type", 0),
+      DqRuleStatistics("fOO -__enum_values", 2)
+    ))
+    assert(dqResult.row_sample === Seq(
+      DqRowSample(Seq(null, "bar", "baz", null, "1"), Seq("foo+-__same_length", "fOO +__not_null")),
+      DqRowSample(Seq("foo", "meh", "baz", null, "2"), Seq("fOO -__enum_values")),
+      DqRowSample(Seq("foo", "42", "baz", null, "4"), Seq("foo+-__same_length", "fOO -__enum_values")),
+      DqRowSample(Seq("invalid", null, null, "invalid", "5"), Seq("__record_not_corrupted", "foo+-__same_length"))
+    ))
+    assert(dqResult.metadata.keySet
+        === Set("input_path", "path", "file_name", "size", "modification_timestamp", "table_name", "data_type_json"))
+    assert(dqResult.metadata.get("table_name") === Some("complex_records_csv"))
+    assert(dqResult.metadata.get("size") === Some("80"))
     assert(Duration.between(Instant.parse(dqResult.metadata("modification_timestamp")), Instant.now()).getSeconds < 60)
   }
 }
 
 object DqTest {
-  case class Record(id: Int, value: String, extra: String)
+  import annotation.DqField
+
+  case class Record(
+      id: Int,
+      value: String,
+      extra: String
+  )
+
+  case class ComplexRecord(
+      @DqField(nullable = false)
+      `fOO +`: String,
+      @DqField(enumValues = Array("foo", "bar", "baz"))
+      `fOO -`: String
+  )
 }
