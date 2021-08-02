@@ -37,7 +37,7 @@ private[dq] object DqFile {
             .option("mode", "PERMISSIVE")
             .option("columnNameOfCorruptRecord", corruptRecordField.name)
             .load(path)
-        val corruptRecordRule = DqRules.namedRule("_record", "not_corrupted", s"${corruptRecordField.name} IS NULL")
+        val corruptRecordRule = DqRules.namedRule("", "record_not_corrupted", s"${corruptRecordField.name} IS NULL")
         // TODO: Improve metadata for for delta, iceberg and other advanced tables?
         val metadata = Map(
           "input_path" -> inputPath,

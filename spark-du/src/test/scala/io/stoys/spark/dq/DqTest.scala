@@ -130,11 +130,11 @@ class DqTest extends SparkTestBase {
       DqViolationPerRow(Seq("1", "__MISSING__"), Seq("id", "missing"), Seq("1", "__MISSING__"),
         "id__equal", "id = missing"),
       DqViolationPerRow(Seq("1", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
-        "_expected_fields__exist", "false"),
+        "__no_missing_fields", "false"),
       DqViolationPerRow(Seq("2", "__MISSING__"), Seq("id", "missing"), Seq("2", "__MISSING__"),
         "id__equal", "id = missing"),
       DqViolationPerRow(Seq("2", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
-        "_expected_fields__exist", "false")
+        "__no_missing_fields", "false")
     ))
 
     val failingRowsDs = dq.selectFailingRows()

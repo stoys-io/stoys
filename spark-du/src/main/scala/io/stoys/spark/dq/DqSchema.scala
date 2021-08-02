@@ -16,19 +16,20 @@ private[dq] object DqSchema {
     val missingPrimaryKeyFieldNames = expectedPrimaryKeyFieldNames.filterNot(existingFieldNames.toSet)
     val allMissingFieldNames = missingFieldNames ++ missingPrimaryKeyFieldNames.filterNot(missingFieldNames.toSet)
     if (allMissingFieldNames.nonEmpty) {
-      val description = s"Expected fields should exist: ${allMissingFieldNames.mkString(", ")}"
-      val rule = namedRule("_expected_fields", "exist", "false", description)
+      val description = s"Missing fields: ${quoteFieldNames(allMissingFieldNames)}"
+      val rule = namedRule("", "no_missing_fields", "false", description)
       rules += rule.copy(referenced_column_names = allMissingFieldNames)
     }
-    if (config.report_extra_columns) {
+    if (config.fail_on_extra_columns) {
       val extraFieldNames = existingFieldNames.filterNot(expectedFieldNames.toSet)
-      val description = s"Extra fields should not exist: ${extraFieldNames.mkString(", ")}"
-      rules += namedRule("_extra_fields", "not_exist", "false", description)
+      val description = s"Extra fields: ${quoteFieldNames(extraFieldNames)}"
+      rules += namedRule("", "no_extra_fields", "false", description)
     }
     if (expectedPrimaryKeyFieldNames.nonEmpty && missingPrimaryKeyFieldNames.isEmpty) {
       val primaryKeyNotNullExpr = expectedPrimaryKeyFieldNames.map(fn => s"`$fn` IS NOT NULL").mkString(" AND ")
-      rules += namedRule("_primary_key", "not_null", primaryKeyNotNullExpr)
-      rules += uniqueRule("_primary_key", expectedPrimaryKeyFieldNames)
+      rules += namedRule("", "primary_key_not_null", primaryKeyNotNullExpr)
+      val primaryKeyUniqueExpr = s"(COUNT(*) OVER (PARTITION BY ${quoteFieldNames(expectedPrimaryKeyFieldNames)})) = 1"
+      rules += namedRule("", "primary_key_unique", primaryKeyUniqueExpr)
     }
     val existingFieldsByName = existingSchema.map(f => f.name.toLowerCase -> f).toMap
     expectedFields.foreach { expectedField =>
@@ -50,5 +51,9 @@ private[dq] object DqSchema {
       }
     }
     rules.toSeq
+  }
+
+  private def quoteFieldNames(fieldNames: Seq[String]): String = {
+    fieldNames.mkString("`", "`, `", "`")
   }
 }

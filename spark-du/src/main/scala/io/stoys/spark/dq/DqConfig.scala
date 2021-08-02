@@ -4,7 +4,7 @@ case class DqConfig(
     sample_rows: Boolean,
     max_rows_per_rule: Int,
     max_rows: Int,
-    report_extra_columns: Boolean
+    fail_on_extra_columns: Boolean
 )
 
 object DqConfig {
@@ -12,6 +12,6 @@ object DqConfig {
     sample_rows = true,
     max_rows_per_rule = 20,
     max_rows = 1000,
-    report_extra_columns = false
+    fail_on_extra_columns = false
   )
 }
