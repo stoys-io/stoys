@@ -9,7 +9,7 @@ import java.time.Instant
 import scala.util.{Failure, Success, Try}
 
 private[dq] object DqFile {
-  val corruptRecordField: StructField = StructField("__corrupt_record__", StringType, nullable = true)
+  val CORRUPT_RECORD_FIELD_NAME = "__corrupt_record__"
 
   case class FileInput(
       df: DataFrame,
@@ -34,15 +34,17 @@ private[dq] object DqFile {
     }
     val status = dfs.getFileStatus(table.path)
 
-    Try(SparkIO.createDataFrameReader(sparkSession, table).load(table.path).schema) match {
-      case Failure(t) => throw new SToysException(s"Path '${table.path}' failed to read schema (header).", t)
+    val dataFrameReader = SparkIO.createDataFrameReader(sparkSession, table)
+        .option("mode", "PERMISSIVE")
+        .option("columnNameOfCorruptRecord", CORRUPT_RECORD_FIELD_NAME)
+    Try(dataFrameReader.load(table.path).schema) match {
+      case Failure(t) => throw new SToysException(s"Failed to load '${table.path}'.", t)
       case Success(schema) =>
-        val df = SparkIO.createDataFrameReader(sparkSession, table)
-            .schema(StructType(schema.fields :+ corruptRecordField))
-            .option("mode", "PERMISSIVE")
-            .option("columnNameOfCorruptRecord", corruptRecordField.name)
-            .load(table.path)
-        val corruptRecordRule = DqRules.namedRule("", "record_not_corrupted", s"${corruptRecordField.name} IS NULL")
+        val corruptRecordField = StructField(CORRUPT_RECORD_FIELD_NAME, StringType, nullable = true)
+        val targetSchema = StructType(schema.fields.filter(_.name != CORRUPT_RECORD_FIELD_NAME) :+ corruptRecordField)
+        val df = dataFrameReader.schema(targetSchema).load(table.path)
+        val recordNotCorruptedRule = DqRules.namedRule("", "record_not_corrupted",
+          s"$CORRUPT_RECORD_FIELD_NAME IS NULL")
         // TODO: Improve metadata for for delta, iceberg and other advanced tables?
         val metadata = Map(
           "input_path" -> inputPath,
@@ -52,7 +54,7 @@ private[dq] object DqFile {
           "modification_timestamp" -> Instant.ofEpochMilli(status.getModificationTime).toString,
           "table_name" -> table.table_name
         )
-        FileInput(df, Seq(corruptRecordRule), metadata)
+        FileInput(df, Seq(recordNotCorruptedRule), metadata)
     }
   }
 }
