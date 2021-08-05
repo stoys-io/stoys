@@ -6,7 +6,9 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 import scala.reflect.runtime.universe._
 
-class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
+class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule] = Seq.empty,
+    initRules: Seq[DqRule] = Seq.empty, initMetadata: Map[String, String] = Map.empty) {
+
   private val logger = org.log4s.getLogger
 
   private var config: DqConfig = DqConfig.default
@@ -43,7 +45,7 @@ class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
   def computeDqResult(): Dataset[DqResult] = {
     val wideDqDfInfo = computeWideDqDfInfo()
     val schema = StructType(wideDqDfInfo.wideDqDf.schema.fields.take(wideDqDfInfo.columnNames.size))
-    DqFramework.computeDqResult(wideDqDfInfo, config, metadata + ("data_type_json" -> schema.json))
+    DqFramework.computeDqResult(wideDqDfInfo, config, initMetadata ++ metadata + ("data_type_json" -> schema.json))
   }
 
   def computeDqViolationPerRow(): Dataset[DqViolationPerRow] = {
@@ -72,7 +74,7 @@ class Dq[T] private(ds: Dataset[T], rulesWithinDs: Seq[DqRule]) {
   }
 
   private def computeWideDqDfInfo(): DqFramework.WideDqDfInfo = {
-    DqFramework.computeWideDqDfInfo(ds, rulesWithinDs, rules ++ getSchemaRules)
+    DqFramework.computeWideDqDfInfo(ds, rulesWithinDs, initRules ++ rules ++ getSchemaRules)
   }
 }
 
@@ -82,7 +84,7 @@ object Dq {
   }
 
   def fromDataset[T: TypeTag](ds: Dataset[T]): Dq[T] = {
-    new Dq(ds, Seq.empty).metadata(Map("table_name" -> TableName.of(ds).fullTableName()))
+    new Dq(ds, initMetadata = Map("table_name" -> TableName.of(ds).fullTableName()))
   }
 
   def fromDqSql(sparkSession: SparkSession, dqSql: String): Dq[Row] = {
@@ -92,18 +94,18 @@ object Dq {
       throw new SToysException(s"Dq sql reference missing tables: ${missingReferencedTableNames.toList}")
     }
     val wideDqDf = sparkSession.sql(dqSql)
-    new Dq(wideDqDf, parsedDqSql.rules).metadata(Map("dq_sql" -> dqSql))
+    new Dq(wideDqDf, rulesWithinDs = parsedDqSql.rules, initMetadata = Map("dq_sql" -> dqSql))
   }
 
   def fromFileInputPath(sparkSession: SparkSession, inputPath: String): Dq[Row] = {
     val fileInput = DqFile.openFileInputPath(sparkSession, inputPath)
-    new Dq(fileInput.df, Seq.empty).rules(fileInput.rules).metadata(fileInput.metadata)
+    new Dq(fileInput.df, initRules = fileInput.rules, initMetadata = fileInput.metadata)
   }
 
   def fromTableName(sparkSession: SparkSession, tableName: String): Dq[Row] = {
     if (!sparkSession.catalog.tableExists(tableName)) {
       throw new SToysException(s"Table '$tableName' does not exist in current spark session.")
     }
-    new Dq(sparkSession.table(tableName), Seq.empty).metadata(Map("table_name" -> tableName))
+    new Dq(sparkSession.table(tableName), initMetadata = Map("table_name" -> tableName))
   }
 }
