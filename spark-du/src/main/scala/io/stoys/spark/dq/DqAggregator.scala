@@ -12,6 +12,7 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
 
   private val ruleCount = existingReferencedColumnIndexes.size
   private val rowsPerRule = if (config.sample_rows) config.max_rows_per_rule else 0
+  private val defaultMaxHash = if (rowsPerRule <= 0) Long.MinValue else Long.MaxValue
 
   override def zero: DqAgg = {
     DqAgg(
@@ -20,11 +21,8 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
       aggPerRule = Array.fill(ruleCount)(
         DqAggPerRule(
           violations = 0L,
-          minHash = if (rowsPerRule <= 0) Long.MinValue else Long.MaxValue,
-          hashes = Array.fill(rowsPerRule)(-1L),
-          rowIds = Array.fill(rowsPerRule)(-1L),
-          rowSample = Array.fill(rowsPerRule)(null),
-          ruleHashes = Array.fill(rowsPerRule)(null)
+          maxHash = defaultMaxHash,
+          rowSample = Array.fill(rowsPerRule)(null)
         )
       )
     )
@@ -33,34 +31,27 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
   override def reduce(agg: DqAgg, row: DqAggInputRow): DqAgg = {
     var ruleViolationsPerRow = 0
     val columnsViolated = mutable.BitSet.empty
-    var ruleIndex = 0
-    while (ruleIndex < ruleCount) {
-      val ruleHash = row.ruleHashes(ruleIndex)
+    var ri = 0
+    while (ri < ruleCount) {
+      val ruleHash = row.ruleHashes(ri)
       if (ruleHash >= 0) {
         ruleViolationsPerRow += 1
-        existingReferencedColumnIndexes(ruleIndex).foreach(columnsViolated.add)
-        val aggPerRule = agg.aggPerRule(ruleIndex)
+        existingReferencedColumnIndexes(ri).foreach(columnsViolated.add)
+        val aggPerRule = agg.aggPerRule(ri)
         aggPerRule.violations += 1
-        if (ruleHash < aggPerRule.minHash) {
-          aggPerRule.minHash = ruleHash
-          var i = 0
-          while (i < rowsPerRule - 1 && ruleHash > aggPerRule.hashes(i + 1)) {
-            aggPerRule.hashes(i) = aggPerRule.hashes(i + 1)
-            aggPerRule.rowIds(i) = aggPerRule.rowIds(i + 1)
-            aggPerRule.rowSample(i) = aggPerRule.rowSample(i + 1)
-            aggPerRule.ruleHashes(i) = aggPerRule.ruleHashes(i + 1)
-            i += 1
-          }
-          aggPerRule.hashes(i) = ruleHash
-          aggPerRule.rowIds(i) = row.rowId
-          aggPerRule.rowSample(i) = row.rowSample
-          aggPerRule.ruleHashes(i) = row.ruleHashes
-          if (aggPerRule.hashes.head < 0) {
-            aggPerRule.minHash = Long.MaxValue
+        if (ruleHash < aggPerRule.maxHash) {
+          val rowSample = aggPerRule.rowSample
+          val indexOfFirstBiggerHashOrNull = rowSample.indexWhere(rs => rs == null || rs.ruleHashes(ri) > ruleHash)
+          val indexOfFirstNull = rowSample.indexOf(null, indexOfFirstBiggerHashOrNull)
+          val lastIndexToMoveTo = if (indexOfFirstNull >= 0) indexOfFirstNull else rowsPerRule - 1
+          lastIndexToMoveTo.until(indexOfFirstBiggerHashOrNull, -1).foreach(i => rowSample(i) = rowSample(i - 1))
+          rowSample(indexOfFirstBiggerHashOrNull) = row.copy()
+          if (indexOfFirstNull < 0 || indexOfFirstNull == rowsPerRule - 1) {
+            aggPerRule.maxHash = rowSample(indexOfFirstBiggerHashOrNull).ruleHashes(ri)
           }
         }
       }
-      ruleIndex += 1
+      ri += 1
     }
     agg.aggPerTable.rows += 1
     if (ruleViolationsPerRow > 0) {
@@ -78,51 +69,24 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
       merged.aggPerColumn(ci).violations = agg1.aggPerColumn(ci).violations + agg2.aggPerColumn(ci).violations
     }
     merged.aggPerRule.indices.foreach { ri =>
-      val aggPerRule1 = agg1.aggPerRule(ri)
-      val aggPerRule2 = agg2.aggPerRule(ri)
-      val aggPerRuleMerged = merged.aggPerRule(ri)
-      aggPerRuleMerged.minHash = Math.min(aggPerRule1.minHash, aggPerRule2.minHash)
-      var i = rowsPerRule - 1
-      var i1 = rowsPerRule - 1
-      var i2 = rowsPerRule - 1
-      while (i >= 0) {
-        if (aggPerRule1.hashes(i1) > aggPerRule2.hashes(i2)) {
-          aggPerRuleMerged.hashes(i) = aggPerRule1.hashes(i1)
-          aggPerRuleMerged.rowIds(i) = aggPerRule1.rowIds(i1)
-          aggPerRuleMerged.rowSample(i) = aggPerRule1.rowSample(i1)
-          aggPerRuleMerged.ruleHashes(i) = aggPerRule1.ruleHashes(i1)
-          i1 -= 1
-        } else {
-          aggPerRuleMerged.hashes(i) = aggPerRule2.hashes(i2)
-          aggPerRuleMerged.rowIds(i) = aggPerRule2.rowIds(i2)
-          aggPerRuleMerged.rowSample(i) = aggPerRule2.rowSample(i2)
-          aggPerRuleMerged.ruleHashes(i) = aggPerRule2.ruleHashes(i2)
-          i2 -= 1
-        }
-        i -= 1
-      }
-      aggPerRuleMerged.violations = aggPerRule1.violations + aggPerRule2.violations
+      val combinedRowSample = (agg1.aggPerRule(ri).rowSample ++ agg2.aggPerRule(ri).rowSample).filter(_ != null)
+      val combinedRowSampleSorted = combinedRowSample.sortBy(r => Option(r).map(_.ruleHashes(ri)).getOrElse(-1L))
+      merged.aggPerRule(ri).rowSample = combinedRowSampleSorted.take(rowsPerRule)
+      merged.aggPerRule(ri).violations = agg1.aggPerRule(ri).violations + agg2.aggPerRule(ri).violations
+      merged.aggPerRule(ri).maxHash = combinedRowSampleSorted.headOption.map(_.ruleHashes(ri)).getOrElse(defaultMaxHash)
     }
     merged
   }
 
   override def finish(agg: DqAgg): DqAggOutputRow = {
-    val rowSampleWithRuleHashesByRowId = mutable.Map.empty[Long, (Array[String], Array[Long])]
-    agg.aggPerRule.foreach { aggPerRule =>
-      aggPerRule.rowIds.indices.foreach { i =>
-        rowSampleWithRuleHashesByRowId(aggPerRule.rowIds(i)) = (aggPerRule.rowSample(i), aggPerRule.ruleHashes(i))
-      }
-    }
-    val rowIds = rowSampleWithRuleHashesByRowId.keys.filter(_ != -1).toArray.sorted
-
+    val combinedRowSample = agg.aggPerRule.flatMap(_.rowSample).filter(_ != null)
+    val distinctRowSample = combinedRowSample.map(rs => rs.rowId -> rs).toMap.values.toArray
     DqAggOutputRow(
       rows = agg.aggPerTable.rows,
       rowViolations = agg.aggPerTable.violations,
       columnViolations = agg.aggPerColumn.map(_.violations),
       ruleViolations = agg.aggPerRule.map(_.violations),
-      rowIds = rowIds,
-      rowSample = rowIds.map(rowId => rowSampleWithRuleHashesByRowId(rowId)._1),
-      ruleHashes = rowIds.map(rowId => rowSampleWithRuleHashesByRowId(rowId)._2)
+      rowSample = distinctRowSample.sortBy(_.rowId)
     )
   }
 
@@ -131,10 +95,10 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
   override def outputEncoder: Encoder[DqAggOutputRow] = ExpressionEncoder[DqAggOutputRow]()
 }
 
-object DqAggregator {
+private[dq] object DqAggregator {
   case class DqAggInputRow(
       rowId: Long,
-      rowSample: Array[String],
+      row: Array[String],
       ruleHashes: Array[Long]
   )
 
@@ -144,12 +108,9 @@ object DqAggregator {
   )
 
   case class DqAggPerRule(
+      var rowSample: Array[DqAggInputRow],
       var violations: Long,
-      var minHash: Long,
-      var hashes: Array[Long],
-      var rowIds: Array[Long],
-      var rowSample: Array[Array[String]],
-      var ruleHashes: Array[Array[Long]]
+      var maxHash: Long
   )
 
   case class DqAggPerColumn(
@@ -167,8 +128,6 @@ object DqAggregator {
       rowViolations: Long,
       columnViolations: Array[Long],
       ruleViolations: Array[Long],
-      rowIds: Array[Long],
-      rowSample: Array[Array[String]],
-      ruleHashes: Array[Array[Long]]
+      rowSample: Array[DqAggInputRow]
   )
 }

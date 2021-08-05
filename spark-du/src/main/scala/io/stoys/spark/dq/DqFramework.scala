@@ -110,10 +110,9 @@ private[dq] object DqFramework {
         when(col(ri.rule.name), lit(-1)).otherwise(abs(hashExpr)).as(ri.rule.name)
     }
     val dqAggInputRowDf = wideDqDfInfo.wideDqDf.select(
-//      col("*"),
-//      struct(wideDqDfInfo.columnNames.map(col): _*).as("row"),
-      array(wideDqDfInfo.columnNames.map(cn => col(cn).cast(StringType)): _*).as("rowSample"),
       monotonically_increasing_id().as("rowId"),
+//      struct(wideDqDfInfo.columnNames.map(col): _*).as("row"),
+      array(wideDqDfInfo.columnNames.map(cn => col(cn).cast(StringType)): _*).as("row"),
       array(ruleHashesExprs: _*).as("ruleHashes")
     )
     val existingReferencedColumnIndexes = wideDqDfInfo.ruleInfo.map(_.columnNamesInfo.existingIndexes)
@@ -129,9 +128,8 @@ private[dq] object DqFramework {
         wideDqDfInfo.columnNames.zip(aggOutputRow.columnViolations).map(DqColumnStatistics.tupled),
         ruleNames.zip(aggOutputRow.ruleViolations).map(DqRuleStatistics.tupled)
       )
-      val rowSample = aggOutputRow.rowSample.zip(aggOutputRow.ruleHashes).toSeq.map {
-        case (rowSample, ruleHashes) =>
-          DqRowSample(rowSample.toSeq, ruleHashes.toSeq.zip(ruleNames).filter(_._1 >= 0).map(_._2))
+      val rowSample = aggOutputRow.rowSample.map { rowSample =>
+        DqRowSample(rowSample.row.toSeq, rowSample.ruleHashes.toSeq.zip(ruleNames).filter(_._1 >= 0).map(_._2))
       }
       DqResult(resultColumns, resultRules, statistics, rowSample.toSeq, metadata)
     }
