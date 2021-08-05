@@ -3,7 +3,7 @@
 
     <groupId>io.stoys</groupId>
     <artifactId>stoys-parent_2.12</artifactId>
-    <version>0.3-SNAPSHOT</version>
+    <version>0.3</version>
     <packaging>pom</packaging>
 
     <name>stoys</name>
@@ -15,7 +15,7 @@
         <url>https://github.com/stoys-io/stoys.git</url>
         <connection>scm:git:git@github.com:stoys-io/stoys.git</connection>
         <developerConnection>scm:git:git@github.com:stoys-io/stoys.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>stoys-0.3</tag>
     </scm>
 
     <issueManagement>
