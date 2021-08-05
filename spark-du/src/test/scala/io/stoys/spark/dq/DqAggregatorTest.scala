@@ -39,19 +39,28 @@ class DqAggregatorTest extends SparkTestBase {
   }
 
   test("DqAggregator - sampling") {
-    val inputRows = 0.until(8).map(i => DqAggInputRow(i, Array(i.toString, "foo"), Array(-1, 1, i - 4)))
-    val inputRowsDs = inputRows.toDS()
+    val allRowIds = 0.until(8)
+    val inputRows = allRowIds.map(i => DqAggInputRow(i, Array(i.toString, "foo"), Array(i, if (i < 4) -1 else 8 - i)))
+    val inputRowsDs = inputRows.toDS().repartition(3)
     val columnCount = inputRows.headOption.map(_.row.length).getOrElse(0)
-    val existingReferencedColumnIndexes = Seq(Seq(0), Seq(0), Seq(1))
+    val existingReferencedColumnIndexes = Seq(Seq(0), Seq(0, 1))
 
-    def run(dqConfig: DqConfig): Seq[Int] = {
-      val aggregator = new DqAggregator(columnCount, existingReferencedColumnIndexes, dqConfig)
+    def run(config: DqConfig): Seq[Int] = {
+      val aggregator = new DqAggregator(columnCount, existingReferencedColumnIndexes, config)
       inputRowsDs.select(aggregator.toColumn).first().rowSample.map(_.row.head.toInt)
     }
 
-    assert(run(DqConfig.default.copy(max_rows_per_rule = 0)) === Seq.empty)
-    assert(run(DqConfig.default.copy(max_rows_per_rule = 1)) === Seq(0, 4))
-    assert(run(DqConfig.default.copy(max_rows_per_rule = 3)) === Seq(0, 1, 2, 4, 5, 6))
-    assert(run(DqConfig.default.copy(max_rows_per_rule = 10)) === Seq(0, 1, 2, 3, 4, 5, 6, 7))
+    assert(run(DqConfig.default) === allRowIds)
+    assert(run(DqConfig.default.copy(sample_rows = false)) === Seq.empty)
+
+    assert(run(DqConfig.default.copy(max_rows_per_rule = 0, max_rows = 9)) === Seq.empty)
+    assert(run(DqConfig.default.copy(max_rows_per_rule = 1, max_rows = 0)) === Seq.empty)
+    assert(run(DqConfig.default.copy(max_rows_per_rule = 1, max_rows = 9)) === Seq(0, 4))
+    assert(run(DqConfig.default.copy(max_rows_per_rule = 2, max_rows = 9)) === Seq(0, 4, 7))
+    assert(run(DqConfig.default.copy(max_rows_per_rule = 2, max_rows = 2)) === Seq(0, 4))
+    assert(run(DqConfig.default.copy(max_rows_per_rule = 3, max_rows = 9)) === Seq(0, 4, 6, 7))
+    assert(run(DqConfig.default.copy(max_rows_per_rule = 3, max_rows = 3)) === Seq(0, 4, 7))
+    assert(run(DqConfig.default.copy(max_rows_per_rule = 4, max_rows = 9)) === Seq(0, 4, 5, 6, 7))
+    assert(run(DqConfig.default.copy(max_rows_per_rule = 9, max_rows = 9)) === allRowIds)
   }
 }
