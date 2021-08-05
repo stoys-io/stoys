@@ -6,28 +6,38 @@ import org.apache.spark.sql.expressions.Aggregator
 
 import scala.collection.mutable
 
-private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes: Seq[Seq[Int]], config: DqConfig)
-    extends Aggregator[DqAggregator.DqAggInputRow, DqAggregator.DqAgg, DqAggregator.DqAggOutputRow] {
+private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, existingReferencedColumnIndexes: Seq[Seq[Int]],
+    config: DqConfig) extends Aggregator[DqAggregator.DqAggInputRow, DqAggregator.DqAgg, DqAggregator.DqAggOutputRow] {
   import DqAggregator._
 
-  private val ruleCount = existingReferencedColumnIndexes.size
-  private val maxRows = if (config.sample_rows) config.max_rows else 0
-  private val maxRowsPerRule = if (config.sample_rows) config.max_rows_per_rule else 0
-  private val defaultMaxHash = if (maxRowsPerRule <= 0) Long.MinValue else Long.MaxValue
+  private val isSamplingEnabled = config.sample_rows && config.max_rows_per_rule > 0 && config.max_rows > 0
 
   override def zero: DqAgg = {
     DqAgg(
-      aggPerTable = DqAggPerTable(rows = 0L, violations = 0L),
-      aggPerColumn = Array.fill(columnCount)(DqAggPerColumn(violations = 0L)),
+      aggPerTable = DqAggPerTable(
+        rows = 0L,
+        violations = 0L
+      ),
+      aggPerColumn = Array.fill(columnCount)(
+        DqAggPerColumn(
+          violations = 0L
+        )
+      ),
       aggPerRule = Array.fill(ruleCount)(
         DqAggPerRule(
-          firstRow = null,
-          lastRow = null,
-          rowSample = Array.fill(maxRowsPerRule)(null),
-          violations = 0L,
-          maxHash = defaultMaxHash
+          rowSample = if (isSamplingEnabled) zeroRowSample else null,
+          violations = 0L
         )
       )
+    )
+  }
+
+  private def zeroRowSample: DqAggRowSample = {
+    DqAggRowSample(
+      first = null,
+      last = null,
+      hashed = Array.fill(config.max_rows_per_rule)(null),
+      maxHash = Long.MaxValue
     )
   }
 
@@ -36,28 +46,13 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
     val columnsViolated = mutable.BitSet.empty
     var ri = 0
     while (ri < ruleCount) {
-      val ruleHash = row.ruleHashes(ri)
-      if (ruleHash >= 0) {
+      if (row.ruleHashes(ri) >= 0) {
         ruleViolationsPerRow += 1
         existingReferencedColumnIndexes(ri).foreach(columnsViolated.add)
         val aggPerRule = agg.aggPerRule(ri)
         aggPerRule.violations += 1
-        if (aggPerRule.firstRow == null || aggPerRule.firstRow.rowId > row.rowId) {
-          aggPerRule.firstRow = row
-        }
-        if (aggPerRule.lastRow == null || aggPerRule.lastRow.rowId < row.rowId) {
-          aggPerRule.lastRow = row
-        }
-        if (ruleHash < aggPerRule.maxHash) {
-          val rowSample = aggPerRule.rowSample
-          val indexOfFirstBiggerHashOrNull = rowSample.indexWhere(rs => rs == null || rs.ruleHashes(ri) > ruleHash)
-          val indexOfFirstNull = rowSample.indexOf(null, indexOfFirstBiggerHashOrNull)
-          val lastIndexToMoveTo = if (indexOfFirstNull >= 0) indexOfFirstNull else maxRowsPerRule - 1
-          lastIndexToMoveTo.until(indexOfFirstBiggerHashOrNull, -1).foreach(i => rowSample(i) = rowSample(i - 1))
-          rowSample(indexOfFirstBiggerHashOrNull) = row
-          if (indexOfFirstNull < 0 || indexOfFirstNull == maxRowsPerRule - 1) {
-            aggPerRule.maxHash = rowSample(indexOfFirstBiggerHashOrNull).ruleHashes(ri)
-          }
+        if (isSamplingEnabled) {
+          reduceRowSample(aggPerRule.rowSample, row, ri)
         }
       }
       ri += 1
@@ -70,37 +65,82 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
     agg
   }
 
+  private def reduceRowSample(rowSample: DqAggRowSample, row: DqAggInputRow, ri: Int): Unit = {
+    if (rowSample.first == null || rowSample.first.rowId > row.rowId) {
+      rowSample.first = row
+    }
+    if (rowSample.last == null || rowSample.last.rowId < row.rowId) {
+      rowSample.last = row
+    }
+    if (row.ruleHashes(ri) < rowSample.maxHash) {
+      val hashed = rowSample.hashed
+      val indexOfFirstBiggerHashOrNull = hashed.indexWhere(rs => rs == null || rs.ruleHashes(ri) > row.ruleHashes(ri))
+      val indexOfFirstNull = hashed.indexOf(null, indexOfFirstBiggerHashOrNull)
+      val lastIndexToMoveTo = if (indexOfFirstNull >= 0) indexOfFirstNull else config.max_rows_per_rule - 1
+      lastIndexToMoveTo.until(indexOfFirstBiggerHashOrNull, -1).foreach(i => hashed(i) = hashed(i - 1))
+      hashed(indexOfFirstBiggerHashOrNull) = row
+      if (indexOfFirstNull < 0 || indexOfFirstNull == config.max_rows_per_rule - 1) {
+        rowSample.maxHash = hashed(indexOfFirstBiggerHashOrNull).ruleHashes(ri)
+      }
+    }
+  }
+
   override def merge(agg1: DqAgg, agg2: DqAgg): DqAgg = {
-    val merged = zero
-    merged.aggPerTable.rows = agg1.aggPerTable.rows + agg2.aggPerTable.rows
-    merged.aggPerTable.violations = agg1.aggPerTable.violations + agg2.aggPerTable.violations
-    merged.aggPerColumn.indices.foreach { ci =>
-      merged.aggPerColumn(ci).violations = agg1.aggPerColumn(ci).violations + agg2.aggPerColumn(ci).violations
-    }
-    merged.aggPerRule.indices.foreach { ri =>
-      val aggPerRule12 = Seq(agg1, agg2).map(_.aggPerRule(ri))
-      merged.aggPerRule(ri).firstRow = aggPerRule12.map(_.firstRow).filter(_ != null).sortBy(_.rowId).headOption.orNull
-      merged.aggPerRule(ri).lastRow = aggPerRule12.map(_.lastRow).filter(_ != null).sortBy(_.rowId).lastOption.orNull
-      val combinedRowSample = (agg1.aggPerRule(ri).rowSample ++ agg2.aggPerRule(ri).rowSample).filter(_ != null)
-      val combinedRowSampleSorted = combinedRowSample.sortBy(_.ruleHashes(ri))
-      merged.aggPerRule(ri).rowSample = combinedRowSampleSorted.take(maxRowsPerRule)
-      merged.aggPerRule(ri).violations = agg1.aggPerRule(ri).violations + agg2.aggPerRule(ri).violations
-      merged.aggPerRule(ri).maxHash = combinedRowSampleSorted.headOption.map(_.ruleHashes(ri)).getOrElse(defaultMaxHash)
-    }
-    merged
+    DqAgg(
+      aggPerTable = DqAggPerTable(
+        rows = agg1.aggPerTable.rows + agg2.aggPerTable.rows,
+        violations = agg1.aggPerTable.violations + agg2.aggPerTable.violations
+      ),
+      aggPerColumn = 0.until(columnCount).toArray.map { ci =>
+        DqAggPerColumn(
+          violations = agg1.aggPerColumn(ci).violations + agg2.aggPerColumn(ci).violations
+        )
+      },
+      aggPerRule = 0.until(ruleCount).toArray.map { ri =>
+        DqAggPerRule(
+          rowSample = if (isSamplingEnabled) {
+            mergeRowSample(agg1.aggPerRule(ri).rowSample, agg2.aggPerRule(ri).rowSample, ri)
+          } else {
+            null
+          },
+          violations = agg1.aggPerRule(ri).violations + agg2.aggPerRule(ri).violations
+        )
+      }
+    )
+  }
+
+  private def mergeRowSample(rowSample1: DqAggRowSample, rowSample2: DqAggRowSample, ri: Int): DqAggRowSample = {
+    val rowSample12 = Seq(rowSample1, rowSample2).filter(_ != null)
+    val hashed = rowSample12.flatMap(_.hashed).filter(_ != null).sortBy(_.ruleHashes(ri))
+    DqAggRowSample(
+      first = rowSample12.map(_.first).filter(_ != null).sortBy(_.rowId).headOption.orNull,
+      last = rowSample12.map(_.last).filter(_ != null).sortBy(_.rowId).lastOption.orNull,
+      hashed = hashed.take(config.max_rows_per_rule).toArray,
+      maxHash = hashed.headOption.map(_.ruleHashes(ri)).getOrElse(Long.MaxValue)
+    )
   }
 
   override def finish(agg: DqAgg): DqAggOutputRow = {
+    DqAggOutputRow(
+      rows = agg.aggPerTable.rows,
+      rowViolations = agg.aggPerTable.violations,
+      columnViolations = agg.aggPerColumn.map(_.violations),
+      ruleViolations = agg.aggPerRule.map(_.violations),
+      rowSample = if (isSamplingEnabled) finishRowSample(agg.aggPerRule.map(_.rowSample)) else Array.empty
+    )
+  }
+
+  private def finishRowSample(rowSamples: Array[DqAggRowSample]): Array[DqAggInputRow] = {
     case class Tmp(ruleIndex: Int, rowSample: Array[DqAggInputRow], last: Int)
-    val rowSamples = agg.aggPerRule.map(apr => (apr.firstRow +: apr.lastRow +: apr.rowSample).filter(_ != null))
-    val tmpQueue = rowSamples.zipWithIndex.map(rsi => Tmp(rsi._2, rsi._1, 0)).to[mutable.Queue]
+    val flattenRowSamples = rowSamples.map(rs => (rs.first +: rs.last +: rs.hashed).filter(_ != null))
+    val tmpQueue = flattenRowSamples.zipWithIndex.map(rsi => Tmp(rsi._2, rsi._1, 0)).to[mutable.Queue]
     val finalRowSample = mutable.Buffer.empty[DqAggInputRow]
     val seenRowIds = mutable.Set.empty[Long]
     val accepted = Array.fill(ruleCount)(0)
-    while (tmpQueue.nonEmpty && finalRowSample.size < maxRows) {
+    while (tmpQueue.nonEmpty && finalRowSample.size < config.max_rows) {
       val tmp = tmpQueue.dequeue()
       val newRowIndex = tmp.rowSample.indexWhere(rs => !seenRowIds.contains(rs.rowId), tmp.last)
-      if (newRowIndex >= 0 && accepted(tmp.ruleIndex) < maxRowsPerRule) {
+      if (newRowIndex >= 0 && accepted(tmp.ruleIndex) < config.max_rows_per_rule) {
         val newRow = tmp.rowSample(newRowIndex)
         finalRowSample += newRow
         seenRowIds.add(newRow.rowId)
@@ -108,14 +148,7 @@ private[dq] class DqAggregator(columnCount: Int, existingReferencedColumnIndexes
         tmpQueue.enqueue(tmp.copy(last = newRowIndex))
       }
     }
-
-    DqAggOutputRow(
-      rows = agg.aggPerTable.rows,
-      rowViolations = agg.aggPerTable.violations,
-      columnViolations = agg.aggPerColumn.map(_.violations),
-      ruleViolations = agg.aggPerRule.map(_.violations),
-      rowSample = finalRowSample.sortBy(_.rowId).toArray
-    )
+    finalRowSample.sortBy(_.rowId).toArray
   }
 
   override def bufferEncoder: Encoder[DqAgg] = ExpressionEncoder[DqAgg]()
@@ -135,12 +168,16 @@ private[dq] object DqAggregator {
       var violations: Long
   )
 
-  case class DqAggPerRule(
-      var firstRow: DqAggInputRow,
-      var lastRow: DqAggInputRow,
-      var rowSample: Array[DqAggInputRow],
-      var violations: Long,
+  case class DqAggRowSample(
+      var first: DqAggInputRow,
+      var last: DqAggInputRow,
+      var hashed: Array[DqAggInputRow],
       var maxHash: Long
+  )
+
+  case class DqAggPerRule(
+      var rowSample: DqAggRowSample,
+      var violations: Long
   )
 
   case class DqAggPerColumn(

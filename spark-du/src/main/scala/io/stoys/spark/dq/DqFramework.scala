@@ -116,7 +116,9 @@ private[dq] object DqFramework {
       array(ruleHashesExprs: _*).as("ruleHashes")
     )
     val existingReferencedColumnIndexes = wideDqDfInfo.ruleInfo.map(_.columnNamesInfo.existingIndexes)
-    val aggregator = new DqAggregator(wideDqDfInfo.columnNames.size, existingReferencedColumnIndexes, config)
+    val columnCount = wideDqDfInfo.columnNames.size
+    val ruleCount = wideDqDfInfo.ruleInfo.size
+    val aggregator = new DqAggregator(columnCount, ruleCount, existingReferencedColumnIndexes, config)
     val aggOutputRowDs = dqAggInputRowDf.as[DqAggregator.DqAggInputRow].select(aggregator.toColumn)
 
     aggOutputRowDs.map { aggOutputRow =>

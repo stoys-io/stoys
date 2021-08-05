@@ -16,6 +16,7 @@ class DqAggregatorTest extends SparkTestBase {
     )
     val inputRowsDs = inputRows.toDS()
     val columnCount = inputRows.headOption.map(_.row.length).getOrElse(0)
+    val ruleCount = inputRows.headOption.map(_.ruleHashes.length).getOrElse(0)
     val existingReferencedColumnIndexes = Seq(Seq(0), Seq(0), Seq(1))
 
     val expected = DqAggOutputRow(
@@ -26,15 +27,15 @@ class DqAggregatorTest extends SparkTestBase {
       rowSample = inputRows.filter(_.ruleHashes.exists(_ != -1)).toArray
     )
 
-    val aggregator = new DqAggregator(columnCount, existingReferencedColumnIndexes, DqConfig.default)
+    val aggregator = new DqAggregator(columnCount, ruleCount, existingReferencedColumnIndexes, DqConfig.default)
     val actual = inputRowsDs.select(aggregator.toColumn).first()
     assert(Jackson.objectMapper.writeValueAsString(actual) === Jackson.objectMapper.writeValueAsString(expected))
 
-    val emptyDqConfigAggregator =
-      new DqAggregator(columnCount, existingReferencedColumnIndexes, Arbitrary.empty[DqConfig])
+    val emptyDqConfigAggregator = new DqAggregator(
+      columnCount, ruleCount, existingReferencedColumnIndexes, Arbitrary.empty[DqConfig])
     assert(inputRowsDs.select(emptyDqConfigAggregator.toColumn).first().rowSample.length === 0)
-    val singleRowSamplingAggregator =
-      new DqAggregator(columnCount, existingReferencedColumnIndexes, DqConfig.default.copy(max_rows_per_rule = 1))
+    val singleRowSamplingAggregator = new DqAggregator(
+      columnCount, ruleCount, existingReferencedColumnIndexes, DqConfig.default.copy(max_rows_per_rule = 1))
     assert(inputRowsDs.select(singleRowSamplingAggregator.toColumn).first().rowSample.length === 2)
   }
 
@@ -43,10 +44,11 @@ class DqAggregatorTest extends SparkTestBase {
     val inputRows = allRowIds.map(i => DqAggInputRow(i, Array(i.toString, "foo"), Array(i, if (i < 4) -1 else 8 - i)))
     val inputRowsDs = inputRows.toDS().repartition(3)
     val columnCount = inputRows.headOption.map(_.row.length).getOrElse(0)
+    val ruleCount = inputRows.headOption.map(_.ruleHashes.length).getOrElse(0)
     val existingReferencedColumnIndexes = Seq(Seq(0), Seq(0, 1))
 
     def run(config: DqConfig): Seq[Int] = {
-      val aggregator = new DqAggregator(columnCount, existingReferencedColumnIndexes, config)
+      val aggregator = new DqAggregator(columnCount, ruleCount, existingReferencedColumnIndexes, config)
       inputRowsDs.select(aggregator.toColumn).first().rowSample.map(_.row.head.toInt)
     }
 
