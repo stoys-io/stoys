@@ -9,6 +9,7 @@ import org.apache.spark.sql.{Column, DataFrame, Dataset, SparkSession}
 import scala.collection.mutable
 
 private[dq] object DqFramework {
+  val ROW_NUMBER_FIELD_NAME = "__row_number__"
   val MISSING_TOKEN = "__MISSING__"
   val NULL_TOKEN = "__NULL__"
 
@@ -118,20 +119,25 @@ private[dq] object DqFramework {
     val existingReferencedColumnIndexes = wideDqDfInfo.ruleInfo.map(_.columnNamesInfo.existingIndexes)
     val columnCount = wideDqDfInfo.columnNames.size
     val ruleCount = wideDqDfInfo.ruleInfo.size
-    val aggregator = new DqAggregator(columnCount, ruleCount, existingReferencedColumnIndexes, config)
+    val partitionCount = dqAggInputRowDf.rdd.getNumPartitions
+    val sensibleRowNumber = metadata.contains("file_name")
+    val aggregator = new DqAggregator(columnCount, ruleCount, partitionCount, sensibleRowNumber,
+      existingReferencedColumnIndexes, config)
     val aggOutputRowDs = dqAggInputRowDf.as[DqAggregator.DqAggInputRow].select(aggregator.toColumn)
 
     aggOutputRowDs.map { aggOutputRow =>
       val ruleNames = wideDqDfInfo.ruleInfo.map(_.rule.name)
-      val resultColumns = wideDqDfInfo.columnNames.map(cn => DqColumn(cn))
+      val columnNames = wideDqDfInfo.columnNames ++ (if (sensibleRowNumber) Option(ROW_NUMBER_FIELD_NAME) else None)
+      val columnViolations = aggOutputRow.columnViolations.toSeq ++ (if (sensibleRowNumber) Option(0L) else None)
+      val resultColumns = columnNames.map(cn => DqColumn(cn))
       val resultRules = wideDqDfInfo.ruleInfo.map(ri => ri.rule.copy(referenced_column_names = ri.columnNamesInfo.all))
       val statistics = DqStatistics(
-        DqTableStatistic(aggOutputRow.rows, aggOutputRow.rowViolations),
-        wideDqDfInfo.columnNames.zip(aggOutputRow.columnViolations).map(DqColumnStatistics.tupled),
-        ruleNames.zip(aggOutputRow.ruleViolations).map(DqRuleStatistics.tupled)
+        table = DqTableStatistic(aggOutputRow.rows, aggOutputRow.rowViolations),
+        column = columnNames.zip(columnViolations).map(nv => DqColumnStatistics(nv._1, nv._2)),
+        rule = ruleNames.zip(aggOutputRow.ruleViolations).map(nv => DqRuleStatistics(nv._1, nv._2))
       )
-      val rowSample = aggOutputRow.rowSample.map { rowSample =>
-        DqRowSample(rowSample.row.toSeq, rowSample.ruleHashes.toSeq.zip(ruleNames).filter(_._1 >= 0).map(_._2))
+      val rowSample = aggOutputRow.rowSample.map { row =>
+        DqRowSample(row.row.toSeq, row.ruleHashes.toSeq.zip(ruleNames).filter(_._1 >= 0).map(_._2))
       }
       DqResult(resultColumns, resultRules, statistics, rowSample.toSeq, metadata)
     }

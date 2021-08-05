@@ -6,17 +6,21 @@ import org.apache.spark.sql.expressions.Aggregator
 
 import scala.collection.mutable
 
-private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, existingReferencedColumnIndexes: Seq[Seq[Int]],
-    config: DqConfig) extends Aggregator[DqAggregator.DqAggInputRow, DqAggregator.DqAgg, DqAggregator.DqAggOutputRow] {
+private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, partitionCount: Int, sensibleRowNumber: Boolean,
+    existingReferencedColumnIndexes: Seq[Seq[Int]], config: DqConfig)
+    extends Aggregator[DqAggregator.DqAggInputRow, DqAggregator.DqAgg, DqAggregator.DqAggOutputRow] {
+
   import DqAggregator._
 
   private val isSamplingEnabled = config.sample_rows && config.max_rows_per_rule > 0 && config.max_rows > 0
+  private val isRowCountingEnabled = isSamplingEnabled && sensibleRowNumber
 
   override def zero: DqAgg = {
     DqAgg(
       aggPerTable = DqAggPerTable(
         rows = 0L,
-        violations = 0L
+        violations = 0L,
+        maxRowIdPerPartition = if (isRowCountingEnabled) Array.fill(partitionCount)(-1L) else null
       ),
       aggPerColumn = Array.fill(columnCount)(
         DqAggPerColumn(
@@ -62,15 +66,20 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, existingReferen
       agg.aggPerTable.violations += 1
       columnsViolated.foreach(ci => agg.aggPerColumn(ci).violations += 1)
     }
+    if (isRowCountingEnabled) {
+      reduceRowCount(agg.aggPerTable.maxRowIdPerPartition, row.rowId)
+    }
     agg
   }
 
   private def reduceRowSample(rowSample: DqAggRowSample, row: DqAggInputRow, ri: Int): Unit = {
-    if (rowSample.first == null || rowSample.first.rowId > row.rowId) {
-      rowSample.first = row
-    }
-    if (rowSample.last == null || rowSample.last.rowId < row.rowId) {
-      rowSample.last = row
+    if (sensibleRowNumber) {
+      if (rowSample.first == null || rowSample.first.rowId > row.rowId) {
+        rowSample.first = row
+      }
+      if (rowSample.last == null || rowSample.last.rowId < row.rowId) {
+        rowSample.last = row
+      }
     }
     if (row.ruleHashes(ri) < rowSample.maxHash) {
       val hashed = rowSample.hashed
@@ -85,11 +94,21 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, existingReferen
     }
   }
 
+  private def reduceRowCount(maxRowIdPerPartition: Array[Long], rowId: Long): Unit = {
+    val partitionId = (rowId >> PARTITION_ID_BIT_OFFSET).toInt
+    maxRowIdPerPartition(partitionId) = math.max(maxRowIdPerPartition(partitionId), rowId & ROW_INDEX_BIT_MASK)
+  }
+
   override def merge(agg1: DqAgg, agg2: DqAgg): DqAgg = {
     DqAgg(
       aggPerTable = DqAggPerTable(
         rows = agg1.aggPerTable.rows + agg2.aggPerTable.rows,
-        violations = agg1.aggPerTable.violations + agg2.aggPerTable.violations
+        violations = agg1.aggPerTable.violations + agg2.aggPerTable.violations,
+        maxRowIdPerPartition = if (isRowCountingEnabled) {
+          mergeRowCount(agg1.aggPerTable.maxRowIdPerPartition, agg2.aggPerTable.maxRowIdPerPartition)
+        } else {
+          null
+        }
       ),
       aggPerColumn = 0.until(columnCount).toArray.map { ci =>
         DqAggPerColumn(
@@ -120,13 +139,28 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, existingReferen
     )
   }
 
+  private def mergeRowCount(maxRowIdPerPartition1: Array[Long], maxRowIdPerPartition2: Array[Long]): Array[Long] = {
+    0.until(partitionCount).toArray.map(i => math.max(maxRowIdPerPartition1(i), maxRowIdPerPartition2(i)))
+  }
+
   override def finish(agg: DqAgg): DqAggOutputRow = {
+    val rowSample = if (isSamplingEnabled) {
+      finishRowSample(agg.aggPerRule.map(_.rowSample))
+    } else {
+      Array.empty[DqAggInputRow]
+    }
+    val finalRowSample = if (isRowCountingEnabled) {
+      finishRowCount(agg.aggPerTable.maxRowIdPerPartition, rowSample)
+    } else {
+      rowSample
+    }
+
     DqAggOutputRow(
       rows = agg.aggPerTable.rows,
       rowViolations = agg.aggPerTable.violations,
       columnViolations = agg.aggPerColumn.map(_.violations),
       ruleViolations = agg.aggPerRule.map(_.violations),
-      rowSample = if (isSamplingEnabled) finishRowSample(agg.aggPerRule.map(_.rowSample)) else Array.empty
+      rowSample = finalRowSample
     )
   }
 
@@ -151,12 +185,24 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, existingReferen
     finalRowSample.sortBy(_.rowId).toArray
   }
 
+  private def finishRowCount(
+      maxRowIdPerPartition: Array[Long], rowSample: Array[DqAggInputRow]): Array[DqAggInputRow] = {
+    val maxRowIdPrefixSum = maxRowIdPerPartition.scanLeft(0L)((acc, maxRowId) => acc + maxRowId + 1)
+    rowSample.map { rs =>
+      val rowNumber = maxRowIdPrefixSum((rs.rowId >> PARTITION_ID_BIT_OFFSET).toInt) + (rs.rowId & ROW_INDEX_BIT_MASK)
+      rs.copy(row = rs.row :+ rowNumber.toString)
+    }
+  }
+
   override def bufferEncoder: Encoder[DqAgg] = ExpressionEncoder[DqAgg]()
 
   override def outputEncoder: Encoder[DqAggOutputRow] = ExpressionEncoder[DqAggOutputRow]()
 }
 
 private[dq] object DqAggregator {
+  private val PARTITION_ID_BIT_OFFSET = 33
+  private val ROW_INDEX_BIT_MASK = (1L << PARTITION_ID_BIT_OFFSET) - 1
+
   case class DqAggInputRow(
       rowId: Long,
       row: Array[String],
@@ -165,7 +211,8 @@ private[dq] object DqAggregator {
 
   case class DqAggPerTable(
       var rows: Long,
-      var violations: Long
+      var violations: Long,
+      var maxRowIdPerPartition: Array[Long]
   )
 
   case class DqAggRowSample(
