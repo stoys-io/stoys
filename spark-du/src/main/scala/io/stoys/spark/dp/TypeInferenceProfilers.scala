@@ -68,12 +68,12 @@ private[dp] case class IntegralTypeInferenceProfiler(
     integralProfiler.profile(baseProfile, config).map { profile =>
       if (config.type_inference_config.prefer_boolean_for_01
           && integralProfiler.min >= 0 && integralProfiler.max <= 1) {
-        profile.copy(data_type = BooleanType.typeName, enum_values = Seq("0", "1"))
+        profile.copy(data_type = BooleanType.typeName, data_type_json = BooleanType.json, enum_values = Seq("0", "1"))
       } else if (config.type_inference_config.prefer_integer
           && integralProfiler.min >= Int.MinValue && integralProfiler.max <= Int.MaxValue) {
-        profile.copy(data_type = IntegerType.typeName)
+        profile.copy(data_type = IntegerType.typeName, data_type_json = IntegerType.json)
       } else {
-        profile.copy(data_type = LongType.typeName)
+        profile.copy(data_type = LongType.typeName, data_type_json = LongType.json)
       }
     }
   }
@@ -110,9 +110,11 @@ private[dp] case class FractionalTypeInferenceProfiler(
   override def profile(baseProfile: Option[DpColumn], config: DpConfig): Option[DpColumn] = {
     val fp = fractionalProfiler
     if (config.type_inference_config.prefer_float && fp.min >= Float.MinValue && fp.max <= Float.MaxValue) {
-      fp.profile(baseProfile, _.toFloat.toString).map(_.copy(data_type = FloatType.typeName, max_length = Some(4)))
+      fp.profile(baseProfile, _.toFloat.toString)
+          .map(_.copy(data_type = FloatType.typeName, data_type_json = FloatType.json, max_length = Some(4)))
     } else {
-      fp.profile(baseProfile, _.toString).map(_.copy(data_type = DoubleType.typeName, max_length = Some(8)))
+      fp.profile(baseProfile, _.toString)
+          .map(_.copy(data_type = DoubleType.typeName, data_type_json = DoubleType.json, max_length = Some(8)))
     }
   }
 }
@@ -151,6 +153,7 @@ private[dp] case class DateTimeTypeInferenceProfiler(
   override def profile(baseProfile: Option[DpColumn], config: DpConfig): Option[DpColumn] = {
     integralProfiler.profile(baseProfile, v => formatter.format(Instant.ofEpochSecond(v))).map(p => p.copy(
       data_type = dataType.typeName,
+      data_type_json = dataType.json,
       format = Option(format),
       min = p.min.map(reformatItem),
       max = p.max.map(reformatItem),
@@ -266,6 +269,7 @@ private[dp] object TypeInferenceStringProfiler {
           Some(
             profile.copy(
               data_type = dataType.typeName,
+              data_type_json = dataType.json,
               enum_values = enumValues.values,
               count_empty = None,
               count_unique = Some(enumInfo.size),

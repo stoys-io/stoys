@@ -56,11 +56,11 @@ class DpTest extends SparkTestBase {
 
   test("computeDpResult - StringRecord") {
     val stringRecords = Seq(
-      StringRecord("no ", "1", "foo", "-0.0", "2020 🐧 02?20"),
-      StringRecord("YES", "2", "bar", "-.0e1", "2020 🐧 02?19"),
-      StringRecord(" no", "3", "foo", "42.0", "2020 🐧 02?21"),
-      StringRecord("yes", "4", "", "NaN", "2020 🐧 02?20"),
-      StringRecord("", "5", null, null, "")
+      StringRecord("no ", "1", "foo", "-0.0", "2020 🐧 02?20", Array.empty),
+      StringRecord("YES", "2", "bar", "-.0e1", "2020 🐧 02?19", Array("foo")),
+      StringRecord(" no", "3", "foo", "42.0", "2020 🐧 02?21", Array("bar")),
+      StringRecord("yes", "4", "", "NaN", "2020 🐧 02?20", Array("baz")),
+      StringRecord("", "5", null, null, "", null)
     )
 
     val typeInferenceConfig = DpTypeInferenceConfig.default.copy(
@@ -76,12 +76,13 @@ class DpTest extends SparkTestBase {
     )
     val dp = Dp.fromDataset(stringRecords.toDS()).config(config)
     val dpResult = dp.computeDpResult().first()
-    assert(dpResult.columns.map(DpColumnSimplified.apply) === Seq(
-      DpColumnSimplified("b", "boolean", nullable = false).copy(enum_values = Seq("NO", "YES")),
-      DpColumnSimplified("i", "integer", nullable = false),
-      DpColumnSimplified("s", "string", nullable = true),
-      DpColumnSimplified("f", "float", nullable = true),
-      DpColumnSimplified("dt", "date", nullable = false).copy(format = Some("yyyy 🐧 MM?dd"))
+    assert(dpResult.columns.map(DpColumnSchemaSlice.apply) === Seq(
+      DpColumnSchemaSlice("b", "boolean", "\"boolean\"", nullable = false).copy(enum_values = Seq("NO", "YES")),
+      DpColumnSchemaSlice("i", "integer", "\"integer\"", nullable = false),
+      DpColumnSchemaSlice("s", "string", "\"string\"", nullable = true),
+      DpColumnSchemaSlice("f", "float", "\"float\"", nullable = true),
+      DpColumnSchemaSlice("dt", "date", "\"date\"", nullable = false).copy(format = Some("yyyy 🐧 MM?dd")),
+      DpColumnSchemaSlice("a", null, null, nullable = true)
     ))
     val bColumn = dpResult.columns.find(_.name == "b").get
     assert(bColumn.count_zeros === Some(2))
@@ -156,25 +157,27 @@ class DpTest extends SparkTestBase {
 
 object DpTest {
   case class TypedRecord(b: Option[Boolean], i: Int, s: String, f: Option[Float], dt: Date, bd: java.math.BigDecimal)
-  case class StringRecord(b: String, i: String, s: String, f: String, dt: String)
+  case class StringRecord(b: String, i: String, s: String, f: String, dt: String, a: Array[String])
   case class NestedRecord(value: String)
   case class CollectionRecord(a: Array[Int], m: Map[String, Int], n: NestedRecord)
 
-  case class DpColumnSimplified(
+  case class DpColumnSchemaSlice(
       name: String,
       data_type: String,
+      data_type_json: String,
       nullable: Boolean,
       enum_values: Seq[String],
       format: Option[String]
   )
 
-  object DpColumnSimplified {
-    def apply(name: String, dataType: String, nullable: Boolean): DpColumnSimplified = {
-      DpColumnSimplified(name, dataType, nullable, Seq.empty, None)
+  object DpColumnSchemaSlice {
+    def apply(name: String, dataType: String, dataTypeJson: String, nullable: Boolean): DpColumnSchemaSlice = {
+      DpColumnSchemaSlice(name, dataType, dataTypeJson, nullable, Seq.empty, None)
     }
 
-    def apply(dpColumn: DpColumn): DpColumnSimplified = {
-      DpColumnSimplified(dpColumn.name, dpColumn.data_type, dpColumn.nullable, dpColumn.enum_values, dpColumn.format)
+    def apply(dpColumn: DpColumn): DpColumnSchemaSlice = {
+      DpColumnSchemaSlice(dpColumn.name, dpColumn.data_type, dpColumn.data_type_json,
+        dpColumn.nullable, dpColumn.enum_values, dpColumn.format)
     }
   }
 }
