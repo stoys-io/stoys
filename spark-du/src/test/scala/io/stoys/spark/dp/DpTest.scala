@@ -95,7 +95,7 @@ class DpTest extends SparkTestBase {
 
   test("computeDpResult - CollectionRecord") {
     val collectionRecords = Seq(
-      CollectionRecord(Array(1), Map("foo" -> 1),  NestedRecord("foo")),
+      CollectionRecord(Array(1), Map("foo" -> 1), NestedRecord("foo")),
       CollectionRecord(Array(2, 3), Map("bar" -> 2), NestedRecord("bar")),
       CollectionRecord(Array.empty, Map("foo" -> 3, "bar" -> 3), NestedRecord("foo")),
       CollectionRecord(Array.empty, Map.empty, NestedRecord(null)),

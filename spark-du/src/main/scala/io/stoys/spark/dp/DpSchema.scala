@@ -1,7 +1,7 @@
 package io.stoys.spark.dp
 
 import io.stoys.spark.MetadataKeys
-import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{DataType, MetadataBuilder, StructField, StructType}
 
 object DpSchema {
   private def toStructField(column: DpColumn): Option[StructField] = {

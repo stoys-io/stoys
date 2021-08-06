@@ -6,9 +6,9 @@ import org.scalatest.funsuite.AnyFunSuite
 import java.sql.Date
 
 class DqReflectionTest extends AnyFunSuite {
-  import DqRules._
   import DqReflection._
   import DqReflectionTest._
+  import DqRules._
 
   test("getDqFields - Record") {
     val expectedFields = Seq(

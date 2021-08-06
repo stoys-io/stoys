@@ -19,7 +19,8 @@ class DqJoinTest extends SparkTestBase {
   private lazy val itemDs = items.toDS()
 
   test("getDqJoinInfo") {
-    val join = DqJoin.equiJoin(orderDs, itemDs.alias("item__alias"), Seq("item_id"), Seq("id")).joinType(DqJoinType.LEFT)
+    val itemAliasDs = itemDs.alias("item__alias")
+    val join = DqJoin.equiJoin(orderDs, itemAliasDs, Seq("item_id"), Seq("id")).joinType(DqJoinType.LEFT)
     assert(join.getDqJoinInfo === DqJoinInfo(
       left_table_name = "order",
       right_table_name = "item__alias",
