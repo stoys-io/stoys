@@ -171,8 +171,10 @@ private[dp] object AnyProfiler {
       case _: FloatType | DoubleType | _: DecimalType => FractionalProfiler.zero(dataType, config)
       case _: StringType if config.infer_types_from_strings => TypeInferenceStringProfiler.zero(config)
       case _: StringType => StringProfiler.zero(config)
-      case _: ArrayType | BinaryType | _: MapType => IterableProfiler.zero
-      case _: StructType => new StructProfiler()
+      case _: ArrayType => IterableProfiler.zero("array")
+      case _: BinaryType => IterableProfiler.zero("binary")
+      case _: MapType => IterableProfiler.zero("map")
+      case _: StructType => StructProfiler.zero()
     }
     typeProfiler.asInstanceOf[TypeProfiler[Any]]
   }
@@ -465,6 +467,7 @@ private[dp] object FractionalProfiler {
 }
 
 private[dp] class IterableProfiler(
+    typeName: String,
     var countEmpty: Long,
     var minLength: Int,
     var maxLength: Int
@@ -504,9 +507,10 @@ private[dp] class IterableProfiler(
   override def profile(baseProfile: Option[DpColumn], config: DpConfig): Option[DpColumn] = {
     baseProfile.map { profile =>
       profile.count - profile.count_nulls.getOrElse(0L) match {
-        case 0L => profile
+        case 0L => profile.copy(data_type = typeName)
         case _ =>
           profile.copy(
+            data_type = typeName,
             count_empty = Some(countEmpty),
             max_length = Some(maxLength)
           )
@@ -516,8 +520,9 @@ private[dp] class IterableProfiler(
 }
 
 private[dp] object IterableProfiler {
-  def zero: IterableProfiler = {
+  def zero(typeName: String): IterableProfiler = {
     new IterableProfiler(
+      typeName = typeName,
       countEmpty = 0L,
       minLength = 0,
       maxLength = 0
@@ -526,15 +531,21 @@ private[dp] object IterableProfiler {
 }
 
 private[dp] class StructProfiler() extends TypeProfiler[AnyRef] {
-  override def update(value: Any): Double = Double.NaN
+  override def update(value: Any): Double = {
+    Double.NaN
+  }
 
-  override def merge(that: TypeProfiler[AnyRef]): StructProfiler = this
+  override def merge(that: TypeProfiler[AnyRef]): StructProfiler = {
+    this
+  }
 
-  override def profile(baseProfile: Option[DpColumn], config: DpConfig): Option[DpColumn] = baseProfile
+  override def profile(baseProfile: Option[DpColumn], config: DpConfig): Option[DpColumn] = {
+    baseProfile.map(_.copy(data_type = "struct"))
+  }
 }
 
 private[dp] object StructProfiler {
-  def zero: StructProfiler = {
+  def zero(): StructProfiler = {
     new StructProfiler()
   }
 }

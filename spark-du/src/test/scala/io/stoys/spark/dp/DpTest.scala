@@ -82,7 +82,7 @@ class DpTest extends SparkTestBase {
       DpColumnSchemaSlice("s", "string", "\"string\"", nullable = true),
       DpColumnSchemaSlice("f", "float", "\"float\"", nullable = true),
       DpColumnSchemaSlice("dt", "date", "\"date\"", nullable = false).copy(format = Some("yyyy 🐧 MM?dd")),
-      DpColumnSchemaSlice("a", null, null, nullable = true)
+      DpColumnSchemaSlice("a", "array", null, nullable = true)
     ))
     val bColumn = dpResult.columns.find(_.name == "b").get
     assert(bColumn.count_zeros === Some(2))
@@ -109,6 +109,7 @@ class DpTest extends SparkTestBase {
     val aColumn = dpResult.columns.find(_.name == "a").get
     assert(aColumn === emptyDpColumn.copy(
       name = "a",
+      data_type = "array",
       nullable = true,
       count = 5L,
       count_empty = 2L,
@@ -118,6 +119,7 @@ class DpTest extends SparkTestBase {
     val mColumn = dpResult.columns.find(_.name == "m").get
     assert(mColumn === emptyDpColumn.copy(
       name = "m",
+      data_type = "map",
       nullable = true,
       count = 5L,
       count_empty = 1L,
@@ -127,6 +129,7 @@ class DpTest extends SparkTestBase {
     val nColumn = dpResult.columns.find(_.name == "n").get
     assert(nColumn === emptyDpColumn.copy(
       name = "n",
+      data_type = "struct",
       nullable = true,
       count = 5L,
       count_nulls = 1L
