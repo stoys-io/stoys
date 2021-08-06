@@ -139,14 +139,14 @@ private[dp] case class AnyProfiler(
           val normalizedFalseValue = profile.enum_values.headOption.map(_.trim.toUpperCase).orNull
           getDiscretePmfBuckets(profile.items, i => if (i.trim.toUpperCase != normalizedFalseValue) 1 else 0)
         case "boolean" => getDiscretePmfBuckets(profile.items, i => if (i.toBoolean) 1 else 0)
-        case "date" | "timestamp" if profile.format.nonEmpty =>
-          val zoneId = ZoneId.of(profile.extras.getOrElse(TypeProfiler.ZONE_ID_EXTRAS_KEY, Dp.DEFAULT_ZONE_ID))
-          val formatter = DateTimeFormatter.ofPattern(profile.format.orNull).withZone(zoneId)
-          getDiscretePmfBuckets(profile.items, i => LocalDateTime.parse(i, formatter).atZone(zoneId).toEpochSecond)
-        case "timestamp" if profile.format.nonEmpty =>
+        case "date" if profile.format.nonEmpty =>
           val zoneId = ZoneId.of(profile.extras.getOrElse(TypeProfiler.ZONE_ID_EXTRAS_KEY, Dp.DEFAULT_ZONE_ID))
           val formatter = DateTimeFormatter.ofPattern(profile.format.orNull).withZone(zoneId)
           getDiscretePmfBuckets(profile.items, i => LocalDate.parse(i, formatter).atStartOfDay(zoneId).toEpochSecond)
+        case "timestamp" if profile.format.nonEmpty =>
+          val zoneId = ZoneId.of(profile.extras.getOrElse(TypeProfiler.ZONE_ID_EXTRAS_KEY, Dp.DEFAULT_ZONE_ID))
+          val formatter = DateTimeFormatter.ofPattern(profile.format.orNull).withZone(zoneId)
+          getDiscretePmfBuckets(profile.items, i => LocalDateTime.parse(i, formatter).atZone(zoneId).toEpochSecond)
         case _ => None
       }
     }
