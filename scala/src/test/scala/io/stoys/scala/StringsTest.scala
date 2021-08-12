@@ -6,6 +6,21 @@ class StringsTest extends AnyFunSuite {
   import Strings._
   import StringsTest._
 
+  test("toCamelCase") {
+    assert(toCamelCase("Foo") === "Foo")
+    assert(toCamelCase("FooBarBaz") === "FooBarBaz")
+    assert(toCamelCase("foo_bar") === "FooBar")
+    assert(toCamelCase("foo__bar") === "Foo_Bar")
+    assert(toCamelCase("Foo_Bar") === "FooBar")
+    assert(toCamelCase("Foo42") === "Foo42")
+    assert(toCamelCase("Foo42Bar") === "Foo42Bar")
+    assert(toCamelCase("FooBARBaz") === "FooBARBaz")
+    assert(toCamelCase("FOOBARBaz") === "FOOBARBaz")
+    assert(toCamelCase("foo  bar_ Baz") === "Foo_Bar_Baz")
+    assert(toCamelCase("Foo_bAR_Baz") === "FooBARBaz")
+    assert(toCamelCase("foo  Bar__bAZ") === "Foo_Bar_BAZ")
+  }
+
   test("toSnakeCase") {
     assert(toSnakeCase("Foo") === "foo")
     assert(toSnakeCase("FooBarBaz") === "foo_bar_baz")
@@ -17,6 +32,8 @@ class StringsTest extends AnyFunSuite {
     assert(toSnakeCase("FooBARBaz") === "foo_bar_baz")
     assert(toSnakeCase("FOOBARBaz") === "foobar_baz")
     assert(toSnakeCase("foo  bar_ Baz") === "foo__bar__baz")
+    assert(toSnakeCase("Foo_BAR_Baz") === "foo_bar_baz")
+    assert(toSnakeCase("foo  Bar__bAZ") === "foo__bar__b_az")
   }
 
   test("replaceParams by case class") {

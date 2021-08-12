@@ -12,6 +12,16 @@ object Strings {
     PARAM_PATTERN.replaceAllIn(text, m => params(m.group("param")).toString)
   }
 
+  def toCamelCase(value: String): String = {
+    val charactersWithoutLastUnderscores = s"_${value}_".toCharArray.sliding(3).flatMap {
+      case Array(p, c, _) if (p == '_' || p.isWhitespace) && (c == '_' || c.isWhitespace) => Array('_')
+      case Array(p, c, _) if p == '_' || p.isWhitespace => Array(c.toUpper)
+      case Array(_, c, _) if c == '_' || c.isWhitespace => Array.empty[Char]
+      case Array(_, c, _) => Array(c)
+    }
+    charactersWithoutLastUnderscores.mkString
+  }
+
   def toSnakeCase(value: String): String = {
     val charactersWithUnderscores = s"_${value}_".toCharArray.sliding(3).flatMap {
       case Array(_, c, _) if c.isWhitespace => Array('_')
