@@ -41,6 +41,7 @@
     </developers>
 
     <modules>
+        <module>bom</module>
         <module>scala</module>
         <module>spark</module>
         <module>spark-db</module>
