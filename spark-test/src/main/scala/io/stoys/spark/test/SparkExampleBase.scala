@@ -12,7 +12,7 @@ class SparkExampleBase extends SparkTestBase {
 
   override protected def sparkSessionBuilderModifier(builder: SparkSession.Builder): Unit = {
     builder.master("local[*]")
-    builder.config("spark.sql.shuffle.partitions", "4")
+    builder.config("spark.sql.shuffle.partitions", Runtime.getRuntime.availableProcessors())
   }
 
   /**
@@ -30,7 +30,7 @@ class SparkExampleBase extends SparkTestBase {
     val path = tmpDir.resolve(relativeTmpPath)
     val valueJsonString = Jackson.objectMapper.writeValueAsString(value)
     Files.write(path, valueJsonString.getBytes(StandardCharsets.UTF_8))
-    logger.info(s"File $relativeTmpPath written to:\n${highlight(path.toAbsolutePath)}")
+    logger.info(s"File $relativeTmpPath written to:\nfile://${highlight(path.toAbsolutePath)}")
     if (logFullContent) {
       logger.info(s"File $relativeTmpPath content:\n$valueJsonString")
     }
