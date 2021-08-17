@@ -6,6 +6,7 @@ import io.stoys.scala.Params
 case class SparkIOConfig(
     inputPaths: Seq[String],
     inputReshapeConfig: ReshapeConfig,
+    registerInputTables: Boolean,
     outputPath: Option[String],
     writeFormat: Option[String],
     writeMode: Option[String],

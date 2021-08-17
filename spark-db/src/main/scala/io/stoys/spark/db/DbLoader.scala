@@ -42,7 +42,6 @@ class DbLoader(args: Array[String]) {
   def run(): Unit = {
     val sparkSession = SparkUtils.createSparkSession(sparkConfig)
     val sparkIO = new SparkIO(sparkSession, sparkIOConfig)
-    sparkIO.init()
 
     IO.using(DriverManager.getConnection(config.jdbcUrl, jdbcProperties)) { connection =>
       runDbSqlFile(connection, config.beforeLoadScript, params = params)

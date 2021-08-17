@@ -92,7 +92,6 @@ object SparkDagRunner {
     val sparkIOConfig = configuration.readConfig[SparkIOConfig]
 
     IO.using(new SparkIO(sparkSession, sparkIOConfig)) { sparkIO =>
-      sparkIO.init()
       try {
         val sparkDagRunner = new SparkDagRunner(sparkSession, sparkIO, sparkDagRunnerConfig)
         // Main dag has to take the following arguments in constructor (exact types and order) and implement Runnable.

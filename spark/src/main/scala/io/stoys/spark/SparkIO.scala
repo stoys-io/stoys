@@ -4,7 +4,7 @@ import org.apache.spark.sql.{DataFrame, DataFrameReader, Dataset, SparkSession}
 
 import scala.collection.mutable
 
-// Note: Do not forget to call init() first to register config.inputPaths!
+// Note: You might want to call registerAllInputTables.
 class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoCloseable {
   import InputPathResolver._
   import SparkIO._
@@ -19,36 +19,65 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   private val inputTables = mutable.Map.empty[String, SosTable]
   private val outputTables = mutable.Map.empty[String, SosTable]
 
-  def init(): Unit = {
-    addInputPaths(config.inputPaths: _*)
+  private val inputDataFrames = mutable.Map.empty[String, DataFrame]
+
+  config.inputPaths.foreach(addInputPath)
+
+  def addInputPath(path: String): Unit = {
+    inputPaths.append(path)
+    inputPathResolver.resolveInputs(path).foreach {
+      case dag: SosDag => inputDags.append(dag)
+      case table: SosTable => addInputTable(table)
+    }
   }
 
   private def addInputTable(table: SosTable): Unit = {
     inputTables.get(table.table_name) match {
       case Some(existingTable) if existingTable == table =>
-        logger.debug(s"Resolved the same table again ($table).")
+        logger.debug(s"Resolved the same table again: $table")
       case Some(existingTable) =>
-        val msg = s"Resolved conflicting tables for table_name ${table.table_name} ($existingTable and $table)!"
-        logger.error(msg)
-        throw new SToysException(msg)
+        throw new SToysException(s"Resolved conflicting tables `${table.table_name}`: $existingTable vs $table")
       case None =>
         inputTables.put(table.table_name, table)
-        registerInputTable(table)
+        if (config.registerInputTables) {
+          registerInputTable(table.table_name)
+        }
     }
   }
 
-  def addInputPaths(paths: String*): Unit = {
-    paths.foreach { path =>
-      inputPaths.append(path)
-      inputPathResolver.resolveInputs(path).foreach {
-        case dag: SosDag => inputDags.append(dag)
-        case table: SosTable => addInputTable(table)
-      }
+  def listInputTableNames(): Set[String] = {
+    inputTables.keys.toSet
+  }
+
+  def getInputTable(fullTableName: String): Option[SosTable] = {
+    inputTables.get(fullTableName)
+  }
+
+  private def getOrLoadInputTable(fullTableName: String): DataFrame = {
+    inputTables.get(fullTableName) match {
+      case Some(inputTable) =>
+        inputDataFrames.getOrElseUpdate(fullTableName, {
+          logger.debug(s"Loading `$fullTableName` ...")
+          createDataFrameReader(sparkSession, inputTable).load(inputTable.path).as(fullTableName)
+        })
+      case None =>
+        throw new SToysException(s"No table `$fullTableName` has been added yet!")
     }
   }
+
+  private def registerInputTable(fullTableName: String): Unit = {
+    if (!sparkSession.catalog.tableExists(fullTableName)) {
+      logger.debug(s"Registering temp view `$fullTableName` ...")
+      getOrLoadInputTable(fullTableName).createOrReplaceTempView(fullTableName)
+    }
+  }
+
+//  def registerAllInputTables(): Unit = {
+//    inputTables.keys.foreach(registerInputTable)
+//  }
 
   def df[T <: Product](tableName: TableName[T]): DataFrame = {
-    sparkSession.table(tableName.fullTableName())
+    getOrLoadInputTable(tableName.fullTableName())
   }
 
   def ds[T <: Product](tableName: TableName[T]): Dataset[T] = {
@@ -60,11 +89,9 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     val path = s"${config.outputPath.get}/$fullTableName"
     val table = SosTable(fullTableName, path, format, options)
     if (outputTables.contains(table.table_name)) {
-      val msg = s"Writing table with the same table_name ${table.table_name} multiple times!"
-      logger.error(msg)
-      throw new SToysException(msg)
+      throw new SToysException(s"Writing table `${table.table_name}` multiple times!")
     } else {
-      logger.info(s"Writing $fullTableName to $path.")
+      logger.debug(s"Writing `$fullTableName` to $path ...")
       val writer = df.write
       table.format.foreach(writer.format)
       writeMode.foreach(writer.mode)
@@ -83,13 +110,6 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     writeDF(ds.toDF(), tableName.fullTableName(), format, writeMode, options)
   }
 
-  private def registerInputTable(inputTable: SosTable): DataFrame = {
-    logger.info(s"Registering input table $inputTable")
-    val table = createDataFrameReader(sparkSession, inputTable).load(inputTable.path)
-    table.createOrReplaceTempView(inputTable.table_name)
-    table
-  }
-
   override def close(): Unit = {
     config.outputPath.foreach { outputPath =>
       dfs.writeString(s"$outputPath/$DAG_DIR/input_paths.list", inputPaths.mkString("\n"))
@@ -99,10 +119,6 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
       val outputTablesContent = outputTables.map(_._2.toUrlString).toSeq.sorted.mkString("\n")
       dfs.writeString(s"$outputPath/$DAG_DIR/output_tables.list", outputTablesContent)
     }
-  }
-
-  def getInputTable(fullTableName: String): Option[SosTable] = {
-    inputTables.get(fullTableName)
   }
 
   def writeSymLink(path: String): Unit = {
