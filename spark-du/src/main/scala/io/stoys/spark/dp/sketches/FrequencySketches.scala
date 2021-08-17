@@ -20,9 +20,9 @@ private[dp] object FrequencySketch {
 }
 
 private[dp] class DummyFrequencySketch[T] extends FrequencySketch[T] {
-  override def update(value: T): Unit = Unit
+  override def update(value: T): Unit = ()
 
-  override def merge(that: FrequencySketch[T]): Unit = Unit
+  override def merge(that: FrequencySketch[T]): Unit = ()
 
   override def isExact: Boolean = true
 

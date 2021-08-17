@@ -133,7 +133,7 @@ private[dp] case class AnyProfiler(
         case "byte" | "short" | "int" | "long" if profile.enum_values.nonEmpty =>
           val normalizedValues = profile.enum_values.map(_.trim.toUpperCase)
           getDiscretePmfBuckets(profile.items, i => normalizedValues.indexOf(i.trim.toUpperCase))
-        case "byte" | "short" | "int" | "long" => getDiscretePmfBuckets(profile.items, _.toLong)
+        case "byte" | "short" | "int" | "long" => getDiscretePmfBuckets(profile.items, _.toLong.toDouble)
         case "float" | "double" => getDiscretePmfBuckets(profile.items, _.toDouble)
         case "boolean" if profile.enum_values.nonEmpty =>
           val normalizedFalseValue = profile.enum_values.headOption.map(_.trim.toUpperCase).orNull
@@ -142,11 +142,13 @@ private[dp] case class AnyProfiler(
         case "date" if profile.format.nonEmpty =>
           val zoneId = ZoneId.of(profile.extras.getOrElse(TypeProfiler.ZONE_ID_EXTRAS_KEY, Dp.DEFAULT_ZONE_ID))
           val formatter = DateTimeFormatter.ofPattern(profile.format.orNull).withZone(zoneId)
-          getDiscretePmfBuckets(profile.items, i => LocalDate.parse(i, formatter).atStartOfDay(zoneId).toEpochSecond)
+          getDiscretePmfBuckets(
+            profile.items, i => LocalDate.parse(i, formatter).atStartOfDay(zoneId).toEpochSecond.toDouble)
         case "timestamp" if profile.format.nonEmpty =>
           val zoneId = ZoneId.of(profile.extras.getOrElse(TypeProfiler.ZONE_ID_EXTRAS_KEY, Dp.DEFAULT_ZONE_ID))
           val formatter = DateTimeFormatter.ofPattern(profile.format.orNull).withZone(zoneId)
-          getDiscretePmfBuckets(profile.items, i => LocalDateTime.parse(i, formatter).atZone(zoneId).toEpochSecond)
+          getDiscretePmfBuckets(
+            profile.items, i => LocalDateTime.parse(i, formatter).atZone(zoneId).toEpochSecond.toDouble)
         case _ => None
       }
     }
@@ -337,7 +339,7 @@ private[dp] class IntegralProfiler(
           profile.copy(
             min = Some(itemToString(min)),
             max = Some(itemToString(max)),
-            mean = Some(math.round(sum.toDouble / countNonNulls)),
+            mean = Some(math.round(sum.toDouble / countNonNulls.toDouble).toDouble),
             count_zeros = Some(countZero),
             max_length = Some((maxLengthInBits + 7) / 8),
             extras = profile.extras ++ integralExtras
@@ -350,9 +352,9 @@ private[dp] class IntegralProfiler(
     new FractionalProfiler(
       countNaN = 0L,
       countZero = countZero,
-      min = min,
-      max = max,
-      sum = sum,
+      min = min.toDouble,
+      max = max.toDouble,
+      sum = sum.toDouble,
       requiresDoublePrecision = maxLengthInBits >= 24
     )
   }
@@ -404,10 +406,10 @@ private[dp] class FractionalProfiler(
       case f: Float => updateDouble(f)
       case d: Double => updateDouble(d)
       case d: Decimal => updateDouble(d.toDouble)
-      case bd: java.math.BigDecimal => updateDouble(bd.doubleValue())
-      case bi: java.math.BigInteger => updateDouble(bi.doubleValue())
-      case bd: scala.math.BigDecimal => updateDouble(bd.doubleValue())
-      case bi: scala.math.BigInt => updateDouble(bi.doubleValue())
+      case bd: java.math.BigDecimal => updateDouble(bd.doubleValue)
+      case bi: java.math.BigInteger => updateDouble(bi.doubleValue)
+      case bd: scala.math.BigDecimal => updateDouble(bd.doubleValue)
+      case bi: scala.math.BigInt => updateDouble(bi.doubleValue)
     }
   }
 

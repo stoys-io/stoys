@@ -47,7 +47,7 @@ class DpAggregator(config: DpConfig = DpConfig.default) extends Aggregator[Row, 
 
   override def bufferEncoder: Encoder[DpAgg] = Encoders.kryo[DpAgg]
 
-  override def outputEncoder: Encoder[DpResult] = ExpressionEncoder[DpResult]
+  override def outputEncoder: Encoder[DpResult] = ExpressionEncoder[DpResult]()
 }
 
 object DpAggregator {

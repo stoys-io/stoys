@@ -21,9 +21,9 @@ private[dp] object QuantileSketch {
 }
 
 private[dp] class DummyQuantileSketch extends QuantileSketch {
-  override def update(value: Double): Unit = Unit
+  override def update(value: Double): Unit = ()
 
-  override def merge(that: QuantileSketch): Unit = Unit
+  override def merge(that: QuantileSketch): Unit = ()
 
   override def getQuantiles(quantiles: Seq[Double]): Option[Seq[Double]] = None
 

@@ -22,9 +22,9 @@ private[dp] object CardinalitySketch {
 }
 
 private[dp] class DummyCardinalitySketch extends CardinalitySketch {
-  override def update(value: Any): Unit = Unit
+  override def update(value: Any): Unit = ()
 
-  override def merge(that: CardinalitySketch): Unit = Unit
+  override def merge(that: CardinalitySketch): Unit = ()
 
   override def getNumberOfUnique: Option[Long] = None
 }

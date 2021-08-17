@@ -167,7 +167,7 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, partitionCount:
   private def finishRowSample(rowSamples: Array[DqAggRowSample]): Array[DqAggInputRow] = {
     case class Tmp(ruleIndex: Int, rowSample: Array[DqAggInputRow], last: Int)
     val flattenRowSamples = rowSamples.map(rs => (rs.first +: rs.last +: rs.hashed).filter(_ != null))
-    val tmpQueue = flattenRowSamples.zipWithIndex.map(rsi => Tmp(rsi._2, rsi._1, 0)).to[mutable.Queue]
+    val tmpQueue = mutable.Queue[Tmp](flattenRowSamples.zipWithIndex.map(rsi => Tmp(rsi._2, rsi._1, 0)): _*)
     val finalRowSample = mutable.Buffer.empty[DqAggInputRow]
     val seenRowIds = mutable.Set.empty[Long]
     val accepted = Array.fill(ruleCount)(0)
