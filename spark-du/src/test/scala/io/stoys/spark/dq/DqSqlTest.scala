@@ -32,7 +32,7 @@ class DqSqlTest extends SparkTestBase {
     val unnamedRuleDqSql = "SELECT *, id IS NOT NULL FROM table"
     assert(im(unnamedRuleDqSql).contains("needs logical name"))
 
-    val unsupportedLogicalPlanSql = "SHOW TABLES"
+    val unsupportedLogicalPlanSql = "DROP TABLE table"
     assert(im(unsupportedLogicalPlanSql).contains("Unsupported logical plan"))
   }
 

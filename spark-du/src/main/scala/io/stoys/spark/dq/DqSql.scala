@@ -5,6 +5,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{NamedRelation, UnresolvedAlias, UnresolvedStar}
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.catalyst.trees.Origin
 
 import scala.util.matching.Regex
 
@@ -20,56 +21,53 @@ private[dq] object DqSql {
 
   def parseDqSql(sparkSession: SparkSession, dqSql: String): ParsedDqSql = {
     val logicalPlan = sparkSession.sessionState.sqlParser.parsePlan(dqSql)
-    val sqlCommentsExtractor = new SqlCommentsExtractor(dqSql)
-    val rules = extractRules(logicalPlan, sqlCommentsExtractor)
+    val lastProject = findLastProject(logicalPlan)
+//    val primaryRelationshipName = lastProject.toSeq.flatMap(getReferencedRelationshipNames).headOption
+    val rules = lastProject.toSeq.flatMap(lp => extractRules(dqSql, lp))
     val referencedRelationshipNames = getReferencedRelationshipNames(logicalPlan)
-    ParsedDqSql(rules, referencedRelationshipNames)
+    ParsedDqSql(rules, referencedRelationshipNames.toSet)
   }
 
-  @scala.annotation.tailrec
-  private def extractRules(logicalPlan: LogicalPlan, sqlCommentsExtractor: SqlCommentsExtractor): Seq[DqRule] = {
-    // TODO: can we extract primary table alias?
-    logicalPlan match {
-      case gl: GlobalLimit => extractRules(gl.child, sqlCommentsExtractor)
-      case ll: LocalLimit => extractRules(ll.child, sqlCommentsExtractor)
-      case project: Project =>
-        project.projectList.zipWithIndex.flatMap {
-          case (_: UnresolvedStar, 0) => None
-          case (ne, 0) =>
-            val msg = s"The first expression (at ${ne.origin}) of dq sql has to be '*' or 'table.*', not:\n$ne"
-            throw new SToysException(msg)
-          case (a: Alias, _) =>
-            val comment = a.origin.line.flatMap(sqlCommentsExtractor.getLineCommentsBefore)
-            Some(DqRule(a.name, a.child.sql, comment, Seq.empty))
-          case (ua: UnresolvedAlias, _) =>
-            throw new SToysException(s"Dq rule (at ${ua.origin}) needs logical name (like 'rule AS rule_name'):\n$ua")
-          case (ne, _) =>
-            throw new SToysException(s"Unsupported expression type ${ne.getClass.getName} (at ${ne.origin}):\n$ne")
-        }
-      case s: Sort => extractRules(s.child, sqlCommentsExtractor)
-      case w: With => extractRules(w.child, sqlCommentsExtractor)
-      case lp => throw new SToysException(s"Unsupported logical plan type ${lp.getClass.getName}:\n$lp")
+  private def findLastProject(logicalPlan: LogicalPlan): Option[Project] = {
+    val projects = logicalPlan.collect {
+      case c: Command => fail(c.origin, s"Unsupported logical plan ${c.getClass.getName}:\n$c")
+      case p: Project => p
+    }
+    projects.lastOption
+  }
+
+  private def extractRules(dqSql: String, project: Project): Seq[DqRule] = {
+    val sqlCommentsExtractor = new SqlCommentsExtractor(dqSql)
+    project.projectList.zipWithIndex.flatMap {
+      case (_: UnresolvedStar, 0) => None
+      case (ne, 0) => fail(ne.origin, s"The first expression of dq sql has to be '*' or 'table.*', not:\n$ne")
+      case (a: Alias, _) =>
+        val comment = a.origin.line.flatMap(sqlCommentsExtractor.getLineCommentsBefore)
+        Some(DqRule(a.name, a.child.sql, comment, Seq.empty))
+      case (ua: UnresolvedAlias, _) => fail(ua.origin, s"Dq rule needs logical name (like 'rule AS rule_name'):\n$ua")
+      case (ne, _) => fail(ne.origin, s"Unsupported expression type ${ne.getClass.getName}:\n$ne")
     }
   }
 
-  private def getReferencedRelationshipNames(logicalPlan: LogicalPlan): Set[String] = {
-    // TODO: foreach and two mutable sets?
-    def getReferencedRelationshipNamesHelper(lp: LogicalPlan): Seq[String] = {
-      val names = lp.collect {
-        case nr: NamedRelation => Seq(nr.name)
-        case w: With => w.cteRelations.flatMap(r => getReferencedRelationshipNamesHelper(r._2))
-      }
-      names.flatten
+  private def getReferencedRelationshipNames(logicalPlan: LogicalPlan): Seq[String] = {
+    // TODO: collect does not work over With.innerChild
+    val namedRelationNames = logicalPlan.collect {
+      case nr: NamedRelation => nr.name
     }
-
-    val referencedRelationshipNames = getReferencedRelationshipNamesHelper(logicalPlan)
-    val withStatementDefinedRelationshipNames = logicalPlan.collect {
-      case w: With => w.cteRelations.map(_._1)
+    val subqueryAliases = logicalPlan.collect {
+      case sa: SubqueryAlias => sa.alias
     }
-    referencedRelationshipNames.toSet.diff(withStatementDefinedRelationshipNames.flatten.toSet)
+    namedRelationNames.filterNot(subqueryAliases.toSet)
 
     // TODO: fix this function for spark 2.4.x and remove this hack
-    Set.empty
+    Seq.empty
+  }
+
+  @inline
+  private def fail(origin: Origin, message: String): Nothing = {
+    val lineFragment = origin.line.map(_.toString).getOrElse("")
+    val columnFragment = origin.startPosition.map(_.toString).getOrElse("")
+    throw new SToysException(s"Error at line $lineFragment, column $columnFragment: $message")
   }
 
   private class SqlCommentsExtractor(sql: String) {
