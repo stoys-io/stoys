@@ -2,10 +2,10 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.stoys</groupId>
-        <artifactId>stoys-parent_2.12</artifactId>
+        <artifactId>stoys-parent</artifactId>
         <version>0.4.0-SNAPSHOT</version>
     </parent>
-    <artifactId>stoys-spark-du_2.12</artifactId>
+    <artifactId>stoys-spark-du_${scala.compat.version}</artifactId>
 
     <properties>
         <datasketches.version>2.0.0</datasketches.version>

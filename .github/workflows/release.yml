@@ -79,7 +79,6 @@ jobs:
 
       - name: Publish to the Maven Central Repository
         run: |
-          mvn scala-cross-build:change-version -Pscala-2.11
           echo "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | gpg --batch --import
           mvn --no-transfer-progress --batch-mode clean deploy -Dgpg.passphrase=${{ secrets.OSSRH_GPG_PASSPHRASE }} -Pjava-8,scala-2.11,spark-2.4,ossrh-release
         env:
@@ -92,8 +91,6 @@ jobs:
 #          java-version: 8
 #
 #      - name: Publish to GitHub Packages
-#        run: |
-#          mvn scala-cross-build:change-version -Pscala-2.11
-#          mvn --batch-mode clean deploy -Pjava-8,scala-2.11,spark-2.4,github-release
+#        run: mvn --batch-mode clean deploy -Pjava-8,scala-2.11,spark-2.4,github-release
 #        env:
 #          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

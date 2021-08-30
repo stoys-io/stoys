@@ -53,9 +53,7 @@ jobs:
           java-version: 8
 
       - name: mvn clean verify
-        run: |
-          mvn scala-cross-build:change-version -Pscala-2.11
-          mvn -B clean verify -Pjava-8,scala-2.11,spark-2.4
+        run: mvn -B clean verify -Pjava-8,scala-2.11,spark-2.4
 
   test__cutting_edge:
     runs-on: ubuntu-latest
@@ -78,6 +76,4 @@ jobs:
           java-version: 15
 
       - name: mvn clean verify
-        run: |
-          mvn scala-cross-build:change-version -Pscala-2.13
-          mvn -B clean verify -Pjava-15,scala-2.13,spark-3.2
+        run: mvn -B clean verify -Pjava-15,scala-2.13,spark-3.2
