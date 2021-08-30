@@ -4,76 +4,45 @@ on:
   push:
     branches:
       - main
+      - dev
   pull_request:
     branches:
       - main
 
 jobs:
-  test__default:
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: default
+            java_version: 11
+            maven_extra_args: ''
+            experimental: false
+          - name: legacy
+            java_version: 8
+            maven_extra_args: -Pjava-8,scala-2.11,spark-2.4
+            experimental: false
+          - name: future
+            java_version: 15
+            maven_extra_args: -Pjava-15,scala-2.13,spark-3.2
+            experimental: true
 
-    name: default
+    continue-on-error: ${{ matrix.experimental }}
+
+    name: ${{ matrix.name }}
+
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Cache ~/.m2/repository
-        uses: actions/cache@v1
+      - name: Set up JDK
+        uses: actions/setup-java@v2
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-default-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-default-maven-
+          distribution: adopt
+          java-version: ${{ matrix.java_version }}
+          cache: maven
 
-      - name: Set up Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-
-      - name: mvn clean verify
-        run: mvn -B clean verify
-
-  test__legacy:
-    runs-on: ubuntu-latest
-
-    name: legacy
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Cache ~/.m2/repository
-        uses: actions/cache@v1
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-legacy-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-legacy-maven-
-
-      - name: Set up Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 8
-
-      - name: mvn clean verify
-        run: mvn -B clean verify -Pjava-8,scala-2.11,spark-2.4
-
-  test__cutting_edge:
-    runs-on: ubuntu-latest
-
-    name: cutting_edge
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Cache ~/.m2/repository
-        uses: actions/cache@v1
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-cutting_edge-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-cutting_edge-maven-
-
-      - name: Set up Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 15
-
-      - name: mvn clean verify
-        run: mvn -B clean verify -Pjava-15,scala-2.13,spark-3.2
+      - name: Build with Maven
+        run: mvn --batch-mode verify ${{ matrix.maven_extra_args }}

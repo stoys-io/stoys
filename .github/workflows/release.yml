@@ -12,85 +12,63 @@ on:
 #          mvn --batch-mode org.codehaus.mojo:versions-maven-plugin:2.8.1:set -DnewVersion=${GITHUB_REF##*/}
 
 jobs:
-  publish__default:
-    runs-on: ubuntu-latest
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: default
+            java_version: 11
+            maven_extra_args: ''
+            experimental: false
+          - name: legacy
+            java_version: 8
+            maven_extra_args: -Pjava-8,scala-2.11,spark-2.4
+            experimental: false
+#          - name: future
+#            java_version: 15
+#            maven_extra_args: -Pjava-15,scala-2.13,spark-3.2
+#            experimental: true
 
-    name: default
+    continue-on-error: ${{ matrix.experimental }}
+
+    name: ${{ matrix.name }}
+
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Cache ~/.m2/repository
-        uses: actions/cache@v1
+      - name: Set up JDK
+        uses: actions/setup-java@v2
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-default-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-default-maven-
+          distribution: adopt
+          java-version: ${{ matrix.java_version }}
+          cache: maven
 
-      - name: Set up Java for publishing to Maven Central Repository
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-          server-id: ossrh
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
+      - name: Build with Maven
+        run: mvn --batch-mode package ${{ matrix.maven_extra_args }}
 
-      - name: Publish to the Maven Central Repository
-        run: |
-          echo "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | gpg --batch --import
-          mvn --no-transfer-progress --batch-mode clean deploy -Dgpg.passphrase=${{ secrets.OSSRH_GPG_PASSPHRASE }} -Possrh-release
-        env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-
-#      - name: Set up Java for publishing to GitHub Packages
-#        uses: actions/setup-java@v1
-#        with:
-#          java-version: 11
-#
 #      - name: Publish to GitHub Packages
-#        run: |
-#          mvn --batch-mode clean deploy -Pgithub-release
+#        run: mvn --batch-mode deploy ${{ matrix.maven_extra_args }} -Pgithub-release
 #        env:
 #          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  release__legacy:
-    runs-on: ubuntu-latest
-
-    name: legacy
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Cache ~/.m2/repository
-        uses: actions/cache@v1
+      - name: Set up JDK for publishing to Maven Central Repository
+        uses: actions/setup-java@v2
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-legacy-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-legacy-maven-
-
-      - name: Set up Java for publishing to Maven Central Repository
-        uses: actions/setup-java@v1
-        with:
-          java-version: 8
+          distribution: adopt
+          java-version: ${{ matrix.java_version }}
+          cache: maven
           server-id: ossrh
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
+          server-username: OSSRH_USERNAME
+          server-password: OSSRH_TOKEN
+          gpg-private-key: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+          gpg-passphrase: OSSRH_GPG_PASSPHRASE
 
       - name: Publish to the Maven Central Repository
-        run: |
-          echo "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | gpg --batch --import
-          mvn --no-transfer-progress --batch-mode clean deploy -Dgpg.passphrase=${{ secrets.OSSRH_GPG_PASSPHRASE }} -Pjava-8,scala-2.11,spark-2.4,ossrh-release
+        run: mvn --batch-mode deploy -Dgpg.passphrase=${{ secrets.OSSRH_GPG_PASSPHRASE }} ${{ matrix.maven_extra_args }} -Possrh-release
         env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-
-#      - name: Set up Java for publishing to GitHub Packages
-#        uses: actions/setup-java@v1
-#        with:
-#          java-version: 8
-#
-#      - name: Publish to GitHub Packages
-#        run: mvn --batch-mode clean deploy -Pjava-8,scala-2.11,spark-2.4,github-release
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
+          OSSRH_GPG_PASSPHRASE: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
