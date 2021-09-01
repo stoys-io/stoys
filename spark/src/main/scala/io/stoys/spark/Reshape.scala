@@ -78,7 +78,7 @@ object Reshape {
   }
 
   private def normalizeFieldName(field: StructField, config: ReshapeConfig): String = {
-    if (config.normalizedNameMatching) {
+    if (config.normalized_name_matching) {
       Strings.toSnakeCase(field.name.trim)
     } else {
       field.name.trim.toLowerCase
@@ -101,9 +101,9 @@ object Reshape {
     val errors = mutable.Buffer.empty[ReshapeError]
     var column = sourceAttribute.map(a => new Column(a)).getOrElse(getNestedColumn(sourceColumn, sourceField.name))
     if (sourceField.nullable && !targetField.nullable) {
-      if (config.failOnIgnoringNullability) {
+      if (config.fail_on_ignoring_nullability) {
         errors += ReshapeError(normalizedFieldPath, "is nullable but target column is not")
-      } else if (config.fillDefaultValues) {
+      } else if (config.fill_default_values) {
         column = coalesce(column, new Column(defaultValueExpression(targetField.dataType)))
       }
     }
@@ -176,11 +176,11 @@ object Reshape {
       case (_: DateType | TimestampType, _: StringType) if sourceField.metadata.contains(FORMAT_KEY) =>
         column = date_format(column, sourceField.metadata.getString(FORMAT_KEY))
 
-      case (_: StringType, _: DateType) if config.dateFormat.isDefined =>
-        column = to_date(column, config.dateFormat.orNull)
-      case (_: StringType, _: TimestampType) if config.timestampFormat.isDefined =>
-        column = to_timestamp(column, config.timestampFormat.orNull)
-      case (sourceDataType, targetDataType) if config.coerceTypes && Cast.canCast(sourceDataType, targetDataType) =>
+      case (_: StringType, _: DateType) if config.date_format.isDefined =>
+        column = to_date(column, config.date_format.orNull)
+      case (_: StringType, _: TimestampType) if config.timestamp_format.isDefined =>
+        column = to_timestamp(column, config.timestamp_format.orNull)
+      case (sourceDataType, targetDataType) if config.coerce_types && Cast.canCast(sourceDataType, targetDataType) =>
         column = column.cast(targetDataType)
       case (sourceDataType, targetDataType) =>
         errors += ReshapeError(normalizedFieldPath, s"of type $sourceDataType cannot be casted to $targetDataType")
@@ -195,7 +195,7 @@ object Reshape {
 
   private def reshapeStructType(sourceStruct: StructType, targetStruct: StructType, config: ReshapeConfig,
       sourceColumn: Column, sourceAttributes: Seq[Attribute]): Either[List[ReshapeError], List[Column]] = {
-    val fieldMapping = if (config.indexBasedMatching) {
+    val fieldMapping = if (config.index_based_matching) {
       getIndexBasedFieldMapping(sourceStruct, targetStruct, config)
     } else {
       getNameBasedFieldMapping(sourceStruct, targetStruct, config)
@@ -207,9 +207,9 @@ object Reshape {
       val normalizedFieldPath = sourceColumnPath.map(cp => s"$cp.${fm.normalizedName}").getOrElse(fm.normalizedName)
       (fm.sourceFields, fm.targetFields) match {
         case (Nil, target :: Nil) =>
-          if (target.nullable && config.fillMissingNulls) {
+          if (target.nullable && config.fill_missing_nulls) {
             Right(List(new Column(nullValueExpression(target.dataType)).as(target.name)))
-          } else if (config.fillDefaultValues) {
+          } else if (config.fill_default_values) {
             Right(List(new Column(defaultValueExpression(target.dataType)).as(target.name)))
           } else {
             Left(List(ReshapeError(normalizedFieldPath, "is missing")))
@@ -217,7 +217,7 @@ object Reshape {
         case (source :: Nil, target :: Nil) =>
           reshapeStructField(source, target, config, sourceColumn, sourceAttribute = None, normalizedFieldPath)
         case (sources, target :: Nil) =>
-          config.conflictResolution match {
+          config.conflict_resolution match {
             case ReshapeConflictResolution.ERROR | ReshapeConflictResolution.UNDEFINED | null =>
               Left(List(ReshapeError(normalizedFieldPath, s"has ${sources.size} conflicting occurrences")))
             case ReshapeConflictResolution.FIRST =>
@@ -228,10 +228,10 @@ object Reshape {
               reshapeStructField(sources.last, target, config, sourceColumn, lastAttribute, normalizedFieldPath)
           }
         case (sources, Nil) =>
-          if (config.failOnExtraColumn) {
+          if (config.fail_on_extra_column) {
             Left(List(ReshapeError(normalizedFieldPath, s"unexpectedly present (${sources.size}x)")))
           } else {
-            if (config.dropExtraColumns) {
+            if (config.drop_extra_columns) {
               Right(List.empty)
             } else {
               val attributes = sourceAttributes.filter(_.name == fm.normalizedName)
@@ -264,7 +264,7 @@ object Reshape {
     val sourceNormalizedFieldNamesWithIndices = sourceStruct.fields.map(f => normalizeFieldName(f, config)).zipWithIndex
     val targetNormalizedFieldNamesWithIndices = targetStruct.fields.map(f => normalizeFieldName(f, config)).zipWithIndex
 
-    val orderedTargetNormalizedFieldNamesWithIndices = config.sortOrder match {
+    val orderedTargetNormalizedFieldNamesWithIndices = config.sort_order match {
       case ReshapeSortOrder.ALPHABETICAL =>
         targetNormalizedFieldNamesWithIndices.sortBy(_._1)
       case ReshapeSortOrder.SOURCE | ReshapeSortOrder.TARGET | ReshapeSortOrder.UNDEFINED | null =>
@@ -286,7 +286,7 @@ object Reshape {
     val sourceFieldsByName = sourceStruct.fields.toList.groupBy(f => normalizeFieldName(f, config))
     val targetFieldsByName = targetStruct.fields.toList.groupBy(f => normalizeFieldName(f, config))
 
-    val normalizedFieldNames = config.sortOrder match {
+    val normalizedFieldNames = config.sort_order match {
       case ReshapeSortOrder.ALPHABETICAL =>
         (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).distinct.sorted
       case ReshapeSortOrder.SOURCE | ReshapeSortOrder.UNDEFINED | null =>

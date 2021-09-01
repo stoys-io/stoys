@@ -32,7 +32,7 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
         logger.warn(s"Overriding $tableName from ${sosTable.path}!")
         sparkIO.ds[T](tableName)
       case None =>
-        if (config.debug || config.computeCollections.contains(fullTableName)) {
+        if (config.debug || config.compute_collections.contains(fullTableName)) {
           logger.info(s"Computing and writing $fullTableName")
           sparkIO.write(ds, tableName)
         }
@@ -61,7 +61,7 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
   }
 
   private def cached[T](ds: Dataset[T]): Dataset[T] = {
-    if (config.disableCaching) {
+    if (config.disable_caching) {
       ds
     } else {
       ds.cache()
@@ -69,10 +69,10 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
   }
 
   private def writeSharedOutputPath(mergedMetrics: Option[Dataset[Metric]]): Unit = {
-    config.sharedOutputPath.foreach { sharedOutputPath =>
+    config.shared_output_path.foreach { sharedOutputPath =>
       if (SparkUtils.isDeltaSupported) {
         mergedMetrics.foreach { mm =>
-          mm.withColumn("run_timestamp", lit(Timestamp.valueOf(config.runTimestamp)))
+          mm.withColumn("run_timestamp", lit(Timestamp.valueOf(config.run_timestamp)))
               .write.format("delta").mode("append").save(s"$sharedOutputPath/metric")
         }
       } else {
@@ -95,7 +95,7 @@ object SparkDagRunner {
       try {
         val sparkDagRunner = new SparkDagRunner(sparkSession, sparkIO, sparkDagRunnerConfig)
         // Main dag has to take the following arguments in constructor (exact types and order) and implement Runnable.
-        val mainDag = Class.forName(sparkDagRunnerConfig.mainDagClass)
+        val mainDag = Class.forName(sparkDagRunnerConfig.main_dag_class)
             .getDeclaredConstructor(classOf[Configuration], classOf[SparkSession], classOf[SparkDagRunner])
             .newInstance(configuration, sparkSession, sparkDagRunner)
             .asInstanceOf[Runnable]

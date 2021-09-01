@@ -4,11 +4,11 @@ import io.stoys.scala.Params
 
 @Params(allowInRootPackage = true)
 case class SparkIOConfig(
-    inputPaths: Seq[String],
-    inputReshapeConfig: ReshapeConfig,
-    registerInputTables: Boolean,
-    outputPath: Option[String],
-    writeFormat: Option[String],
-    writeMode: Option[String],
-    writeOptions: Map[String, String]
+    input_paths: Seq[String],
+    input_reshape_config: ReshapeConfig,
+    register_input_tables: Boolean,
+    output_path: Option[String],
+    write_format: Option[String],
+    write_mode: Option[String],
+    write_options: Map[String, String]
 )

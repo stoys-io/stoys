@@ -4,8 +4,8 @@ import io.stoys.scala.Params
 
 @Params(allowInRootPackage = true)
 case class SparkConfig(
-    appName: String,
+    app_name: String,
     master: String,
-    // sparkOptions are options for SparkSession.Builder
-    sparkOptions: Map[String, String]
+    // spark_options are options for SparkSession.Builder
+    spark_options: Map[String, String]
 )

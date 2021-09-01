@@ -9,9 +9,9 @@ import scala.jdk.CollectionConverters._
 object SparkUtils {
   def createSparkSession(sparkConfig: SparkConfig): SparkSession = {
     val builder = SparkSession.builder()
-    sparkConfig.sparkOptions.foreach(kv => builder.config(kv._1, kv._2))
+    sparkConfig.spark_options.foreach(kv => builder.config(kv._1, kv._2))
     Option(sparkConfig.master).foreach(builder.master)
-    Option(sparkConfig.appName).foreach(builder.appName)
+    Option(sparkConfig.app_name).foreach(builder.appName)
     builder.getOrCreate()
   }
 

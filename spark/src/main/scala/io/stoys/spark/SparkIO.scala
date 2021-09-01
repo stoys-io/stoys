@@ -21,7 +21,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
 
   private val inputDataFrames = mutable.Map.empty[String, DataFrame]
 
-  config.inputPaths.foreach(addInputPath)
+  config.input_paths.foreach(addInputPath)
 
   def addInputPath(path: String): Unit = {
     inputPaths.append(path)
@@ -39,7 +39,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
         throw new SToysException(s"Resolved conflicting tables `${table.table_name}`: $existingTable vs $table")
       case None =>
         inputTables.put(table.table_name, table)
-        if (config.registerInputTables) {
+        if (config.register_input_tables) {
           registerInputTable(table.table_name)
         }
     }
@@ -81,12 +81,12 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   def ds[T <: Product](tableName: TableName[T]): Dataset[T] = {
-    Reshape.reshape[T](df(tableName), config.inputReshapeConfig)(tableName.typeTag)
+    Reshape.reshape[T](df(tableName), config.input_reshape_config)(tableName.typeTag)
   }
 
   private def writeDF(df: DataFrame, fullTableName: String,
       format: Option[String], writeMode: Option[String], options: Map[String, String]): Unit = {
-    val path = s"${config.outputPath.get}/$fullTableName"
+    val path = s"${config.output_path.get}/$fullTableName"
     val table = SosTable(fullTableName, path, format, options)
     if (outputTables.contains(table.table_name)) {
       throw new SToysException(s"Writing table `${table.table_name}` multiple times!")
@@ -102,7 +102,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   def write[T <: Product](ds: Dataset[T], tableName: TableName[T]): Unit = {
-    write[T](ds, tableName, config.writeFormat, config.writeMode, config.writeOptions)
+    write[T](ds, tableName, config.write_format, config.write_mode, config.write_options)
   }
 
   def write[T <: Product](ds: Dataset[T], tableName: TableName[T],
@@ -111,7 +111,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   override def close(): Unit = {
-    config.outputPath.foreach { outputPath =>
+    config.output_path.foreach { outputPath =>
       dfs.writeString(s"$outputPath/$DAG_DIR/input_paths.list", inputPaths.mkString("\n"))
       dfs.writeString(s"$outputPath/$DAG_DIR/input_dags.list", inputDags.map(_.toUrlString).mkString("\n"))
       val inputTablesContent = inputTables.map(_._2.toUrlString).toSeq.sorted.mkString("\n")
@@ -122,7 +122,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   def writeSymLink(path: String): Unit = {
-    config.outputPath.foreach(outputPath => dfs.writeString(path, SosDag(outputPath).toUrlString))
+    config.output_path.foreach(outputPath => dfs.writeString(path, SosDag(outputPath).toUrlString))
   }
 }
 

@@ -16,7 +16,7 @@ class SparkIOTest extends SparkTestBase {
     writeTmpData("dag/foo", Seq.empty[Option[Int]])
     writeTmpData("non_dag_table", Seq.empty[Option[Int]])
 
-    val config = emptySparkIOConfig.copy(inputPaths = Seq(s"$tmpDir/dag/.dag"), outputPath = Some(s"$tmpDir/out"))
+    val config = emptySparkIOConfig.copy(input_paths = Seq(s"$tmpDir/dag/.dag"), output_path = Some(s"$tmpDir/out"))
     IO.using(new SparkIO(sparkSession, config)) { sparkIO =>
       assert(sparkIO.getInputTable("foo").isDefined)
 
@@ -43,7 +43,7 @@ class SparkIOTest extends SparkTestBase {
   test("SparkIOConfig.registerInputTables") {
     writeTmpData("record", Seq.empty[Record])
 
-    val config = emptySparkIOConfig.copy(inputPaths = Seq(s"$tmpDir/record"), outputPath = Some(s"$tmpDir/out"))
+    val config = emptySparkIOConfig.copy(input_paths = Seq(s"$tmpDir/record"), output_path = Some(s"$tmpDir/out"))
     IO.using(new SparkIO(sparkSession, config)) { sparkIO =>
       assert(Datasets.getAlias(sparkIO.ds(TableName[Record])) === Some("record"))
       assert(!sparkSession.catalog.tableExists("record"))
@@ -53,7 +53,7 @@ class SparkIOTest extends SparkTestBase {
       assert(!sparkSession.catalog.tableExists("record__renamed"))
     }
 
-    IO.using(new SparkIO(sparkSession, config.copy(registerInputTables = true))) { sparkIO =>
+    IO.using(new SparkIO(sparkSession, config.copy(register_input_tables = true))) { sparkIO =>
       assert(Datasets.getAlias(sparkIO.ds(TableName[Record])) === Some("record"))
       assert(sparkSession.catalog.tableExists("record"))
 
