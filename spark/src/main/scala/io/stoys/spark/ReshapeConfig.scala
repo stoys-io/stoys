@@ -1,6 +1,5 @@
 package io.stoys.spark
 
-import io.stoys.scala.Strings
 import org.apache.spark.sql.Dataset
 
 case class ReshapeConfig(
@@ -59,25 +58,9 @@ case class ReshapeConfig(
      */
     fill_missing_nulls: Boolean,
     /**
-     * Should indexed based mapping be used?
-     *
-     * Index based mapping ignores source field names. It assume source fields map to target fields in given order.
-     *
-     * Note:  This is good for example for csv files without headers.
-     *
-     * BEWARE: This is quite error prone for production code if there is any change source type will change.
-     * The changes in source structure may lead to wrong field mapping without any errors.
+     * Which field matching strategy should be used?
      */
-    index_based_matching: Boolean,
-    /**
-     * Should names be normalized before matching?
-     *
-     * Number of normalizations happen - trim, lowercase, replace non-word characters with underscores, etc.
-     * For details see [[Strings.toSnakeCase]].
-     *
-     * Note: Trim (drop leading and trailing spaces) and lower casing happens even when this is disabled!
-     */
-    normalized_name_matching: Boolean,
+    field_matching_strategy: ReshapeFieldMatchingStrategy,
     /**
      * How should the output columns be sorted?
      *
@@ -106,8 +89,7 @@ object ReshapeConfig {
     fail_on_ignoring_nullability = false,
     fill_default_values = false,
     fill_missing_nulls = false,
-    index_based_matching = false,
-    normalized_name_matching = false,
+    field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_DEFAULT,
     sort_order = ReshapeSortOrder.SOURCE,
     date_format = None,
     timestamp_format = None
@@ -125,6 +107,6 @@ object ReshapeConfig {
     conflict_resolution = ReshapeConflictResolution.LAST,
     fill_default_values = true,
     fill_missing_nulls = true,
-    normalized_name_matching = true
+    field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_NORMALIZED
   )
 }

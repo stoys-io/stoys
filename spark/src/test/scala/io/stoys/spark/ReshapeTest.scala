@@ -90,20 +90,20 @@ class ReshapeTest extends SparkTestBase {
     assert(fixedDS.collect() === Seq(Record(null, 42, null)))
   }
 
-  test("index_based_matching") {
+  test("ReshapeFieldMatchingStrategy.INDEX") {
     val fixableDF = sparkSession.sql("SELECT 'foo' AS _c0")
     val caught = intercept[ReshapeException](Reshape.reshape[NestedRecord](fixableDF))
     assert(caught.getMessage.contains("nestedstring is missing"))
-    val config = ReshapeConfig.default.copy(index_based_matching = true)
+    val config = ReshapeConfig.default.copy(field_matching_strategy = ReshapeFieldMatchingStrategy.INDEX)
     val fixedDS = Reshape.reshape[NestedRecord](fixableDF, config)
     assert(fixedDS.collect() === Seq(NestedRecord("foo")))
   }
 
-  test("normalized_name_matching") {
+  test("ReshapeFieldMatchingStrategy.NAME_NORMALIZED") {
     val fixableDF = sparkSession.sql("SELECT 'foo' AS `nested string`")
     val caught = intercept[ReshapeException](Reshape.reshape[NestedRecord](fixableDF))
     assert(caught.getMessage.contains("nestedstring is missing"))
-    val config = ReshapeConfig.default.copy(normalized_name_matching = true)
+    val config = ReshapeConfig.default.copy(field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_NORMALIZED)
     val fixedDS = Reshape.reshape[NestedRecord](fixableDF, config)
     assert(fixedDS.collect() === Seq(NestedRecord("foo")))
   }
@@ -175,6 +175,7 @@ class ReshapeTest extends SparkTestBase {
   test("ReshapeConfig.as behaves like Arbitrary.empty[ReshapeConfig]") {
     val reshapeConfig = Arbitrary.empty[ReshapeConfig].copy(
       conflict_resolution = ReshapeConflictResolution.ERROR,
+      field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_DEFAULT,
       sort_order = ReshapeSortOrder.SOURCE
     )
     assert(reshapeConfig === ReshapeConfig.as)

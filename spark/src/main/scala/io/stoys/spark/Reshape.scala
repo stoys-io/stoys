@@ -77,11 +77,12 @@ object Reshape {
     }
   }
 
-  private def normalizeFieldName(field: StructField, config: ReshapeConfig): String = {
-    if (config.normalized_name_matching) {
-      Strings.toSnakeCase(field.name.trim)
-    } else {
-      field.name.trim.toLowerCase
+  private def getNormalizeFieldName(field: StructField, fieldMatchingStrategy: ReshapeFieldMatchingStrategy): String = {
+    fieldMatchingStrategy match {
+      case ReshapeFieldMatchingStrategy.UNDEFINED | ReshapeFieldMatchingStrategy.NAME_DEFAULT | null =>
+        field.name.trim.toLowerCase
+      case ReshapeFieldMatchingStrategy.NAME_EXACT | ReshapeFieldMatchingStrategy.INDEX => field.name
+      case ReshapeFieldMatchingStrategy.NAME_NORMALIZED => Strings.toSnakeCase(field.name.trim)
     }
   }
 
@@ -195,10 +196,12 @@ object Reshape {
 
   private def reshapeStructType(sourceStruct: StructType, targetStruct: StructType, config: ReshapeConfig,
       sourceColumn: Column, sourceAttributes: Seq[Attribute]): Either[List[ReshapeError], List[Column]] = {
-    val fieldMapping = if (config.index_based_matching) {
-      getIndexBasedFieldMapping(sourceStruct, targetStruct, config)
-    } else {
-      getNameBasedFieldMapping(sourceStruct, targetStruct, config)
+    val fieldMapping = config.field_matching_strategy match {
+      case ReshapeFieldMatchingStrategy.UNDEFINED | ReshapeFieldMatchingStrategy.NAME_DEFAULT
+          | ReshapeFieldMatchingStrategy.NAME_EXACT | ReshapeFieldMatchingStrategy.NAME_NORMALIZED | null =>
+        getNameBasedFieldMapping(sourceStruct, targetStruct, config)
+      case ReshapeFieldMatchingStrategy.INDEX =>
+        getIndexBasedFieldMapping(sourceStruct, targetStruct, config)
     }
 
     val sourceColumnPath = Option(sourceColumn).map(c => usePrettyExpression(c.expr).sql)
@@ -261,9 +264,9 @@ object Reshape {
 
   private def getIndexBasedFieldMapping(sourceStruct: StructType, targetStruct: StructType,
       config: ReshapeConfig): Seq[FieldMapping] = {
-    val sourceNormalizedFieldNamesWithIndices = sourceStruct.fields.map(f => normalizeFieldName(f, config)).zipWithIndex
-    val targetNormalizedFieldNamesWithIndices = targetStruct.fields.map(f => normalizeFieldName(f, config)).zipWithIndex
-
+    def getNormalizedName(sf: StructField) = getNormalizeFieldName(sf, ReshapeFieldMatchingStrategy.NAME_EXACT)
+    val sourceNormalizedFieldNamesWithIndices = sourceStruct.fields.map(getNormalizedName).zipWithIndex
+    val targetNormalizedFieldNamesWithIndices = targetStruct.fields.map(getNormalizedName).zipWithIndex
     val orderedTargetNormalizedFieldNamesWithIndices = config.sort_order match {
       case ReshapeSortOrder.ALPHABETICAL =>
         targetNormalizedFieldNamesWithIndices.sortBy(_._1)
@@ -272,7 +275,6 @@ object Reshape {
     }
     val extraSourceNormalizedFieldNamesWithIndices =
       sourceNormalizedFieldNamesWithIndices.drop(targetNormalizedFieldNamesWithIndices.length)
-
     (orderedTargetNormalizedFieldNamesWithIndices ++ extraSourceNormalizedFieldNamesWithIndices).map {
       case (normalizedFieldName, i) =>
         val sourceField = if (sourceStruct.isDefinedAt(i)) Some(sourceStruct.fields(i)) else None
@@ -283,18 +285,17 @@ object Reshape {
 
   private def getNameBasedFieldMapping(sourceStruct: StructType, targetStruct: StructType,
       config: ReshapeConfig): Seq[FieldMapping] = {
-    val sourceFieldsByName = sourceStruct.fields.toList.groupBy(f => normalizeFieldName(f, config))
-    val targetFieldsByName = targetStruct.fields.toList.groupBy(f => normalizeFieldName(f, config))
-
+    def getNormalizedName(sf: StructField) = getNormalizeFieldName(sf, config.field_matching_strategy)
+    val sourceFieldsByName = sourceStruct.fields.toList.groupBy(getNormalizedName)
+    val targetFieldsByName = targetStruct.fields.toList.groupBy(getNormalizedName)
     val normalizedFieldNames = config.sort_order match {
       case ReshapeSortOrder.ALPHABETICAL =>
-        (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).distinct.sorted
+        (sourceStruct.fields ++ targetStruct.fields).map(getNormalizedName).distinct.sorted
       case ReshapeSortOrder.SOURCE | ReshapeSortOrder.UNDEFINED | null =>
-        (sourceStruct.fields ++ targetStruct.fields).map(f => normalizeFieldName(f, config)).distinct
+        (sourceStruct.fields ++ targetStruct.fields).map(getNormalizedName).distinct
       case ReshapeSortOrder.TARGET =>
-        (targetStruct.fields ++ sourceStruct.fields).map(f => normalizeFieldName(f, config)).distinct
+        (targetStruct.fields ++ sourceStruct.fields).map(getNormalizedName).distinct
     }
-
     normalizedFieldNames.map { normalizedFieldName =>
       val sourceFields = sourceFieldsByName.getOrElse(normalizedFieldName, List.empty)
       val targetFields = targetFieldsByName.getOrElse(normalizedFieldName, List.empty)
