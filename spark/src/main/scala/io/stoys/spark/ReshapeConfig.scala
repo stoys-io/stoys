@@ -59,6 +59,17 @@ case class ReshapeConfig(
      */
     fillMissingNulls: Boolean,
     /**
+     * Should indexed based mapping be used?
+     *
+     * Index based mapping ignores source field names. It assume source fields map to target fields in given order.
+     *
+     * Note:  This is good for example for csv files without headers.
+     *
+     * BEWARE: This is quite error prone for production code if there is any change source type will change.
+     * The changes in source structure may lead to wrong field mapping without any errors.
+     */
+    indexBasedMatching: Boolean,
+    /**
      * Should names be normalized before matching?
      *
      * Number of normalizations happen - trim, lowercase, replace non-word characters with underscores, etc.
@@ -95,6 +106,7 @@ object ReshapeConfig {
     failOnIgnoringNullability = false,
     fillDefaultValues = false,
     fillMissingNulls = false,
+    indexBasedMatching = false,
     normalizedNameMatching = false,
     sortOrder = ReshapeSortOrder.SOURCE,
     dateFormat = None,

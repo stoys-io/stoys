@@ -90,6 +90,15 @@ class ReshapeTest extends SparkTestBase {
     assert(fixedDS.collect() === Seq(Record(null, 42, null)))
   }
 
+  test("indexBasedMatching") {
+    val fixableDF = sparkSession.sql("SELECT 'foo' AS _c0")
+    val caught = intercept[ReshapeException](Reshape.reshape[NestedRecord](fixableDF))
+    assert(caught.getMessage.contains("nestedstring is missing"))
+    val config = ReshapeConfig.default.copy(indexBasedMatching = true)
+    val fixedDS = Reshape.reshape[NestedRecord](fixableDF, config)
+    assert(fixedDS.collect() === Seq(NestedRecord("foo")))
+  }
+
   test("normalizedNameMatching") {
     val fixableDF = sparkSession.sql("SELECT 'foo' AS `nested string`")
     val caught = intercept[ReshapeException](Reshape.reshape[NestedRecord](fixableDF))
