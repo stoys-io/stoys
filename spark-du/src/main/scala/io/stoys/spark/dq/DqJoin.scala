@@ -52,7 +52,7 @@ class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Datase
 
   def computeDqJoinResult(): Dataset[DqJoinResult] = {
     import joinKeyCountsDs.sparkSession.implicits._
-    val key = DigestUtils.sha256Hex(Jackson.objectMapper.writeValueAsString(getDqJoinInfo)).take(7)
+    val key = DigestUtils.sha256Hex(Jackson.json.writeValueAsString(getDqJoinInfo)).take(7)
     val dqJoinInfo = Seq(getDqJoinInfo).toDS()
     val dqJoinStatistics = computeDqJoinStatistics()
     val dqResult = computeDqResult()

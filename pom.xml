@@ -63,7 +63,7 @@
         <commons-io.version>2.11.0</commons-io.version>
         <commons-text.version>1.9</commons-text.version>
         <delta.version>1.0.0</delta.version>
-        <jackson.version>2.12.4</jackson.version>
+        <jackson.version>2.12.5</jackson.version>
         <log4s.version>1.10.0</log4s.version>
         <persistence-api.version>2.2</persistence-api.version>
         <scala-collection-compat.version>2.5.0</scala-collection-compat.version>
@@ -445,7 +445,6 @@
             <properties>
                 <scala.version>2.11.12</scala.version>
                 <scala.compat.version>2.11</scala.compat.version>
-                <jackson.version>2.9.6</jackson.version>
             </properties>
         </profile>
         <profile>

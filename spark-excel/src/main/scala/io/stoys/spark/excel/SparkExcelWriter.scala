@@ -1,6 +1,6 @@
 package io.stoys.spark.excel
 
-import io.stoys.scala.Configuration
+import io.stoys.scala.Jackson
 import io.stoys.spark.SToysException
 import io.stoys.spark.datasources.BinaryFilePerRow
 import io.stoys.spark.excel.ExcelWriter.ColumnInfo
@@ -26,7 +26,7 @@ object SparkExcelWriter {
   }
 
   def toExcel(row: Row, configMap: Map[String, Any]): Array[Byte] = {
-    val config = Configuration.updateCaseClassWithConfigMap(ExcelWriterConfig.default, configMap)
+    val config = Jackson.json.updateValue(ExcelWriterConfig.default.copy(), configMap)
     workbookRowToExcelByteArray(row, config)
   }
 

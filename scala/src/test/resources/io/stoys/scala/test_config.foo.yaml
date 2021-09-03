@@ -1,4 +1,4 @@
-string: foo
+str: foo
 seq:
   - foo
 map:

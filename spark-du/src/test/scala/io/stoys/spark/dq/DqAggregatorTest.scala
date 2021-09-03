@@ -32,7 +32,7 @@ class DqAggregatorTest extends SparkTestBase {
     val aggregator = new DqAggregator(columnCount, ruleCount, partitionCount,
       sensibleRowNumber = false, existingReferencedColumnIndexes, DqConfig.default)
     val actual = inputRowsDs.select(aggregator.toColumn).first()
-    assert(Jackson.objectMapper.writeValueAsString(actual) === Jackson.objectMapper.writeValueAsString(expected))
+    assert(Jackson.json.writeValueAsString(actual) === Jackson.json.writeValueAsString(expected))
 
     val emptyDqConfigAggregator = new DqAggregator(columnCount, ruleCount, partitionCount,
       sensibleRowNumber = false, existingReferencedColumnIndexes, Arbitrary.empty[DqConfig])

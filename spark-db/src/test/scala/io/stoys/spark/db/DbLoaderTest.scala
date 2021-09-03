@@ -149,6 +149,6 @@ object DbLoaderTest {
     } else {
       dbJsonString
     }
-    Jackson.objectMapper.readValue[T](jsonString)
+    Jackson.json.readValue[T](jsonString)
   }
 }

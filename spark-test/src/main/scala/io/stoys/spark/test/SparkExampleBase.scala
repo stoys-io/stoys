@@ -28,7 +28,7 @@ class SparkExampleBase extends SparkTestBase {
    */
   def writeValueAsJsonTmpFile[T](relativeTmpPath: String, value: T, logFullContent: Boolean = false): Path = {
     val path = tmpDir.resolve(relativeTmpPath)
-    val valueJsonString = Jackson.objectMapper.writeValueAsString(value)
+    val valueJsonString = Jackson.json.writeValueAsString(value)
     Files.write(path, valueJsonString.getBytes(StandardCharsets.UTF_8))
     logger.info(s"File $relativeTmpPath written to:\nfile://${highlight(path.toAbsolutePath)}")
     if (logFullContent) {
