@@ -159,6 +159,7 @@
                 <groupId>io.delta</groupId>
                 <artifactId>delta-core_${scala.compat.version}</artifactId>
                 <version>${delta.version}</version>
+                <scope>provided</scope>
             </dependency>
 
             <!-- scala libs -->
@@ -444,7 +445,6 @@
             <properties>
                 <scala.version>2.11.12</scala.version>
                 <scala.compat.version>2.11</scala.compat.version>
-                <delta.version>0.6.1</delta.version>
                 <jackson.version>2.9.6</jackson.version>
             </properties>
         </profile>

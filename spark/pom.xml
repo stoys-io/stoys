@@ -34,13 +34,6 @@
             <artifactId>spark-sql_${scala.compat.version}</artifactId>
         </dependency>
 
-        <!-- TODO: Move delta dependency back here from profiles once it is published for Scala 2.13. -->
-        <!--&lt;!&ndash; spark libraries &ndash;&gt;-->
-        <!--<dependency>-->
-        <!--    <groupId>io.delta</groupId>-->
-        <!--    <artifactId>delta-core_${scala.compat.version}</artifactId>-->
-        <!--</dependency>-->
-
         <!-- test -->
         <dependency>
             <groupId>org.scalatest</groupId>
@@ -85,10 +78,6 @@
         <profile>
             <id>scala-2.11</id>
             <dependencies>
-                <dependency>
-                    <groupId>io.delta</groupId>
-                    <artifactId>delta-core_${scala.compat.version}</artifactId>
-                </dependency>
             </dependencies>
         </profile>
         <profile>
@@ -107,6 +96,11 @@
                     <groupId>org.scala-lang.modules</groupId>
                     <artifactId>scala-parallel-collections_${scala.compat.version}</artifactId>
                 </dependency>
+                <!-- TODO: enable delta for scala 2.13 once it is published for 2.13 -->
+                <!--<dependency>-->
+                <!--    <groupId>io.delta</groupId>-->
+                <!--    <artifactId>delta-core_${scala.compat.version}</artifactId>-->
+                <!--</dependency>-->
             </dependencies>
         </profile>
     </profiles>
