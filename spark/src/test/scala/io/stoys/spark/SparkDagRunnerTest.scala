@@ -48,8 +48,8 @@ class SparkDagRunnerTest extends SparkTestBase {
     assert(readListLines(s"$outputDir/.dag/input_tables.list")
         === Set(s"file:$inputDir/bar?sos-table_name=bar", s"file:$inputDir/foo?sos-table_name=foo"))
     assert(readListLines(s"$outputDir/.dag/output_tables.list") === Set(
-      s"$outputDir/pack?sos-table_name=pack&sos-format=parquet",
-      s"$outputDir/metric?sos-table_name=metric&sos-format=parquet"))
+      s"$outputDir/pack?sos-format=parquet&sos-table_name=pack",
+      s"$outputDir/metric?sos-format=parquet&sos-table_name=metric"))
     assert(readListLines(s"$sharedOutputDir/latest.list")
         === Set(s"$outputDir?sos-listing_strategy=dag"))
   }

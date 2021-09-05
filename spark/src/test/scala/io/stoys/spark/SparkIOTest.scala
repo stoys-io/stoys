@@ -2,7 +2,7 @@ package io.stoys.spark
 
 import io.stoys.scala.{Arbitrary, IO}
 import io.stoys.spark.test.SparkTestBase
-import org.apache.spark.sql.AnalysisException
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StructField}
 
 class SparkIOTest extends SparkTestBase {
   import SparkIOTest._
@@ -40,10 +40,10 @@ class SparkIOTest extends SparkTestBase {
     assert(dfs.exists(s"$tmpDir/out/.dag"))
   }
 
-  test("SparkIOConfig.registerInputTables") {
+  test("SparkIOConfig.register_input_tables") {
     writeTmpData("record", Seq.empty[Record])
 
-    val config = emptySparkIOConfig.copy(input_paths = Seq(s"$tmpDir/record"), output_path = Some(s"$tmpDir/out"))
+    val config = emptySparkIOConfig.copy(input_paths = Seq(s"$tmpDir/record"))
     IO.using(new SparkIO(sparkSession, config)) { sparkIO =>
       assert(Datasets.getAlias(sparkIO.ds(TableName[Record])) === Some("record"))
       assert(!sparkSession.catalog.tableExists("record"))
@@ -65,8 +65,29 @@ class SparkIOTest extends SparkTestBase {
       assert(Datasets.getAlias(sparkSession.table("record__renamed")) === Some("record__renamed"))
     }
   }
+
+  test("reshape_config") {
+    writeTmpData("record", Seq(Record(42)))
+    val recordConfig = emptySparkIOConfig.copy(input_paths = Seq(s"$tmpDir/record"))
+    IO.using(new SparkIO(sparkSession, recordConfig)) { sparkIO =>
+      assert(sparkIO.ds(TableName[Record]).schema.fields === Array(StructField("i", IntegerType)))
+    }
+
+    writeTmpData("different_record", Seq(DifferentConfig(42)))
+    val badRecordConfig = emptySparkIOConfig.copy(
+      input_paths = Seq(
+        s"$tmpDir/different_record?sos-table_name=record&sos-reshape_config__field_matching_strategy=INDEX"),
+      input_reshape_config = ReshapeConfig.default
+    )
+    IO.using(new SparkIO(sparkSession, badRecordConfig)) { sparkIO =>
+      assert(sparkIO.df(TableName[Record]).schema.fields === Array(StructField("foo", DoubleType)))
+      assert(sparkIO.ds(TableName[Record]).schema.fields === Array(StructField("i", IntegerType)))
+      assert(!sparkSession.catalog.tableExists("different_record"))
+    }
+  }
 }
 
 object SparkIOTest {
-  case class Record(s: String)
+  case class Record(i: Int)
+  case class DifferentConfig(foo: Double)
 }

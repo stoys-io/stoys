@@ -88,9 +88,11 @@ object Configuration {
   private val DEFAULT_ENVIRONMENTS = Seq("local")
   private val PROPERTIES_PATH_SEPARATOR = "__"
 
+  private val javaPropsMapper = Jackson.setMapperBuilderDefaults(JavaPropsMapper.builder()).build()
   private val javaPropsSchema = JavaPropsSchema.emptySchema().withPathSeparator(PROPERTIES_PATH_SEPARATOR)
-  private val propsReader = Jackson.setMapperBuilderDefaults(JavaPropsMapper.builder()).build().reader(javaPropsSchema)
-  private val yamlReader = Jackson.setMapperBuilderDefaults(YAMLMapper.builder()).build().reader()
+  private[stoys] val propsReader = javaPropsMapper.reader(javaPropsSchema)
+  private[stoys] val propsWriter = javaPropsMapper.writer(javaPropsSchema)
+  private[stoys] val yamlReader = Jackson.setMapperBuilderDefaults(YAMLMapper.builder()).build().reader()
 
   def apply(args: String*): Configuration = {
     apply(args.toArray)

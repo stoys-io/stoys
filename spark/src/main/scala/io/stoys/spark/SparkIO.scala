@@ -1,5 +1,6 @@
 package io.stoys.spark
 
+import io.stoys.scala.Jackson
 import org.apache.spark.sql.{DataFrame, DataFrameReader, Dataset, SparkSession}
 
 import scala.collection.mutable
@@ -32,7 +33,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   }
 
   private def addInputTable(table: SosTable): Unit = {
-    inputTables.get(table.table_name) match {
+    getInputTable(table.table_name) match {
       case Some(existingTable) if existingTable == table =>
         logger.debug(s"Resolved the same table again: $table")
       case Some(existingTable) =>
@@ -53,8 +54,8 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     inputTables.get(fullTableName)
   }
 
-  private def getOrLoadInputTable(fullTableName: String): DataFrame = {
-    inputTables.get(fullTableName) match {
+  private def getOrLoadDataFrame(fullTableName: String): DataFrame = {
+    getInputTable(fullTableName) match {
       case Some(inputTable) =>
         inputDataFrames.getOrElseUpdate(fullTableName, {
           logger.debug(s"Loading `$fullTableName` ...")
@@ -68,26 +69,26 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   private def registerInputTable(fullTableName: String): Unit = {
     if (!sparkSession.catalog.tableExists(fullTableName)) {
       logger.debug(s"Registering temp view `$fullTableName` ...")
-      getOrLoadInputTable(fullTableName).createOrReplaceTempView(fullTableName)
+      getOrLoadDataFrame(fullTableName).createOrReplaceTempView(fullTableName)
     }
   }
 
-//  def registerAllInputTables(): Unit = {
-//    inputTables.keys.foreach(registerInputTable)
-//  }
-
   def df[T <: Product](tableName: TableName[T]): DataFrame = {
-    getOrLoadInputTable(tableName.fullTableName())
+    getOrLoadDataFrame(tableName.fullTableName())
   }
 
   def ds[T <: Product](tableName: TableName[T]): Dataset[T] = {
-    Reshape.reshape[T](df(tableName), config.input_reshape_config)(tableName.typeTag)
+    // TODO: the reshaping should be part of the cache but it requires to scan entity classes first
+    val dataFrame = df(tableName)
+    val reshapeConfigPropsOverrides = getInputTable(tableName.fullTableName()).map(_.reshape_config_props_overrides)
+    val reshapeConfig = Jackson.json.updateValue(config.input_reshape_config.copy(), reshapeConfigPropsOverrides)
+    Reshape.reshape[T](dataFrame, reshapeConfig)(tableName.typeTag).as(tableName.fullTableName())
   }
 
   private def writeDF(df: DataFrame, fullTableName: String,
       format: Option[String], writeMode: Option[String], options: Map[String, String]): Unit = {
     val path = s"${config.output_path.get}/$fullTableName"
-    val table = SosTable(fullTableName, path, format, options)
+    val table = SosTable(path, fullTableName, format, options, Map.empty)
     if (outputTables.contains(table.table_name)) {
       throw new SToysException(s"Writing table `${table.table_name}` multiple times!")
     } else {
