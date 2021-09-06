@@ -472,18 +472,6 @@
                     </dependency>
                 </dependencies>
             </dependencyManagement>
-            <repositories>
-                <repository>
-                    <id>apache.snapshots</id>
-                    <url>https://repository.apache.org/snapshots/</url>
-                    <releases>
-                        <enabled>false</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>true</enabled>
-                    </snapshots>
-                </repository>
-            </repositories>
         </profile>
         <profile>
             <id>spark-2.4</id>
@@ -508,6 +496,18 @@
             <properties>
                 <spark.version>3.2.0-SNAPSHOT</spark.version>
             </properties>
+            <repositories>
+                <repository>
+                    <id>apache.snapshots</id>
+                    <url>https://repository.apache.org/snapshots/</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
         </profile>
 
         <profile>
