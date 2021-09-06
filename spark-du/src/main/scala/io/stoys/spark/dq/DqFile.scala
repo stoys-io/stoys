@@ -1,6 +1,6 @@
 package io.stoys.spark.dq
 
-import io.stoys.spark.InputPathResolver.SosTable
+import io.stoys.spark.InputPathResolver.TableInfo
 import io.stoys.spark.{Dfs, InputPathResolver, SToysException, SparkIO}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -22,7 +22,7 @@ private[dq] object DqFile {
     val inputPathResolver = new InputPathResolver(dfs)
 
     val table = inputPathResolver.resolveInputs(inputPath) match {
-      case Seq(table: SosTable) => table
+      case Seq(table: TableInfo) => table
       case _ => throw new SToysException(s"Input path '$inputPath' has to resolved into a single table.")
     }
 
@@ -52,7 +52,7 @@ private[dq] object DqFile {
           "file_name" -> dfs.path(table.path).getName,
           "size" -> dfs.getContentSummary(table.path).getLength.toString,
           "modification_timestamp" -> Instant.ofEpochMilli(status.getModificationTime).toString,
-          "table_name" -> table.table_name
+          "table_name" -> table.tableName
         )
         FileInput(df, Seq(recordNotCorruptedRule), metadata)
     }

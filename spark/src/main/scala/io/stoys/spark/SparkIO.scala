@@ -16,9 +16,9 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   private val inputPathResolver = new InputPathResolver(dfs)
 
   private val inputPaths = mutable.Buffer.empty[String]
-  private val inputDags = mutable.Buffer.empty[SosDag]
-  private val inputTables = mutable.Map.empty[String, SosTable]
-  private val outputTables = mutable.Map.empty[String, SosTable]
+  private val inputDags = mutable.Buffer.empty[DagInfo]
+  private val inputTables = mutable.Map.empty[String, TableInfo]
+  private val outputTables = mutable.Map.empty[String, TableInfo]
 
   private val inputDataFrames = mutable.Map.empty[String, DataFrame]
 
@@ -27,21 +27,21 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   def addInputPath(path: String): Unit = {
     inputPaths.append(path)
     inputPathResolver.resolveInputs(path).foreach {
-      case dag: SosDag => inputDags.append(dag)
-      case table: SosTable => addInputTable(table)
+      case dag: DagInfo => inputDags.append(dag)
+      case table: TableInfo => addInputTable(table)
     }
   }
 
-  private def addInputTable(table: SosTable): Unit = {
-    getInputTable(table.table_name) match {
-      case Some(existingTable) if existingTable == table =>
-        logger.debug(s"Resolved the same table again: $table")
+  private def addInputTable(tableInfo: TableInfo): Unit = {
+    getInputTable(tableInfo.tableName) match {
+      case Some(existingTable) if existingTable == tableInfo =>
+        logger.debug(s"Resolved the same table again: $tableInfo")
       case Some(existingTable) =>
-        throw new SToysException(s"Resolved conflicting tables `${table.table_name}`: $existingTable vs $table")
+        throw new SToysException(s"Resolved conflicting tables `${tableInfo.tableName}`: $existingTable vs $tableInfo")
       case None =>
-        inputTables.put(table.table_name, table)
+        inputTables.put(tableInfo.tableName, tableInfo)
         if (config.register_input_tables) {
-          registerInputTable(table.table_name)
+          registerInputTable(tableInfo.tableName)
         }
     }
   }
@@ -50,7 +50,7 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
     inputTables.keys.toSet
   }
 
-  def getInputTable(fullTableName: String): Option[SosTable] = {
+  def getInputTable(fullTableName: String): Option[TableInfo] = {
     inputTables.get(fullTableName)
   }
 
@@ -80,25 +80,24 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   def ds[T <: Product](tableName: TableName[T]): Dataset[T] = {
     // TODO: the reshaping should be part of the cache but it requires to scan entity classes first
     val dataFrame = df(tableName)
-    val reshapeConfigPropsOverrides = getInputTable(tableName.fullTableName()).map(_.reshape_config_props_overrides)
-    val reshapeConfig = Jackson.json.updateValue(config.input_reshape_config.copy(), reshapeConfigPropsOverrides)
+    val reshapeConfig = Jackson.json.updateValue(config.input_reshape_config.copy(),
+      getInputTable(tableName.fullTableName()).map(_.reshapeConfigPropsOverrides))
     Reshape.reshape[T](dataFrame, reshapeConfig)(tableName.typeTag).as(tableName.fullTableName())
   }
 
   private def writeDF(df: DataFrame, fullTableName: String,
       format: Option[String], writeMode: Option[String], options: Map[String, String]): Unit = {
     val path = s"${config.output_path.get}/$fullTableName"
-    val table = SosTable(path, fullTableName, format, options, Map.empty)
-    if (outputTables.contains(table.table_name)) {
-      throw new SToysException(s"Writing table `${table.table_name}` multiple times!")
+    if (outputTables.contains(fullTableName)) {
+      throw new SToysException(s"Writing table `$fullTableName` multiple times!")
     } else {
       logger.debug(s"Writing `$fullTableName` to $path ...")
       val writer = df.write
-      table.format.foreach(writer.format)
+      format.foreach(writer.format)
       writeMode.foreach(writer.mode)
-      writer.options(table.options)
+      writer.options(options)
       writer.save(path)
-      outputTables.put(table.table_name, table)
+      outputTables.put(fullTableName, TableInfo(path, fullTableName, format, Map.empty, options))
     }
   }
 
@@ -114,26 +113,26 @@ class SparkIO(sparkSession: SparkSession, config: SparkIOConfig) extends AutoClo
   override def close(): Unit = {
     config.output_path.foreach { outputPath =>
       dfs.writeString(s"$outputPath/$DAG_DIR/input_paths.list", inputPaths.mkString("\n"))
-      dfs.writeString(s"$outputPath/$DAG_DIR/input_dags.list", inputDags.map(_.toUrlString).mkString("\n"))
-      val inputTablesContent = inputTables.map(_._2.toUrlString).toSeq.sorted.mkString("\n")
+      dfs.writeString(s"$outputPath/$DAG_DIR/input_dags.list", inputDags.map(_.toInputPathUrl).mkString("\n"))
+      val inputTablesContent = inputTables.map(_._2.toInputPathUrl).toSeq.sorted.mkString("\n")
       dfs.writeString(s"$outputPath/$DAG_DIR/input_tables.list", inputTablesContent)
-      val outputTablesContent = outputTables.map(_._2.toUrlString).toSeq.sorted.mkString("\n")
+      val outputTablesContent = outputTables.map(_._2.toInputPathUrl).toSeq.sorted.mkString("\n")
       dfs.writeString(s"$outputPath/$DAG_DIR/output_tables.list", outputTablesContent)
     }
   }
 
   def writeSymLink(path: String): Unit = {
-    config.output_path.foreach(outputPath => dfs.writeString(path, SosDag(outputPath).toUrlString))
+    config.output_path.foreach(outputPath => dfs.writeString(path, DagInfo(outputPath).toInputPathUrl))
   }
 }
 
 object SparkIO {
   import InputPathResolver._
 
-  private[spark] def createDataFrameReader(sparkSession: SparkSession, inputTable: SosTable): DataFrameReader = {
+  private[spark] def createDataFrameReader(sparkSession: SparkSession, inputTable: TableInfo): DataFrameReader = {
     var reader = sparkSession.read
     inputTable.format.foreach(f => reader = reader.format(f))
-    reader = reader.options(inputTable.options)
+    reader = reader.options(inputTable.sparkOptions)
     reader
   }
 }

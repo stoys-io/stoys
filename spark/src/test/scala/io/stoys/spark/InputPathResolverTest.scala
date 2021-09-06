@@ -12,14 +12,14 @@ class InputPathResolverTest extends SparkTestBase {
   private lazy val dfs = Dfs(sparkSession)
 
   test("parseInputPath") {
-    val emptySosOptions = Arbitrary.empty[SosOptions]
-    assert(parseInputPath("dir") === ParsedInputPath("dir", emptySosOptions, Map.empty))
-    assert(parseInputPath("dir/file") === ParsedInputPath("dir/file", emptySosOptions, Map.empty))
-    assert(parseInputPath("?param=value") === ParsedInputPath("", emptySosOptions, Map("param" -> "value")))
+    val emptyStoysOptions = Arbitrary.empty[StoysOptions]
+    assert(parseInputPath("dir") === ParsedInputPath("dir", emptyStoysOptions, Map.empty))
+    assert(parseInputPath("dir/file") === ParsedInputPath("dir/file", emptyStoysOptions, Map.empty))
+    assert(parseInputPath("?param=value") === ParsedInputPath("", emptyStoysOptions, Map("param" -> "value")))
     assert(parseInputPath("dir/file?param1=value1&param2=&param3=value3&param3")
-        === ParsedInputPath("dir/file", emptySosOptions, Map("param1" -> "value1", "param2" -> "", "param3" -> null)))
+        === ParsedInputPath("dir/file", emptyStoysOptions, Map("param1" -> "value1", "param2" -> "", "param3" -> null)))
     assert(parseInputPath("dir?sos-listing_strategy=*~42/@&foo=foo")
-        === ParsedInputPath("dir", emptySosOptions.copy(listing_strategy = Some("*~42/@")), Map("foo" -> "foo")))
+        === ParsedInputPath("dir", emptyStoysOptions.copy(listing_strategy = Some("*~42/@")), Map("foo" -> "foo")))
   }
 
   test("resolveInputs - fails") {
@@ -44,23 +44,24 @@ class InputPathResolverTest extends SparkTestBase {
     dfs.mkdirs(s"$tmpDir/dag/foo")
     dfs.mkdirs(s"$tmpDir/dag/bar")
 
-    val emptySosTable = Arbitrary.empty[SosTable]
+    val emptyStoysOptions = Arbitrary.empty[StoysOptions]
+    val emptyTableInfo = Arbitrary.empty[TableInfo]
 
-    val dagAA = SosDag(s"$tmpDir/aa")
-    val aa = emptySosTable.copy(table_name = "aa", path = s"$tmpDir/aa/aa")
-    val dagA = SosDag(s"$tmpDir/a")
-    val a = emptySosTable.copy(table_name = "a", path = s"$tmpDir/a/a")
-    val dagB = SosDag(s"$tmpDir/b")
-    val b = emptySosTable.copy(table_name = "b", path = s"$tmpDir/b/b")
-    val nonDagTable = emptySosTable.copy(table_name = "non_dag_table", path = s"$tmpDir/non_dag_table")
-    val dagDag = SosDag(s"$tmpDir/dag")
-    val foo = emptySosTable.copy(table_name = "foo", path = s"$tmpDir/dag/foo")
-    val bar = emptySosTable.copy(table_name = "bar", path = s"$tmpDir/dag/bar")
+    val dagAA = DagInfo(s"$tmpDir/aa")
+    val aa = emptyTableInfo.copy(tableName = "aa", path = s"$tmpDir/aa/aa")
+    val dagA = DagInfo(s"$tmpDir/a")
+    val a = emptyTableInfo.copy(tableName = "a", path = s"$tmpDir/a/a")
+    val dagB = DagInfo(s"$tmpDir/b")
+    val b = emptyTableInfo.copy(tableName = "b", path = s"$tmpDir/b/b")
+    val nonDagTable = emptyTableInfo.copy(tableName = "non_dag_table", path = s"$tmpDir/non_dag_table")
+    val dagDag = DagInfo(s"$tmpDir/dag")
+    val foo = emptyTableInfo.copy(tableName = "foo", path = s"$tmpDir/dag/foo")
+    val bar = emptyTableInfo.copy(tableName = "bar", path = s"$tmpDir/dag/bar")
 
     val resolver = new InputPathResolver(dfs)
     assert(resolver.resolveInputs(s"$tmpDir/dag/foo").toSet === Set(foo))
     assert(resolver.resolveInputs(s"$tmpDir/dag/foo?sos-table_name=renamed").toSet
-        === Set(foo.copy(table_name = "renamed")))
+        === Set(foo.copy(tableName = "renamed")))
     assert(resolver.resolveInputs(s"$tmpDir/dag/.dag").toSet === Set(dagDag, bar, foo))
     assert(resolver.resolveInputs(s"$tmpDir/dag/.dag/output_tables.list").toSet === Set(bar, foo))
     assert(resolver.resolveInputs(s"$tmpDir/dag?sos-listing_strategy=tables").toSet
