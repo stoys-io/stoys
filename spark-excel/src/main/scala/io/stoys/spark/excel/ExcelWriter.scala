@@ -1,7 +1,5 @@
 package io.stoys.spark.excel
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-
 import io.stoys.scala.IO
 import io.stoys.spark.SToysException
 import org.apache.poi.ss.usermodel._
@@ -9,6 +7,7 @@ import org.apache.poi.ss.util.{CellAddress, CellRangeAddress}
 import org.apache.poi.xssf.streaming.{SXSSFSheet, SXSSFWorkbook}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import scala.jdk.CollectionConverters._
 import scala.util.Try
 

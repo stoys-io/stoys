@@ -46,8 +46,8 @@ object TableName {
   }
 
   private[spark] case class SimpleTableName(
-    entityName: Option[String],
-    logicalName: Option[String]
+      entityName: Option[String],
+      logicalName: Option[String]
   )
 
   private[spark] def parse(fullTableName: String): Option[SimpleTableName] = {

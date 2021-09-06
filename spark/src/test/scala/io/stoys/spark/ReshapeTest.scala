@@ -3,7 +3,7 @@ package io.stoys.spark
 import io.stoys.scala.Arbitrary
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.catalyst.ScalaReflection
-import org.apache.spark.sql.types.{ArrayType, DateType, IntegerType, Metadata, StringType, StructField, StructType, TimestampType}
+import org.apache.spark.sql.types._
 
 import java.nio.file.Files
 import java.sql.{Date, Timestamp}

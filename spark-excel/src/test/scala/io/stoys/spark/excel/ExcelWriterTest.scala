@@ -1,8 +1,5 @@
 package io.stoys.spark.excel
 
-import java.io.ByteArrayInputStream
-import java.nio.file.Files
-
 import io.stoys.scala.IO
 import io.stoys.spark.test.SparkTestBase
 import org.apache.poi.ss.usermodel.{Cell, CellType, Sheet, Workbook}
@@ -10,6 +7,8 @@ import org.apache.poi.ss.util.CellAddress
 import org.apache.poi.xssf.streaming.SXSSFWorkbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
+import java.io.ByteArrayInputStream
+import java.nio.file.Files
 import scala.jdk.CollectionConverters._
 
 class ExcelWriterTest extends SparkTestBase {

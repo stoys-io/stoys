@@ -40,6 +40,7 @@ class TaxiDataset(sparkSession: SparkSession) {
       val function = f(new Column(x)).expr
       LambdaFunction(function, Seq(x))
     }
+
     new Column(ArrayTransform(column.expr, createLambda(f)))
   }
 }

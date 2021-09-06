@@ -56,7 +56,8 @@ private[dp] case class DataSketchesKllFloatsSketchAggregator(child: Expression, 
     copy(inputAggBufferOffset = newInputAggBufferOffset)
   }
 
-  /** override **/ def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+  /** override * */
+  def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
     copy(child = newChildren.head)
   }
 

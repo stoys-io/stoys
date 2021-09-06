@@ -1,11 +1,11 @@
 package io.stoys.spark.test
 
-import java.net.URL
-import java.nio.file.{Path, Paths}
-
 import io.stoys.scala.Strings
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+
+import java.net.URL
+import java.nio.file.{Path, Paths}
 
 class DataCache(sparkSession: SparkSession, dataDir: String = "data_cache", cacheDir: String = "target/data_cache") {
   private val logger = org.log4s.getLogger

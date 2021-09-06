@@ -265,6 +265,7 @@ object Reshape {
   private def getIndexBasedFieldMapping(sourceStruct: StructType, targetStruct: StructType,
       config: ReshapeConfig): Seq[FieldMapping] = {
     def getNormalizedName(sf: StructField) = getNormalizeFieldName(sf, ReshapeFieldMatchingStrategy.NAME_EXACT)
+
     val sourceNormalizedFieldNamesWithIndices = sourceStruct.fields.map(getNormalizedName).zipWithIndex
     val targetNormalizedFieldNamesWithIndices = targetStruct.fields.map(getNormalizedName).zipWithIndex
     val orderedTargetNormalizedFieldNamesWithIndices = config.sort_order match {
@@ -286,6 +287,7 @@ object Reshape {
   private def getNameBasedFieldMapping(sourceStruct: StructType, targetStruct: StructType,
       config: ReshapeConfig): Seq[FieldMapping] = {
     def getNormalizedName(sf: StructField) = getNormalizeFieldName(sf, config.field_matching_strategy)
+
     val sourceFieldsByName = sourceStruct.fields.toList.groupBy(getNormalizedName)
     val targetFieldsByName = targetStruct.fields.toList.groupBy(getNormalizedName)
     val normalizedFieldNames = config.sort_order match {

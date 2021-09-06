@@ -1,7 +1,6 @@
 package io.stoys.spark
 
 import io.stoys.scala.{Reflection, Strings}
-import io.stoys.spark.TableName.SimpleTableName
 import org.apache.spark.sql.Row
 
 import scala.reflect.runtime.universe._

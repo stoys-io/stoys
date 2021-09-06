@@ -57,7 +57,8 @@ private[dp] case class DataSketchesItemsSketchAggregator[T <: AnyRef](child: Exp
     copy(inputAggBufferOffset = newInputAggBufferOffset)
   }
 
-  /** override **/ def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+  /** override * */
+  def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
     copy(child = newChildren.head)
   }
 

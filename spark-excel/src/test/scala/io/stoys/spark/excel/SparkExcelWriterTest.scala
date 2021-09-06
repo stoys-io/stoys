@@ -1,12 +1,12 @@
 package io.stoys.spark.excel
 
-import java.sql.Date
-
 import io.stoys.scala.IO
 import io.stoys.spark.SToysException
 import io.stoys.spark.datasources.BinaryFilePerRow
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.functions._
+
+import java.sql.Date
 
 class SparkExcelWriterTest extends SparkTestBase {
   import ExcelWriterTest._

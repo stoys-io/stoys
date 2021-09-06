@@ -1,6 +1,6 @@
 package io.stoys.spark
 
-import org.apache.spark.sql.types.{Metadata, StructField}
+import org.apache.spark.sql.types.StructField
 
 object MetadataKeys {
   val ENUM_VALUES_KEY = "enum_values"
