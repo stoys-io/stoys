@@ -7,6 +7,7 @@ import java.lang.{Long => JLong}
 import java.sql.{Date, Timestamp}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate, LocalDateTime, ZoneId}
+import scala.collection.compat.IterableOnce
 import scala.util.Try
 
 private[dp] trait TypeProfiler[T] {
@@ -473,30 +474,29 @@ private[dp] class IterableProfiler(
     var countEmpty: Long,
     var minLength: Int,
     var maxLength: Int
-) extends TypeProfiler[Iterable[_]] {
+) extends TypeProfiler[IterableOnce[_]] {
 
-  def updateIterable(value: Iterable[_]): Double = {
+  def updateIterable(value: IterableOnce[_]): Unit = {
     if (value.isEmpty) {
       countEmpty += 1
     }
-    if (minLength > value.size) {
-      minLength = value.size
+    val valueSize = value.size
+    if (minLength > valueSize) {
+      minLength = valueSize
     }
-    if (maxLength < value.size) {
-      maxLength = value.size
+    if (maxLength < valueSize) {
+      maxLength = valueSize
     }
-    Double.NaN
   }
 
   override def update(value: Any): Double = {
     value match {
-      case s: Seq[_] => updateIterable(s)
-      case a: Array[_] => updateIterable(a)
-      case m: Map[_, _] => updateIterable(m)
+      case io: IterableOnce[_] => updateIterable(io)
     }
+    Double.NaN
   }
 
-  override def merge(that: TypeProfiler[Iterable[_]]): IterableProfiler = {
+  override def merge(that: TypeProfiler[IterableOnce[_]]): IterableProfiler = {
     that match {
       case that: IterableProfiler =>
         this.countEmpty += that.countEmpty
