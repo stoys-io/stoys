@@ -22,17 +22,17 @@ class DqSchemaTest extends SparkTestBase {
     val primaryKeyFieldNames = Seq("i", "s")
 
     val expectedRules = Seq(
-      DqRule("__no_missing_fields", "false", Some("Missing fields: `missing`"), Seq("missing")),
-      DqRule("__primary_key_not_null", "`i` IS NOT NULL AND `s` IS NOT NULL", None, Seq.empty),
-      DqRule("__primary_key_unique", "(COUNT(*) OVER (PARTITION BY `i`, `s`)) = 1", None, Seq.empty),
-      DqRule("b__type", "false", Some("Cannot cast `b` from 'StringType' to 'NullType'."), Seq.empty),
-      DqRule("i__type", "`i` IS NULL OR (CAST(`i` AS INT) IS NOT NULL)", None, Seq.empty),
-      DqRule("a__type", "`a` IS NULL OR (CAST(`a` AS ARRAY<INT>) IS NOT NULL)", None, Seq.empty),
-      DqRule("s__type", "`s` IS NULL OR (CAST(`s` AS STRING) IS NOT NULL)", None, Seq.empty),
-      DqRule("s__not_null", "`s` IS NOT NULL", None, Seq.empty),
-      DqRule("s__enum_values", "`s` IS NULL OR (CAST(`s` AS STRING) IN ('foo', 'bar', 'baz'))", None, Seq.empty),
-      DqRule("s__regexp", "`s` IS NULL OR (CAST(`s` AS STRING) RLIKE '(foo|bar|baz)')", None, Seq.empty),
-      DqRule("d__type", "`d` IS NULL OR (TO_DATE(`d`, 'MM/dd/yyyy') IS NOT NULL)", None, Seq.empty)
+      DqRule("__no_missing_fields", "false", Some("Missing fields: missing"), Seq("missing")),
+      DqRule("__primary_key_not_null", "i IS NOT NULL AND s IS NOT NULL", None, Seq.empty),
+      DqRule("__primary_key_unique", "(COUNT(*) OVER (PARTITION BY i, s)) = 1", None, Seq.empty),
+      DqRule("b__type", "false", Some("Cannot cast b from 'StringType' to 'NullType'."), Seq.empty),
+      DqRule("i__type", "i IS NULL OR (CAST(i AS INT) IS NOT NULL)", None, Seq.empty),
+      DqRule("a__type", "a IS NULL OR (CAST(a AS ARRAY<INT>) IS NOT NULL)", None, Seq.empty),
+      DqRule("s__type", "s IS NULL OR (CAST(s AS STRING) IS NOT NULL)", None, Seq.empty),
+      DqRule("s__not_null", "s IS NOT NULL", None, Seq.empty),
+      DqRule("s__enum_values", "s IS NULL OR (CAST(s AS STRING) IN ('foo', 'bar', 'baz'))", None, Seq.empty),
+      DqRule("s__regexp", "s IS NULL OR (CAST(s AS STRING) RLIKE '(foo|bar|baz)')", None, Seq.empty),
+      DqRule("d__type", "d IS NULL OR (TO_DATE(d, 'MM/dd/yyyy') IS NOT NULL)", None, Seq.empty)
     )
     val rules = generateSchemaRules(existingSchema, expectedFields, primaryKeyFieldNames, DqConfig.default)
     assert(rules === expectedRules)
@@ -52,7 +52,7 @@ class DqSchemaTest extends SparkTestBase {
       rule("__primary_key_unique", "(COUNT(*) OVER (PARTITION BY `space s`, `symbols  (*)_42`)) = 1"),
       rule("space s__type", "`space s` IS NULL OR (CAST(`space s` AS INT) IS NOT NULL)"),
       rule("symbols  (*)_42__type", "`symbols  (*)_42` IS NULL OR (CAST(`symbols  (*)_42` AS INT) IS NOT NULL)"),
-      rule("mixed_CASE__type", "`mixed_CASE` IS NULL OR (CAST(`mixed_CASE` AS INT) IS NOT NULL)")
+      rule("mixed_CASE__type", "mixed_CASE IS NULL OR (CAST(mixed_CASE AS INT) IS NOT NULL)")
     )
     val rules = generateSchemaRules(existingSchema, expectedFields, primaryKeyFieldNames, DqConfig.default)
     assert(rules === expectedRules)
@@ -66,7 +66,7 @@ class DqSchemaTest extends SparkTestBase {
     val config = DqConfig.default.copy(fail_on_extra_columns = true)
     val rules = generateSchemaRules(existingSchema, Seq.empty, Seq.empty, config)
     val expectedRules = Seq(
-      rule("__no_extra_fields", "false", "Extra fields: `b`, `i`, `s`, `a`, `d`, `extra`")
+      rule("__no_extra_fields", "false", "Extra fields: b, i, s, a, d, extra")
     )
     assert(rules === expectedRules)
   }

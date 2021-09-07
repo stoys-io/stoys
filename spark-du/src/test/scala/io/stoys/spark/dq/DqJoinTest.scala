@@ -27,7 +27,7 @@ class DqJoinTest extends SparkTestBase {
       left_key_column_names = Seq("item_id"),
       right_key_column_names = Seq("id"),
       join_type = "LEFT",
-      join_condition = "(`item_id` <=> item__alias.`id`)"
+      join_condition = s"(${quoteIfNeeded("item_id")} <=> item__alias.${quoteIfNeeded("id")})"
     ))
   }
 
@@ -53,8 +53,8 @@ class DqJoinTest extends SparkTestBase {
   test("computeDqJoinResult") {
     val join = DqJoin.equiJoin(orderDs, itemDs, Seq("item_id"), Seq("id"))
     val dqJoinResult = join.computeDqJoinResult().first()
-    assert(dqJoinResult.key.size === 7)
-    assert(dqJoinResult.dq_join_info.join_condition === "(`item_id` <=> `id`)")
+    assert(dqJoinResult.key.length === 7)
+    assert(dqJoinResult.dq_join_info.join_condition === s"(${quoteIfNeeded("item_id")} <=> ${quoteIfNeeded("id")})")
     assert(dqJoinResult.dq_join_statistics.left === 5)
     assert(dqJoinResult.dq_result.rules.size === 4)
   }

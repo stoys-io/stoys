@@ -1,6 +1,7 @@
 package io.stoys.spark.dq
 
 import io.stoys.spark.SToysException
+import io.stoys.spark.SqlUtils.quoteIfNeeded
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.expressions.{Alias, Cast}
 import org.apache.spark.sql.types.{DataType, DateType, TimestampType}
@@ -20,7 +21,7 @@ object DqRules {
 
   def nullSafeNamedRule(
       fieldName: String, logicalName: String, expression: String, description: String = null): DqRule = {
-    namedRule(fieldName, logicalName, s"`$fieldName` IS NULL OR ($expression)", description)
+    namedRule(fieldName, logicalName, s"${quoteIfNeeded(fieldName)} IS NULL OR ($expression)", description)
   }
 
   def rule(name: String, expression: String, description: String = null): DqRule = {
@@ -42,7 +43,7 @@ object DqRules {
   def rule(column: Column, description: String): DqRule = {
     column.expr match {
       case a: Alias => rule(a, description)
-      case _ => throw new SToysException("Column is missing name. Add it with '.as(...)' function.`")
+      case _ => throw new SToysException("Column is missing name. Add it with '.as(...)' function.")
     }
   }
 
@@ -55,31 +56,32 @@ object DqRules {
 
   def enumValuesRule(fieldName: String, enumValues: Seq[String], caseInsensitive: Boolean = false): DqRule = {
     val expression = if (caseInsensitive) {
-      s"UPPER(CAST(`$fieldName` AS STRING)) IN ${enumValues.map(_.toUpperCase()).mkString("('", "', '", "')")}"
+      val enumValuesExpr = enumValues.map(_.toUpperCase()).mkString("('", "', '", "')")
+      s"UPPER(CAST(${quoteIfNeeded(fieldName)} AS STRING)) IN $enumValuesExpr"
     } else {
-      s"CAST(`$fieldName` AS STRING) IN ${enumValues.mkString("('", "', '", "')")}"
+      s"CAST(${quoteIfNeeded(fieldName)} AS STRING) IN ${enumValues.mkString("('", "', '", "')")}"
     }
     nullSafeNamedRule(fieldName, "enum_values", expression)
   }
 
   def notNullRule(fieldName: String): DqRule = {
-    namedRule(fieldName, "not_null", s"`$fieldName` IS NOT NULL")
+    namedRule(fieldName, "not_null", s"${quoteIfNeeded(fieldName)} IS NOT NULL")
   }
 
   def regexpRule(fieldName: String, regexp: String): DqRule = {
-    nullSafeNamedRule(fieldName, "regexp", s"CAST(`$fieldName` AS STRING) RLIKE '$regexp'")
+    nullSafeNamedRule(fieldName, "regexp", s"CAST(${quoteIfNeeded(fieldName)} AS STRING) RLIKE '$regexp'")
   }
 
   def typeRule(fieldName: String, sourceType: DataType, targetType: DataType, format: String = null): DqRule = {
     if (Cast.canCast(sourceType, targetType)) {
       val expression = (targetType, Option(format)) match {
-        case (DateType, Some(format)) => s"TO_DATE(`$fieldName`, '$format') IS NOT NULL"
-        case (TimestampType, Some(format)) => s"TO_TIMESTAMP(`$fieldName`, '$format') IS NOT NULL"
-        case (dataType, _) => s"CAST(`$fieldName` AS ${dataType.sql}) IS NOT NULL"
+        case (DateType, Some(format)) => s"TO_DATE(${quoteIfNeeded(fieldName)}, '$format') IS NOT NULL"
+        case (TimestampType, Some(format)) => s"TO_TIMESTAMP(${quoteIfNeeded(fieldName)}, '$format') IS NOT NULL"
+        case (dataType, _) => s"CAST(${quoteIfNeeded(fieldName)} AS ${dataType.sql}) IS NOT NULL"
       }
       nullSafeNamedRule(fieldName, "type", expression)
     } else {
-      val description = s"Cannot cast `$fieldName` from '$sourceType' to '$targetType'."
+      val description = s"Cannot cast ${quoteIfNeeded(fieldName)} from '$sourceType' to '$targetType'."
       namedRule(fieldName, "type", "false", description)
     }
   }
@@ -99,6 +101,7 @@ object DqRules {
   }
 
   def uniqueRule(baseRuleName: String, fieldNames: Seq[String]): DqRule = {
-    namedRule(baseRuleName, "unique", s"(COUNT(*) OVER (PARTITION BY ${fieldNames.mkString("`", "`, `", "`")})) = 1")
+    val fieldNamesExpr = fieldNames.map(quoteIfNeeded).mkString(", ")
+    namedRule(baseRuleName, "unique", s"(COUNT(*) OVER (PARTITION BY $fieldNamesExpr)) = 1")
   }
 }

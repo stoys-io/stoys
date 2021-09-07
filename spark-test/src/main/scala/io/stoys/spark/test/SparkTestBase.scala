@@ -4,6 +4,7 @@ import io.stoys.scala.Strings
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.{Configuration => HadoopConfiguration}
 import org.apache.hadoop.fs.FileStatus
+import org.apache.spark.sql.catalyst.util.quoteIdentifier
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.{BeforeAndAfterEachTestData, TestData}
@@ -113,12 +114,30 @@ abstract class SparkTestBase extends AnyFunSuite with BeforeAndAfterEachTestData
   def walkFileStatuses(path: String, omitMetadataFiles: Boolean = true): Map[String, FileStatus] = {
     SparkTestBase.walkFileStatuses(sparkSession.sparkContext.hadoopConfiguration, path, omitMetadataFiles)
   }
+
+  /**
+   * Quote identifier if needed.
+   *
+   * Note: Spark was always quoting column names in [[org.apache.spark.sql.catalyst.expressions.Expression.sql]]
+   * before Spark 3.2. Since then identifiers are quoted only when needed.
+   *
+   * @param part identifier part to quote
+   * @return raw or quoted identifier
+   */
+  protected def quoteIfNeeded(part: String): String = {
+    if (UNQUOTE_SAFE_IDENTIFIER_PATTERN.findFirstMatchIn(part).isEmpty || sparkSession.version < "3.2") {
+      quoteIdentifier(part)
+    } else {
+      part
+    }
+  }
 }
 
 object SparkTestBase {
   val TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS")
   val BASE_TMP_DIRECTORY: Path = Paths.get("target", "tmp")
   val MAX_OLD_TMP_VERSIONS_TO_KEEP: Int = 10
+  private val UNQUOTE_SAFE_IDENTIFIER_PATTERN = "^[a-zA-Z_][a-zA-Z0-9_]*$".r
 
   def createTemporaryDirectoryAndCleanupOldVersions(clazz: Class[_]): Path = {
     val tmpDirName = s"${clazz.getSimpleName}.${TIMESTAMP_FORMATTER.format(LocalDateTime.now())}"

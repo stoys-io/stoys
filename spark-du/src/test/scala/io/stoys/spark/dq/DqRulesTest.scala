@@ -36,7 +36,7 @@ class DqRulesTest extends SparkTestBase {
     import org.apache.spark.sql.functions._
     assertThrows[SToysException](rule(col("id").isNotNull))
     assert(rule(col("id").isNotNull.as("id__not_null"), "id should not be null")
-        === expectedDqRule.copy(expression = "(`id` IS NOT NULL)"))
+        === expectedDqRule.copy(expression = s"(${quoteIfNeeded("id")} IS NOT NULL)"))
   }
 
   test("field") {

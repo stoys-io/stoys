@@ -73,12 +73,14 @@ class DqTest extends SparkTestBase {
          |  $recordsTableName
          |""".stripMargin.trim
 
+    val id = quoteIfNeeded("id")
+    val value = quoteIfNeeded("value")
     val expectedDqResult = DqResult(
       columns = Seq(DqColumn("id"), DqColumn("value"), DqColumn("extra")),
       rules = Seq(
-        DqRule("id__not_null", "(`id` IS NOT NULL)", None, Seq("id")),
-        DqRule("id__odd", "((`id` IS NOT NULL) AND ((`id` % 2) = 0))", None, Seq("id")),
-        DqRule("value__enum_value", "(`value` IN ('foo', 'bar', 'baz'))", None, Seq("value"))
+        DqRule("id__not_null", s"($id IS NOT NULL)", None, Seq("id")),
+        DqRule("id__odd", s"(($id IS NOT NULL) AND (($id % 2) = 0))", None, Seq("id")),
+        DqRule("value__enum_value", s"($value IN ('foo', 'bar', 'baz'))", None, Seq("value"))
       ),
       DqStatistics(
         table = DqTableStatistic(4, 3),

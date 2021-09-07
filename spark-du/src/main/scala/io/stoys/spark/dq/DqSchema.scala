@@ -1,5 +1,6 @@
 package io.stoys.spark.dq
 
+import io.stoys.spark.SqlUtils.quoteIfNeeded
 import io.stoys.spark.dq.DqRules._
 import org.apache.spark.sql.types.{DataType, StructType}
 
@@ -26,8 +27,8 @@ private[dq] object DqSchema {
       rules += namedRule("", "no_extra_fields", "false", description)
     }
     if (expectedPrimaryKeyFieldNames.nonEmpty && missingPrimaryKeyFieldNames.isEmpty) {
-      val primaryKeyNotNullExpr = expectedPrimaryKeyFieldNames.map(fn => s"`$fn` IS NOT NULL").mkString(" AND ")
-      rules += namedRule("", "primary_key_not_null", primaryKeyNotNullExpr)
+      val primaryKeyNotNullExprs = expectedPrimaryKeyFieldNames.map(fn => s"${quoteIfNeeded(fn)} IS NOT NULL")
+      rules += namedRule("", "primary_key_not_null", primaryKeyNotNullExprs.mkString(" AND "))
       val primaryKeyUniqueExpr = s"(COUNT(*) OVER (PARTITION BY ${quoteFieldNames(expectedPrimaryKeyFieldNames)})) = 1"
       rules += namedRule("", "primary_key_unique", primaryKeyUniqueExpr)
     }
@@ -54,6 +55,6 @@ private[dq] object DqSchema {
   }
 
   private def quoteFieldNames(fieldNames: Seq[String]): String = {
-    fieldNames.mkString("`", "`, `", "`")
+    fieldNames.map(quoteIfNeeded).mkString(", ")
   }
 }

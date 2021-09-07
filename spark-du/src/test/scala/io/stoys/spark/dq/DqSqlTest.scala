@@ -20,15 +20,12 @@ class DqSqlTest extends SparkTestBase {
     }
 
     val dqSql = "SELECT *, id IS NOT NULL AS id__not_null FROM table"
-    val rules = Seq(namedRule("id", "not_null", "(`id` IS NOT NULL)"))
-    val parsedDqSql = ParsedDqSql(rules, Set.empty)
-
-    assert(parseDqSql(sparkSession, dqSql) === parsedDqSql)
-
+    val expectedRule = namedRule("id", "not_null", s"(${quoteIfNeeded("id")} IS NOT NULL)")
+    assert(parseDqSql(sparkSession, dqSql) === ParsedDqSql(Seq(expectedRule), Set.empty))
     val noStarDqSql = "SELECT id IS NOT NULL AS id__not_null FROM table"
     assert(im(noStarDqSql).contains("dq sql has to be '*'"))
     val tableStarDqSql = "SELECT table.*, id IS NOT NULL AS id__not_null FROM table"
-    assert(parseDqSql(sparkSession, tableStarDqSql) === parsedDqSql)
+    assert(parseDqSql(sparkSession, tableStarDqSql) === ParsedDqSql(Seq(expectedRule), Set.empty))
     val unnamedRuleDqSql = "SELECT *, id IS NOT NULL FROM table"
     assert(im(unnamedRuleDqSql).contains("needs logical name"))
 
@@ -53,13 +50,13 @@ class DqSqlTest extends SparkTestBase {
          |  table
          |""".stripMargin.trim
 
-    val actual = parseDqSql(sparkSession, dqSql)
+    val id = quoteIfNeeded("id")
+    val value = quoteIfNeeded("value")
     val expectedRules = Seq(
-      DqRule("id__not_null", "(`id` IS NOT NULL)", None, Seq.empty),
-      DqRule("id__odd", "((`id` IS NOT NULL) AND ((`id` % 2) = 0))", None, Seq.empty),
-      DqRule("value__enum_value", "(`value` IN ('foo', 'bar', 'baz'))", Some("optional\ncomment"), Seq.empty)
+      DqRule("id__not_null", s"($id IS NOT NULL)", None, Seq.empty),
+      DqRule("id__odd", s"(($id IS NOT NULL) AND (($id % 2) = 0))", None, Seq.empty),
+      DqRule("value__enum_value", s"($value IN ('foo', 'bar', 'baz'))", Some("optional\ncomment"), Seq.empty)
     )
-    assert(actual.referencedTableNames === Set.empty)
-    assert(actual.rules === expectedRules)
+    assert(parseDqSql(sparkSession, dqSql) === ParsedDqSql(expectedRules, Set.empty))
   }
 }
