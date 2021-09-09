@@ -1,12 +1,15 @@
 package io.stoys.spark
 
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.sources.DataSourceRegister
+import org.apache.spark.sql.{Row, SparkSession}
 
 import java.util.ServiceLoader
 import scala.jdk.CollectionConverters._
+import scala.reflect.runtime.universe._
 
 object SparkUtils {
+  val rowTypeTag: TypeTag[Row] = typeTag[Row]
+
   def createSparkSession(sparkConfig: SparkConfig): SparkSession = {
     val builder = SparkSession.builder()
     sparkConfig.spark_options.foreach(kv => builder.config(kv._1, kv._2))
