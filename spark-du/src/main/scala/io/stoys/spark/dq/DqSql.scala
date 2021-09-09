@@ -8,6 +8,7 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.trees.Origin
 
 import scala.util.matching.Regex
+import scala.util.Try
 
 private[dq] object DqSql {
   case class ParsedDqSql(
@@ -21,16 +22,35 @@ private[dq] object DqSql {
 
   def parseDqSql(sparkSession: SparkSession, dqSql: String): ParsedDqSql = {
     val logicalPlan = sparkSession.sessionState.sqlParser.parsePlan(dqSql)
+    assertSafeLogicalPlan(logicalPlan)
     val lastProject = findLastProject(logicalPlan)
 //    val primaryRelationshipName = lastProject.toSeq.flatMap(getReferencedRelationshipNames).headOption
-    val rules = lastProject.toSeq.flatMap(lp => extractRules(dqSql, lp))
+    val rules = lastProject.map(lp => extractRules(dqSql, lp)).getOrElse(Seq.empty)
     val referencedRelationshipNames = getReferencedRelationshipNames(logicalPlan)
     ParsedDqSql(rules, referencedRelationshipNames.toSet)
   }
 
+  private def assertSafeLogicalPlan(logicalPlan: LogicalPlan): Unit = {
+    val forbiddenClassNames = Seq(
+      "org.apache.spark.sql.catalyst.plans.logical.Command",
+      "org.apache.spark.sql.catalyst.plans.logical.ParsedStatement"
+    )
+    val forbiddenClasses = forbiddenClassNames.flatMap(fcn =>
+      Try(Class.forName(fcn)).toOption.asInstanceOf[Option[Class[_]]]
+    )
+    logicalPlan.collect {
+      case lp if forbiddenClasses.exists(_.isInstance(lp)) =>
+        fail(lp.origin, s"Unsupported logical plan ${lp.getClass.getName}:\n$lp")
+    }
+    // TODO: Switch to the following code after dropping Spark 2.4.x support.
+//    logicalPlan.collectWithSubqueries {
+//      case c: Command => fail(c.origin, s"Unsupported logical plan ${c.getClass.getName}:\n$c")
+//      case s: ParsedStatement => fail(s.origin, s"Unsupported logical plan ${s.getClass.getName}:\n$s")
+//    }
+  }
+
   private def findLastProject(logicalPlan: LogicalPlan): Option[Project] = {
     val projects = logicalPlan.collect {
-      case c: Command => fail(c.origin, s"Unsupported logical plan ${c.getClass.getName}:\n$c")
       case p: Project => p
     }
     projects.lastOption

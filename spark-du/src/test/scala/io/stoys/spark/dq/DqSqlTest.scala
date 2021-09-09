@@ -29,8 +29,15 @@ class DqSqlTest extends SparkTestBase {
     val unnamedRuleDqSql = "SELECT *, id IS NOT NULL FROM table"
     assert(im(unnamedRuleDqSql).contains("needs logical name"))
 
-    val unsupportedLogicalPlanSql = "DROP TABLE table"
-    assert(im(unsupportedLogicalPlanSql).contains("Unsupported logical plan"))
+    val ddlStatement = "DROP TABLE table"
+    assert(im(ddlStatement).contains("Unsupported logical plan"))
+    // TODO: Uncomment the following code after dropping Spark 2.4.x support.
+//    val dmlStatement = "INSERT INTO table VALUES ('foo')"
+//    assert(im(dmlStatement).contains("Unsupported logical plan"))
+    val auxiliaryStatement = "SHOW TABLES"
+    assert(im(auxiliaryStatement).contains("Unsupported logical plan"))
+    val explainStatement = "EXPLAIN SELECT 'foo'"
+    assert(im(explainStatement).contains("Unsupported logical plan"))
   }
 
   test("parseDqSql - complex") {
