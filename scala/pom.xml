@@ -103,16 +103,6 @@
                             <include>org.log4s:*</include>
                         </includes>
                     </artifactSet>
-                    <relocations combine.children="append">
-                        <relocation>
-                            <pattern>com.fasterxml.jackson</pattern>
-                            <shadedPattern>io.stoys.shaded.com.fasterxml.jackson</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.log4s</pattern>
-                            <shadedPattern>io.stoys.shaded.org.log4s</shadedPattern>
-                        </relocation>
-                    </relocations>
                 </configuration>
             </plugin>
         </plugins>
