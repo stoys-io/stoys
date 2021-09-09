@@ -77,12 +77,22 @@
 
     <profiles>
         <profile>
-            <id>scala-2.11</id>
+            <id>scala-2.13</id>
             <dependencies>
+                <dependency>
+                    <groupId>org.scala-lang.modules</groupId>
+                    <artifactId>scala-parallel-collections_${scala.compat.version}</artifactId>
+                </dependency>
             </dependencies>
         </profile>
         <profile>
-            <id>scala-2.12</id>
+            <id>spark-2.4</id>
+        </profile>
+        <profile>
+            <id>spark-3.0</id>
+            <properties>
+                <delta.version>0.8.0</delta.version>
+            </properties>
             <dependencies>
                 <dependency>
                     <groupId>io.delta</groupId>
@@ -91,18 +101,27 @@
             </dependencies>
         </profile>
         <profile>
-            <id>scala-2.13</id>
+            <id>spark-3.1</id>
+            <properties>
+                <delta.version>1.0.0</delta.version>
+            </properties>
             <dependencies>
                 <dependency>
-                    <groupId>org.scala-lang.modules</groupId>
-                    <artifactId>scala-parallel-collections_${scala.compat.version}</artifactId>
+                    <groupId>io.delta</groupId>
+                    <artifactId>delta-core_${scala.compat.version}</artifactId>
                 </dependency>
-                <!-- TODO: enable delta for scala 2.13 once it is published for 2.13 -->
-                <!--<dependency>-->
-                <!--    <groupId>io.delta</groupId>-->
-                <!--    <artifactId>delta-core_${scala.compat.version}</artifactId>-->
-                <!--</dependency>-->
             </dependencies>
+        </profile>
+        <profile>
+            <id>spark-3.2</id>
+            <!-- TODO: enable delta for scala 2.13 once it is published for 2.13 -->
+            <!--<properties>-->
+            <!--    <delta.version>1.0.0</delta.version>-->
+            <!--</properties>-->
+            <!--<dependency>-->
+            <!--    <groupId>io.delta</groupId>-->
+            <!--    <artifactId>delta-core_${scala.compat.version}</artifactId>-->
+            <!--</dependency>-->
         </profile>
     </profiles>
 </project>
