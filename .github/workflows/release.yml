@@ -18,8 +18,8 @@ jobs:
       matrix:
         include:
           - name: default
-            java_version: 11
-            maven_extra_args: ''
+            java_version: 8
+            maven_extra_args: -Pjava-8,scala-2.12,spark-3.0
             experimental: false
           - name: legacy
             java_version: 8

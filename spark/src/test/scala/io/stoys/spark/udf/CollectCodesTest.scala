@@ -49,7 +49,7 @@ class CollectCodesTest extends SparkTestBase {
     assert(selectSingleStringSeq(
       "SELECT COLLECT_CODES(codes1, codes2) FROM VALUES (array('foo'), array('bar')) AS (codes1, codes2)") === foobar)
 
-    assertThrows[SparkException](selectSingleStringSeq("SELECT COLLECT_CODES(42)"))
+    assertThrows[Exception](selectSingleStringSeq("SELECT COLLECT_CODES(42)"))
   }
 
   test("cleanupCodes") {
