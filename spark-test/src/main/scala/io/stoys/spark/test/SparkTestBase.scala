@@ -6,6 +6,7 @@ import org.apache.hadoop.conf.{Configuration => HadoopConfiguration}
 import org.apache.hadoop.fs.FileStatus
 import org.apache.spark.sql.catalyst.util.quoteIdentifier
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.scalactic.source
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.{BeforeAndAfterEachTestData, TestData}
 
@@ -13,6 +14,7 @@ import java.nio.file.{Path, Paths}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
+import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 
 abstract class SparkTestBase extends AnyFunSuite with BeforeAndAfterEachTestData {
@@ -116,6 +118,21 @@ abstract class SparkTestBase extends AnyFunSuite with BeforeAndAfterEachTestData
   }
 
   /**
+   * Assert given throwable is thrown and error message matches given regex.
+   *
+   * @param f the function value that should throw the expected exception
+   * @param regex regular expression pattern error message should match
+   * @tparam T expected throwable class
+   * @return the intercepted exception, if it is of the expected type
+   */
+  def interceptMessage[T <: Throwable : ClassTag](f: => Any, regex: String)(implicit pos: source.Position): T = {
+    val fullRegex = s"(?s).*$regex.*"
+    val throwable = intercept[T](f)
+    assert(throwable.getMessage.matches(fullRegex), s"(fullRegex='$fullRegex', message=${throwable.getMessage})")
+    throwable
+  }
+
+  /**
    * Quote identifier if needed.
    *
    * Note: Spark was always quoting column names in [[org.apache.spark.sql.catalyst.expressions.Expression.sql]]
@@ -124,7 +141,7 @@ abstract class SparkTestBase extends AnyFunSuite with BeforeAndAfterEachTestData
    * @param part identifier part to quote
    * @return raw or quoted identifier
    */
-  protected def quoteIfNeeded(part: String): String = {
+  def quoteIfNeeded(part: String): String = {
     if (UNQUOTE_SAFE_IDENTIFIER_PATTERN.findFirstMatchIn(part).isEmpty || sparkSession.version < "3.2") {
       quoteIdentifier(part)
     } else {

@@ -2,6 +2,7 @@ package io.stoys.spark
 
 import io.stoys.scala.Arbitrary
 import io.stoys.spark.test.SparkTestBase
+import org.scalactic.source
 
 import java.nio.file.Path
 
@@ -23,17 +24,15 @@ class InputPathResolverTest extends SparkTestBase {
   }
 
   test("resolveInputs - fails") {
-    val inputPathResolver = new InputPathResolver(dfs)
-
-    def im(path: String): String = {
-      intercept[SToysException](inputPathResolver.resolveInputs(s"$tmpDir/$path")).getMessage
+    def im(relativePath: String, regex: String)(implicit pos: source.Position): SToysException = {
+      interceptMessage[SToysException](new InputPathResolver(dfs).resolveInputs(s"$tmpDir/$relativePath"), regex)
     }
 
-    assert(im("foo.list?sos-table_name=bar").contains("not supported on *.list"))
-    assert(im("foo?sos-listing_strategy=tables&sos-table_name=bar").contains("at the same time are not supported"))
-    assert(im("foo?sos-listing_strategy=unsupported").contains("Unsupported listing strategy"))
-    assert(im("foo?sos-listing_strategy=dag_unsupported").contains("Unsupported dag listing strategy"))
-    assert(im(".foo").contains("Unsupported path starting with dot"))
+    im("foo.list?sos-table_name=bar", "are not supported on \\*.list files")
+    im("foo?sos-listing_strategy=tables&sos-table_name=bar", "at the same time are not supported")
+    im("foo?sos-listing_strategy=unsupported", "Unsupported listing strategy")
+    im("foo?sos-listing_strategy=dag_unsupported", "Unsupported dag listing strategy")
+    im(".foo", "Unsupported path starting with dot")
   }
 
   test("resolveInputs") {
@@ -44,7 +43,6 @@ class InputPathResolverTest extends SparkTestBase {
     dfs.mkdirs(s"$tmpDir/dag/foo")
     dfs.mkdirs(s"$tmpDir/dag/bar")
 
-    val emptyStoysOptions = Arbitrary.empty[StoysOptions]
     val emptyTableInfo = Arbitrary.empty[TableInfo]
 
     val dagAA = DagInfo(s"$tmpDir/aa")

@@ -3,6 +3,7 @@ package io.stoys.spark.dq
 import io.stoys.spark.SToysException
 import io.stoys.spark.test.SparkTestBase
 import org.apache.spark.sql.types.{BooleanType, StringType, StructField, StructType}
+import org.scalactic.source
 
 class DqFrameworkTest extends SparkTestBase {
   import DqFramework._
@@ -24,15 +25,15 @@ class DqFrameworkTest extends SparkTestBase {
 
     def schema(fields: StructField*): StructType = StructType(fields)
 
-    def im(wideDqSchema: StructType, ruleCount: Int): String = {
-      intercept[SToysException](checkWideDqColumnsSanity(wideDqSchema, ruleCount)).getMessage
+    def im(wideDqSchema: StructType, ruleCount: Int, regex: String)(implicit pos: source.Position): SToysException = {
+      interceptMessage[SToysException](checkWideDqColumnsSanity(wideDqSchema, ruleCount), regex)
     }
 
     assert(checkWideDqColumnsSanity(schema(str("f1"), bool("r1")), 1))
-    assert(im(schema(str("f1"), str("r1")), 1).contains("return boolean values"))
-    assert(im(schema(str("f1"), bool("r1"), bool("r1")), 2).contains("have unique names"))
-    assert(im(schema(str("fr1"), bool("fr1")), 1).contains("have unique names"))
-    assert(im(schema(str("FR1"), bool("fr1")), 1).contains("have unique names"))
+    im(schema(str("f1"), str("r1")), 1, "return boolean values")
+    im(schema(str("f1"), bool("r1"), bool("r1")), 2, "have unique names")
+    im(schema(str("fr1"), bool("fr1")), 1, "have unique names")
+    im(schema(str("FR1"), bool("fr1")), 1, "have unique names")
   }
 
   private def ruleInfo(rule: DqRule, existing: Seq[String], existingIndexes: Seq[Int],

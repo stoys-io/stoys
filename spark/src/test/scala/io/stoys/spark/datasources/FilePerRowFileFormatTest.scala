@@ -38,11 +38,9 @@ class FilePerRowFileFormatTest extends SparkTestBase {
     }
 
     val integerDf = Seq(("dir/file.ext", 42)).toDF("path", "content")
-    val integerMessage = intercept[SToysException](write(integerDf)).getMessage
-    assert(integerMessage.contains("Unsupported schema!"))
+    interceptMessage[SToysException](write(integerDf), "Unsupported schema!")
     val incorrectNameDf = Seq(("dir/file.ext", 42)).toDF("path", "incorrectName")
-    val incorrectNameMessage = intercept[SToysException](write(incorrectNameDf)).getMessage
-    assert(incorrectNameMessage.contains("Unsupported schema!"))
+    interceptMessage[SToysException](write(incorrectNameDf), "Unsupported schema!")
     val escapingDf = Seq(("../escaping_is_dangerous", "content")).toDF("path", "content")
     val escapingMessage = intercept[SparkException](write(escapingDf)).getCause.getCause.getCause.getMessage
     assert(escapingMessage.contains("has to stay in output directory"))

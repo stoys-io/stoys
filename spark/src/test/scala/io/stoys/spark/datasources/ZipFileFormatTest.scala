@@ -22,8 +22,8 @@ class ZipFileFormatTest extends SparkTestBase {
     assert(parseZipOptions(Map("zip_level" -> "1")) === ZipOptions(None, Some(1), None))
     assert(parseZipOptions(Map("zip_file_name" -> "foo.zip")) === ZipOptions(None, None, Some("foo.zip")))
 
-    assert(intercept[SToysException](parseZipOptions(Map("zip_method" -> "foo"))).getMessage.contains("Unsupported"))
-    assert(intercept[SToysException](parseZipOptions(Map("zip_level" -> "42"))).getMessage.contains("Unsupported"))
+    interceptMessage[SToysException](parseZipOptions(Map("zip_method" -> "foo")), "Unsupported")
+    interceptMessage[SToysException](parseZipOptions(Map("zip_level" -> "42")), "Unsupported")
   }
 
   test("zip.works") {

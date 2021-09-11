@@ -28,8 +28,8 @@ class SparkIOTest extends SparkTestBase {
       sparkIO.addInputPath(s"$tmpDir/non_dag_table?sos-table_name=bar")
       assert(sparkIO.getInputTable("bar").isDefined)
 
-      val conflictingException = intercept[SToysException](sparkIO.addInputPath(s"$tmpDir/dag/foo?sos-table_name=bar"))
-      assert(conflictingException.getMessage.contains("conflicting tables"))
+      interceptMessage[SToysException](
+        sparkIO.addInputPath(s"$tmpDir/dag/foo?sos-table_name=bar"), "conflicting tables")
 
       // It is fine to add path that will resolve to the same table (including all options).
       sparkIO.addInputPath(s"$tmpDir/dag/foo?sos-table_name=foo")

@@ -10,6 +10,7 @@ import java.sql.Date
 
 class SparkExcelWriterTest extends SparkTestBase {
   import ExcelWriterTest._
+  import SparkExcelWriter._
   import SparkExcelWriterTest._
   import io.stoys.spark.test.implicits._
   import sparkSession.implicits._
@@ -24,7 +25,7 @@ class SparkExcelWriterTest extends SparkTestBase {
   )
 
   test("datasetToExcelFilesPerRow") {
-    val excelFilesPerRowDf = SparkExcelWriter.datasetToExcelFilesPerRow(orders.toDF())
+    val excelFilesPerRowDf = datasetToExcelFilesPerRow(orders.toDF())
     excelFilesPerRowDf.cache()
     excelFilesPerRowDf.write.format("file_per_row").save(s"$tmpDir/datasetToExcelFilesPerRow")
     val excelFilesPerRow = excelFilesPerRowDf.as[BinaryFilePerRow].collect()
@@ -41,8 +42,7 @@ class SparkExcelWriterTest extends SparkTestBase {
   }
 
   test("datasetsToExcelFilesPerRow.zeroDatasetsUnsupported") {
-    val intercepted = intercept[SToysException](SparkExcelWriter.datasetsToExcelFilesPerRow(Seq.empty))
-    assert(intercepted.getMessage.contains("At least one dataset required"))
+    interceptMessage[SToysException](datasetsToExcelFilesPerRow(Seq.empty), "At least one dataset required")
   }
 
   test("datasetsToExcelFilesPerRow") {
@@ -70,7 +70,7 @@ class SparkExcelWriterTest extends SparkTestBase {
          |ORDER BY customer, item
          |""".stripMargin.trim)
     val dfs = Seq(allOrdersDf, ordersByCustomerDf, spendByCustomerDf)
-    val excelFilesPerRowDf = SparkExcelWriter.datasetsToExcelFilesPerRow(dfs, ordersConfig)
+    val excelFilesPerRowDf = datasetsToExcelFilesPerRow(dfs, ordersConfig)
     excelFilesPerRowDf.cache()
     excelFilesPerRowDf.write.format("file_per_row").save(s"$tmpDir/datasetsToExcelFilesPerRow")
     excelFilesPerRowDf.coalesce(1).write.format("zip")
@@ -85,7 +85,7 @@ class SparkExcelWriterTest extends SparkTestBase {
 
   test("to_excel") {
     orders.toDS().createOrReplaceTempView("order")
-    sparkSession.udf.register("to_excel", SparkExcelWriter.toExcel _)
+    sparkSession.udf.register("to_excel", toExcel _)
 
     sparkSession.sql(
       s"""
@@ -103,7 +103,7 @@ class SparkExcelWriterTest extends SparkTestBase {
 
   test("to_excel.complex") {
     orders.toDS().createOrReplaceTempView("order")
-    sparkSession.udf.register("to_excel", SparkExcelWriter.toExcel _)
+    sparkSession.udf.register("to_excel", toExcel _)
 
     val ordersTemplateXlsxDs = Seq(BinaryFilePerRow("orders.template.xlsx", ordersTemplateXlsx)).toDS()
     ordersTemplateXlsxDs.createOrReplaceTempView("orders_template_xlsx")

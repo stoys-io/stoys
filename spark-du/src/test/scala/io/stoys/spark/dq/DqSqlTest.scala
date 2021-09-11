@@ -2,6 +2,7 @@ package io.stoys.spark.dq
 
 import io.stoys.spark.SToysException
 import io.stoys.spark.test.SparkTestBase
+import org.scalactic.source
 
 class DqSqlTest extends SparkTestBase {
   import DqRules._
@@ -14,30 +15,30 @@ class DqSqlTest extends SparkTestBase {
     assert(parseReferencedColumnNames(sparkSession, "table.foo IS NOT NULL") === Seq("table.foo"))
   }
 
-  test("parseDqSql - exceptions") {
-    def im(dqSql: String): String = {
-      intercept[SToysException](parseDqSql(sparkSession, dqSql)).getMessage
+  test("parseDqSql - fails") {
+    def im(dqSql: String, regex: String)(implicit pos: source.Position): SToysException = {
+      interceptMessage[SToysException](parseDqSql(sparkSession, dqSql), regex)
     }
 
     val dqSql = "SELECT *, id IS NOT NULL AS id__not_null FROM table"
     val expectedRule = namedRule("id", "not_null", s"(${quoteIfNeeded("id")} IS NOT NULL)")
     assert(parseDqSql(sparkSession, dqSql) === ParsedDqSql(Seq(expectedRule), Set.empty))
     val noStarDqSql = "SELECT id IS NOT NULL AS id__not_null FROM table"
-    assert(im(noStarDqSql).contains("dq sql has to be '*'"))
+    im(noStarDqSql, "dq sql has to be '*'")
     val tableStarDqSql = "SELECT table.*, id IS NOT NULL AS id__not_null FROM table"
     assert(parseDqSql(sparkSession, tableStarDqSql) === ParsedDqSql(Seq(expectedRule), Set.empty))
     val unnamedRuleDqSql = "SELECT *, id IS NOT NULL FROM table"
-    assert(im(unnamedRuleDqSql).contains("needs logical name"))
+    im(unnamedRuleDqSql, "needs logical name")
 
     val ddlStatement = "DROP TABLE table"
-    assert(im(ddlStatement).contains("Unsupported logical plan"))
+    im(ddlStatement, "Unsupported logical plan")
     // TODO: Uncomment the following code after dropping Spark 2.4.x support.
 //    val dmlStatement = "INSERT INTO table VALUES ('foo')"
-//    assert(im(dmlStatement).contains("Unsupported logical plan"))
+//    im(dmlStatement, "Unsupported logical plan")
     val auxiliaryStatement = "SHOW TABLES"
-    assert(im(auxiliaryStatement).contains("Unsupported logical plan"))
+    im(auxiliaryStatement, "Unsupported logical plan")
     val explainStatement = "EXPLAIN SELECT 'foo'"
-    assert(im(explainStatement).contains("Unsupported logical plan"))
+    im(explainStatement, "Unsupported logical plan")
   }
 
   test("parseDqSql - complex") {
