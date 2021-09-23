@@ -173,7 +173,7 @@ class ReshapeTest extends SparkTestBase {
       field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_DEFAULT,
       sort_order = ReshapeSortOrder.SOURCE
     )
-    assert(reshapeConfig === ReshapeConfig.as)
+    assert(reshapeConfig === ReshapeConfig.spark)
 
     val df = recordsDF.selectExpr("i", "nested", "s")
     val sourceOrderConfig = ReshapeConfig.default.copy(sort_order = ReshapeSortOrder.SOURCE)

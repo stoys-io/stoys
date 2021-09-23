@@ -1,13 +1,5 @@
 package io.stoys.spark.dq
 
-case class DqResult(
-    columns: Seq[DqColumn],
-    rules: Seq[DqRule],
-    statistics: DqStatistics,
-    row_sample: Seq[DqRowSample],
-    metadata: Map[String, String]
-)
-
 case class DqColumn(
     name: String
 )
@@ -36,4 +28,12 @@ case class DqStatistics(
 case class DqRowSample(
     row: Seq[String],
     violated_rule_names: Seq[String]
+)
+
+case class DqResult(
+    columns: Seq[DqColumn],
+    rules: Seq[DqRule],
+    statistics: DqStatistics,
+    row_sample: Seq[DqRowSample],
+    metadata: Map[String, String]
 )

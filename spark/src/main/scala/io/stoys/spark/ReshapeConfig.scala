@@ -79,9 +79,9 @@ case class ReshapeConfig(
 
 object ReshapeConfig {
   /**
-   * [[ReshapeConfig.as]] behaves the same way as Spark's own [[Dataset.as]].
+   * [[ReshapeConfig.spark]] behaves the same way as Spark's own [[Dataset.as]].
    */
-  val as: ReshapeConfig = ReshapeConfig(
+  val spark: ReshapeConfig = ReshapeConfig(
     coerce_types = false,
     conflict_resolution = ReshapeConflictResolution.ERROR,
     drop_extra_columns = false,
@@ -94,11 +94,11 @@ object ReshapeConfig {
     date_format = None,
     timestamp_format = None
   )
-  val paranoid: ReshapeConfig = as.copy(
+  val paranoid: ReshapeConfig = spark.copy(
     fail_on_extra_column = true,
     fail_on_ignoring_nullability = true
   )
-  val default: ReshapeConfig = as.copy(
+  val default: ReshapeConfig = spark.copy(
     coerce_types = true,
     drop_extra_columns = true,
     sort_order = ReshapeSortOrder.TARGET
@@ -106,6 +106,12 @@ object ReshapeConfig {
   val dangerous: ReshapeConfig = default.copy(
     conflict_resolution = ReshapeConflictResolution.LAST,
     fill_default_values = true,
+    fill_missing_nulls = true,
+    field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_NORMALIZED
+  )
+  val notebook: ReshapeConfig = spark.copy(
+    coerce_types = true,
+    conflict_resolution = ReshapeConflictResolution.LAST,
     fill_missing_nulls = true,
     field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_NORMALIZED
   )

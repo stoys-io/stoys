@@ -2,6 +2,7 @@ package io.stoys.spark
 
 import io.stoys.scala.Configuration
 import io.stoys.spark.test.SparkTestBase
+import io.stoys.utils.Spark
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
 import java.nio.charset.StandardCharsets
@@ -39,7 +40,7 @@ class SparkDagRunnerTest extends SparkTestBase {
     assert(readTmpData[Pack]("output/pack") === expectedPack)
 
     // TODO: Do we want to have shared metrics optional or mandatory again once delta is published for Scala 2.13.
-    if (SparkUtils.isDeltaSupported) {
+    if (Spark.isDeltaSupported) {
       val sharedMetrics = sparkSession.read.format("delta").load(s"$sharedOutputDir/metric")
       val ts = Timestamp.valueOf(LocalDateTime.parse(runTimestamp))
       assert(sharedMetrics.collect() === Array(Row("add_metric", 42.0, Map("foo" -> "bar"), ts)))

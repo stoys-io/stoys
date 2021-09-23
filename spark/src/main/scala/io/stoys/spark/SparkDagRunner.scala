@@ -1,6 +1,7 @@
 package io.stoys.spark
 
 import io.stoys.scala.{Configuration, IO}
+import io.stoys.utils.Spark
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{Dataset, SparkSession}
 
@@ -70,7 +71,7 @@ class SparkDagRunner(sparkSession: SparkSession, sparkIO: SparkIO, config: Spark
 
   private def writeSharedOutputPath(mergedMetrics: Option[Dataset[Metric]]): Unit = {
     config.shared_output_path.foreach { sharedOutputPath =>
-      if (SparkUtils.isDeltaSupported) {
+      if (Spark.isDeltaSupported) {
         mergedMetrics.foreach { mm =>
           mm.withColumn("run_timestamp", lit(Timestamp.valueOf(config.run_timestamp)))
               .write.format("delta").mode("append").save(s"$sharedOutputPath/metric")

@@ -1,24 +1,13 @@
 package io.stoys.spark
 
-import org.apache.spark.sql.sources.DataSourceRegister
-import org.apache.spark.sql.{Row, SparkSession}
-
-import java.util.ServiceLoader
-import scala.jdk.CollectionConverters._
-import scala.reflect.runtime.universe._
+import org.apache.spark.sql.SparkSession
 
 object SparkUtils {
-  val rowTypeTag: TypeTag[Row] = typeTag[Row]
-
   def createSparkSession(sparkConfig: SparkConfig): SparkSession = {
     val builder = SparkSession.builder()
     sparkConfig.spark_options.foreach(kv => builder.config(kv._1, kv._2))
     Option(sparkConfig.master).foreach(builder.master)
     Option(sparkConfig.app_name).foreach(builder.appName)
     builder.getOrCreate()
-  }
-
-  def isDeltaSupported: Boolean = {
-    ServiceLoader.load(classOf[DataSourceRegister]).iterator().asScala.exists(_.shortName().toLowerCase() == "delta")
   }
 }

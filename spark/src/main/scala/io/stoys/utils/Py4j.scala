@@ -1,4 +1,4 @@
-package io.stoys.spark
+package io.stoys.utils
 
 import java.util.{List => JList, Map => JMap}
 import scala.jdk.CollectionConverters._
