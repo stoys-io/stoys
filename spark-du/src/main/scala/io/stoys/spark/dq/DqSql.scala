@@ -8,7 +8,6 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.trees.Origin
 
 import scala.util.matching.Regex
-import scala.util.Try
 
 private[dq] object DqSql {
   case class ParsedDqSql(
@@ -31,22 +30,10 @@ private[dq] object DqSql {
   }
 
   private def assertSafeLogicalPlan(logicalPlan: LogicalPlan): Unit = {
-    val forbiddenClassNames = Seq(
-      "org.apache.spark.sql.catalyst.plans.logical.Command",
-      "org.apache.spark.sql.catalyst.plans.logical.ParsedStatement"
-    )
-    val forbiddenClasses = forbiddenClassNames.flatMap(fcn =>
-      Try(Class.forName(fcn)).toOption.asInstanceOf[Option[Class[_]]]
-    )
-    logicalPlan.collect {
-      case lp if forbiddenClasses.exists(_.isInstance(lp)) =>
-        fail(lp.origin, s"Unsupported logical plan ${lp.getClass.getName}:\n$lp")
+    logicalPlan.collectWithSubqueries {
+      case c: Command => fail(c.origin, s"Unsupported logical plan ${c.getClass.getName}:\n$c")
+      case s: ParsedStatement => fail(s.origin, s"Unsupported logical plan ${s.getClass.getName}:\n$s")
     }
-    // TODO: Switch to the following code after dropping Spark 2.4.x support.
-//    logicalPlan.collectWithSubqueries {
-//      case c: Command => fail(c.origin, s"Unsupported logical plan ${c.getClass.getName}:\n$c")
-//      case s: ParsedStatement => fail(s.origin, s"Unsupported logical plan ${s.getClass.getName}:\n$s")
-//    }
   }
 
   private def findLastProject(logicalPlan: LogicalPlan): Option[Project] = {

@@ -3,6 +3,7 @@ package io.stoys.spark.dq
 import io.stoys.scala.Jackson
 import io.stoys.spark.TableName
 import org.apache.commons.codec.digest.DigestUtils
+import org.apache.spark.sql.catalyst.expressions.aggregate.CountIf
 import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, Dataset}
@@ -201,7 +202,7 @@ object DqJoin {
   }
 
   private def count_if(condition: Column): Column = {
-    count(when(condition, lit(1)).otherwise(lit(null)))
+    new Column(CountIf(condition.expr).toAggregateExpression())
   }
 
   private def sum_if(condition: Column, value: Column): Column = {

@@ -17,18 +17,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: default
+          - name: stoys_2.12
             java_version: 8
             maven_extra_args: -Pjava-8,scala-2.12,spark-3.0
             experimental: false
-          - name: legacy
+          - name: stoys_2.13
             java_version: 8
-            maven_extra_args: -Pjava-8,scala-2.11,spark-2.4
+            maven_extra_args: -Pjava-8,scala-2.13,spark-3.2
             experimental: false
-#          - name: future
-#            java_version: 15
-#            maven_extra_args: -Pjava-15,scala-2.13,spark-3.2
-#            experimental: true
 
     continue-on-error: ${{ matrix.experimental }}
 

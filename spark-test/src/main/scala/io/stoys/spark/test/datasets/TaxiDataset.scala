@@ -31,16 +31,4 @@ class TaxiDataset(sparkSession: SparkSession) {
     computeTripDataPlus(readCachedYellowTripDataCsv(fileName))
 //    dataCache.readOrCreateCachedDf("tripDataPlusDf", computeTripDataPlus(readCachedYellowTripDataCsv(fileName)))
   }
-
-  // TODO: Remove this transform after dropping Spark 2.4.x support.
-  private def transform(column: Column, f: Column => Column): Column = {
-    import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, LambdaFunction, UnresolvedNamedLambdaVariable}
-    def createLambda(f: Column => Column) = {
-      val x = UnresolvedNamedLambdaVariable(Seq("x"))
-      val function = f(new Column(x)).expr
-      LambdaFunction(function, Seq(x))
-    }
-
-    new Column(ArrayTransform(column.expr, createLambda(f)))
-  }
 }

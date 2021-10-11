@@ -118,7 +118,7 @@ class ReshapeTest extends SparkTestBase {
     assert(reshape[SeqOfRecord](df, config).collect() === Seq(SeqOfRecord(Seq(Record("foo", 42, null)))))
   }
 
-  ignore("maps") {
+  test("maps") {
     val df = sparkSession.sql("SELECT MAP(0, STRUCT('foo' AS s, 42 AS i)) AS records")
     val config = ReshapeConfig.dangerous.copy(sort_order = ReshapeSortOrder.ALPHABETICAL)
     assert(reshape[MapOfRecord](df, config).collect() === Seq(MapOfRecord(Map("0" -> Record("foo", 42, null)))))

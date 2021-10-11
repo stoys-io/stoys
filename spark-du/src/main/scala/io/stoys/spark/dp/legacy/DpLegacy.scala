@@ -4,6 +4,7 @@ import io.stoys.spark.dp.legacy.functions.{data_sketches_items_sketch, data_sket
 import io.stoys.spark.dp.{DpConfig, DpProfilerName, DpResult}
 import io.stoys.spark.{MetadataKeys, SToysException}
 import org.apache.spark.sql.catalyst.expressions.FormatNumber
+import org.apache.spark.sql.catalyst.expressions.aggregate.CountIf
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, Dataset}
@@ -137,9 +138,7 @@ private[dp] object DpLegacy {
   }
 
   private def count_if(condition: Column): Column = {
-    count(when(condition, lit(1)).otherwise(lit(null)))
-    // Spark 3.1+:
-//    new Column(CountIf(condition.expr).toAggregateExpression())
+    new Column(CountIf(condition.expr).toAggregateExpression())
   }
 
   private def format_number_str(column: Column, fmt: String): Column = {

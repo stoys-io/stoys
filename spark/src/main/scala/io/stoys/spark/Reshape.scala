@@ -3,7 +3,7 @@ package io.stoys.spark
 import io.stoys.scala.Strings
 import io.stoys.spark.MetadataKeys.{ENUM_VALUES_KEY, FORMAT_KEY}
 import org.apache.spark.sql.catalyst.ScalaReflection
-import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Attribute, Cast, CreateArray, CreateMap, Expression, LambdaFunction, Literal, NamedLambdaVariable}
+import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Attribute, Cast, CreateArray, CreateMap, Expression, LambdaFunction, Literal, NamedLambdaVariable, TransformKeys, TransformValues}
 import org.apache.spark.sql.catalyst.util.usePrettyExpression
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
@@ -129,32 +129,31 @@ object Reshape {
             column = new Column(ArrayTransform(column.expr, lambdaFunction))
         }
 
-      // TODO: Should we create multi version build? This works only in Spark 3+ (3.1 even has transform_key function).
-//      case (sourceMT: MapType, targetMT: MapType) =>
-//        val keyFieldPath = s"$normalizedFieldPath{K}"
-//        val valueFieldPath = s"$normalizedFieldPath{V}"
-//        val keyIdentifier = Strings.toWordCharactersCollapsing(keyFieldPath)
-//        val valueIdentifier = Strings.toWordCharactersCollapsing(valueFieldPath)
-//        val keyLambdaVariable = NamedLambdaVariable(keyIdentifier, sourceMT.keyType, nullable = false)
-//        val valueLambdaVariable = NamedLambdaVariable(valueIdentifier, sourceMT.valueType, sourceMT.valueContainsNull)
-//        if (sourceMT.keyType != targetMT.keyType) {
-//          reshapeDataType(sourceMT.keyType, targetMT.keyType, config, keyLambdaVariable, keyFieldPath) match {
-//            case Left(nestedErrors) =>
-//              errors ++= nestedErrors
-//            case Right(nestedColumn) =>
-//              val lambdaFunction = LambdaFunction(nestedColumn.expr, Seq(keyLambdaVariable, valueLambdaVariable))
-//              column = new Column(TransformKeys(column.expr, lambdaFunction))
-//          }
-//        }
-//        if (sourceMT.valueType != targetMT.valueType) {
-//          reshapeDataType(sourceMT.valueType, targetMT.valueType, config, valueLambdaVariable, valueFieldPath) match {
-//            case Left(nestedErrors) =>
-//              errors ++= nestedErrors
-//            case Right(nestedColumn) =>
-//              val lambdaFunction = LambdaFunction(nestedColumn.expr, Seq(keyLambdaVariable, valueLambdaVariable))
-//              column = new Column(TransformValues(column.expr, lambdaFunction))
-//          }
-//        }
+      case (sourceMT: MapType, targetMT: MapType) =>
+        val keyFieldPath = s"$normalizedFieldPath{K}"
+        val valueFieldPath = s"$normalizedFieldPath{V}"
+        val keyIdentifier = Strings.toWordCharactersCollapsing(keyFieldPath)
+        val valueIdentifier = Strings.toWordCharactersCollapsing(valueFieldPath)
+        val keyLambdaVariable = NamedLambdaVariable(keyIdentifier, sourceMT.keyType, nullable = false)
+        val valueLambdaVariable = NamedLambdaVariable(valueIdentifier, sourceMT.valueType, sourceMT.valueContainsNull)
+        if (sourceMT.keyType != targetMT.keyType) {
+          reshapeDataType(sourceMT.keyType, targetMT.keyType, config, keyLambdaVariable, keyFieldPath) match {
+            case Left(nestedErrors) =>
+              errors ++= nestedErrors
+            case Right(nestedColumn) =>
+              val lambdaFunction = LambdaFunction(nestedColumn.expr, Seq(keyLambdaVariable, valueLambdaVariable))
+              column = new Column(TransformKeys(column.expr, lambdaFunction))
+          }
+        }
+        if (sourceMT.valueType != targetMT.valueType) {
+          reshapeDataType(sourceMT.valueType, targetMT.valueType, config, valueLambdaVariable, valueFieldPath) match {
+            case Left(nestedErrors) =>
+              errors ++= nestedErrors
+            case Right(nestedColumn) =>
+              val lambdaFunction = LambdaFunction(nestedColumn.expr, Seq(keyLambdaVariable, valueLambdaVariable))
+              column = new Column(TransformValues(column.expr, lambdaFunction))
+          }
+        }
 
       case (_: StringType, _: IntegerType | LongType) if targetField.metadata.contains(ENUM_VALUES_KEY) =>
         val enumValues = targetField.metadata.getStringArray(ENUM_VALUES_KEY).map(_.toUpperCase)

@@ -4,8 +4,8 @@ import io.stoys.scala.{Reflection, Strings}
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.sql.{Dataset, Row}
 
+import java.util.concurrent.atomic.AtomicLong
 import scala.reflect.runtime.universe._
-import scala.util.Random
 
 case class TableName[T: TypeTag] private[spark](entityName: Option[String], logicalName: Option[String]) {
   import TableName._
@@ -59,10 +59,12 @@ object TableName {
     }
   }
 
+  private val nextExecutionId = new AtomicLong(0)
+
   private def getDataFrameLogicalName(ds: Dataset[_]): String = {
     val schemaHash = DigestUtils.sha256Hex(ds.schema.json)
-    // TODO: Should we use ds.queryExecution.id on Spark 3+?
+    // TODO: Should we use ds.queryExecution.id on Spark 3.1+?
 //    s"${schemaHash.take(7)}$LOGICAL_NAME_SEPARATOR${ds.queryExecution.id}"
-    s"${schemaHash.take(7)}$LOGICAL_NAME_SEPARATOR${math.abs(Random.nextLong())}"
+    s"${schemaHash.take(7)}$LOGICAL_NAME_SEPARATOR${nextExecutionId.getAndIncrement()}"
   }
 }

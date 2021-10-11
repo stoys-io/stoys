@@ -32,9 +32,8 @@ class DqSqlTest extends SparkTestBase {
 
     val ddlStatement = "DROP TABLE table"
     im(ddlStatement, "Unsupported logical plan")
-    // TODO: Uncomment the following code after dropping Spark 2.4.x support.
-//    val dmlStatement = "INSERT INTO table VALUES ('foo')"
-//    im(dmlStatement, "Unsupported logical plan")
+    val dmlStatement = "INSERT INTO table VALUES ('foo')"
+    im(dmlStatement, "Unsupported logical plan")
     val auxiliaryStatement = "SHOW TABLES"
     im(auxiliaryStatement, "Unsupported logical plan")
     val explainStatement = "EXPLAIN SELECT 'foo'"

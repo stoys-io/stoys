@@ -85,9 +85,6 @@
             </dependencies>
         </profile>
         <profile>
-            <id>spark-2.4</id>
-        </profile>
-        <profile>
             <id>spark-3.0</id>
             <properties>
                 <delta.version>0.8.0</delta.version>
