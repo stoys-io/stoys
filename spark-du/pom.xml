@@ -8,7 +8,7 @@
     <artifactId>stoys-spark-du_${scala.compat.version}</artifactId>
 
     <properties>
-        <datasketches.version>2.0.0</datasketches.version>
+        <datasketches.version>3.0.0</datasketches.version>
     </properties>
 
     <dependencies>

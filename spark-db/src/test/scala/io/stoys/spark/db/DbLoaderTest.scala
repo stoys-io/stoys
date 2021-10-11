@@ -1,5 +1,6 @@
 package io.stoys.spark.db
 
+import com.fasterxml.jackson.module.scala.JavaTypeable
 import io.stoys.scala.{IO, Jackson}
 import io.stoys.spark.test.SparkTestBase
 import org.apache.commons.text.StringEscapeUtils
@@ -142,7 +143,7 @@ object DbLoaderTest {
 
   // Spark insert the json as string. H2 does assume that it is intended as json string and escape what we give it.
   // Hence we have to unescape it. Note: JSON behaviour is very quite different in different dbs!
-  def readJsonValue[T: Manifest](rs: ResultSet, columnLabel: String, unescapeJsonAsString: Boolean): T = {
+  def readJsonValue[T: JavaTypeable](rs: ResultSet, columnLabel: String, unescapeJsonAsString: Boolean): T = {
     val dbJsonString = rs.getString(columnLabel)
     val jsonString = if (unescapeJsonAsString) {
       StringEscapeUtils.UNESCAPE_JSON.translate(dbJsonString.substring(1, dbJsonString.length - 1))

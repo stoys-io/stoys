@@ -63,11 +63,11 @@
         <commons-io.version>2.11.0</commons-io.version>
         <commons-text.version>1.9</commons-text.version>
         <delta.version>1.0.0</delta.version>
-        <jackson.version>2.12.5</jackson.version>
+        <jackson.version>2.13.0</jackson.version>
         <log4s.version>1.10.0</log4s.version>
         <persistence-api.version>2.2</persistence-api.version>
         <scala-collection-compat.version>2.5.0</scala-collection-compat.version>
-        <scalatest.version>3.2.9</scalatest.version>
+        <scalatest.version>3.2.10</scalatest.version>
         <spark.version>3.1.2</spark.version>
     </properties>
 
@@ -215,6 +215,9 @@
 
                 <!-- git -->
                 <plugin>
+                    <!--<groupId>io.github.git-commit-id</groupId>-->
+                    <!--<artifactId>git-commit-id-maven-plugin</artifactId>-->
+                    <!--<version>5.0.0</version>-->
                     <groupId>pl.project13.maven</groupId>
                     <artifactId>git-commit-id-plugin</artifactId>
                     <version>4.9.10</version>
@@ -242,7 +245,7 @@
                 <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
-                    <version>4.5.3</version>
+                    <version>4.5.4</version>
                     <executions>
                         <execution>
                             <goals>
@@ -395,7 +398,7 @@
                 <!--<plugin>-->
                 <!--    <groupId>org.apache.maven.plugins</groupId>-->
                 <!--    <artifactId>maven-javadoc-plugin</artifactId>-->
-                <!--    <version>3.3.0</version>-->
+                <!--    <version>3.3.1</version>-->
                 <!--    <configuration>-->
                 <!--        <additionalparam>-Xdoclint:all -Xdoclint:-missing</additionalparam>-->
                 <!--    </configuration>-->
