@@ -31,7 +31,7 @@ class ZipFileFormatTest extends SparkTestBase {
       "foo" -> "foo",
       "dir0/dir00/bar.txt" -> "bar",
       "dir0/dir00/baz.txt" -> "baz",
-      "dir0/dir01/bar.txt" -> "bar"
+      "dir0/dir01/bar.txt" -> "bar",
     )
 
     val binaryFilesZipPath = s"$tmpDir/binary"

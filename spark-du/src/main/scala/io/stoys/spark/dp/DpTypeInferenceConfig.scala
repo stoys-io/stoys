@@ -62,7 +62,7 @@ case class DpTypeInferenceConfig(
      * )
      * }}}
      */
-    enum_values: Seq[DpTypeInferenceConfig.EnumValues]
+    enum_values: Seq[DpTypeInferenceConfig.EnumValues],
 )
 
 object DpTypeInferenceConfig {
@@ -76,13 +76,13 @@ object DpTypeInferenceConfig {
     enum_values = Seq(
       EnumValues(EnumValues.BOOLEAN_NAME, Seq("FALSE", "TRUE")),
       EnumValues(EnumValues.BOOLEAN_NAME, Seq("NO", "YES")),
-      EnumValues(EnumValues.BOOLEAN_NAME, Seq("N", "Y"))
-    )
+      EnumValues(EnumValues.BOOLEAN_NAME, Seq("N", "Y")),
+    ),
   )
 
   case class EnumValues(
       name: String,
-      values: Seq[String]
+      values: Seq[String],
   )
 
   object EnumValues {

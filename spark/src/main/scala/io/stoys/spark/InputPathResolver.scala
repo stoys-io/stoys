@@ -80,7 +80,7 @@ object InputPathResolver {
       tableName: String,
       format: Option[String],
       reshapeConfigPropsOverrides: Map[String, String],
-      sparkOptions: Map[String, String]
+      sparkOptions: Map[String, String],
   ) extends Info {
     override def toInputPathUrl: String = {
       val stoysOptions = StoysOptions(Option(tableName), format, listing_strategy = None, reshapeConfigPropsOverrides)
@@ -101,7 +101,7 @@ object InputPathResolver {
   }
 
   case class DagInfo(
-      path: String
+      path: String,
   ) extends Info {
     override def toInputPathUrl: String = {
       s"$path?${STOYS_OPTION_PREFIX}listing_strategy=dag"
@@ -113,13 +113,13 @@ object InputPathResolver {
       format: Option[String],
       listing_strategy: Option[String],
       @JsonProperty("reshape_config")
-      reshape_config_props_overrides: Map[String, String]
+      reshape_config_props_overrides: Map[String, String],
   )
 
   private[spark] case class ParsedInputPath(
       path: String,
       stoysOptions: StoysOptions,
-      sparkOptions: Map[String, String]
+      sparkOptions: Map[String, String],
   )
 
   private[spark] def parseInputPath(inputPath: String): ParsedInputPath = {

@@ -23,7 +23,7 @@ object ExcelWriter {
 
   private[excel] case class ComplexStyle(
       cellStyle: CellStyle,
-      conditionalFormatting: Option[ConditionalFormatting]
+      conditionalFormatting: Option[ConditionalFormatting],
   )
 
   private[excel] case class SheetConfig(
@@ -31,7 +31,7 @@ object ExcelWriter {
       startAddress: Option[CellAddress],
       headerStyle: Option[ComplexStyle],
       cellStyle: Option[ComplexStyle],
-      columnStyles: Map[String, ComplexStyle]
+      columnStyles: Map[String, ComplexStyle],
   )
 
   private[excel] object SheetConfig {
@@ -43,7 +43,7 @@ object ExcelWriter {
   private[excel] case class ColumnInfo(
       columnName: String,
       dataFormatString: Option[String],
-      converter: Option[Any => Any] = None
+      converter: Option[Any => Any] = None,
   )
 
   def createWorkbook(config: ExcelWriterConfig): Workbook = {
@@ -236,7 +236,7 @@ object ExcelWriter {
   private case class SpecialColumnInfo(
       key: String,
       index: Int,
-      columnInfo: ColumnInfo
+      columnInfo: ColumnInfo,
   )
 
   private def getSpecialColumnInfo(columnInfo: Seq[ColumnInfo]): Seq[SpecialColumnInfo] = {

@@ -10,7 +10,7 @@ class DpAggregator(config: DpConfig = DpConfig.default) extends Aggregator[Row, 
   override def zero: DpAgg = {
     DpAgg(
       count = 0,
-      profilers = Array.empty[AnyProfiler]
+      profilers = Array.empty[AnyProfiler],
     )
   }
 
@@ -41,7 +41,7 @@ class DpAggregator(config: DpConfig = DpConfig.default) extends Aggregator[Row, 
   override def finish(agg: DpAgg): DpResult = {
     DpResult(
       table = DpTable(agg.count),
-      columns = agg.profilers.map(_.profile(None, config).orNull)
+      columns = agg.profilers.map(_.profile(None, config).orNull),
     )
   }
 
@@ -53,6 +53,6 @@ class DpAggregator(config: DpConfig = DpConfig.default) extends Aggregator[Row, 
 object DpAggregator {
   case class DpAgg(
       var count: Long,
-      var profilers: Array[AnyProfiler]
+      var profilers: Array[AnyProfiler],
   )
 }

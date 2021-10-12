@@ -55,7 +55,7 @@ case class ExcelWriterConfig(
      * Apache POI library used to generate excel files is very memory hungry (and slow). Streaming should help with
      * that by writing file parts to local filesystem. See apache poi documentation for details.
      */
-    poi_streaming_row_access_window_size: Option[Int]
+    poi_streaming_row_access_window_size: Option[Int],
 )
 
 object ExcelWriterConfig {
@@ -70,6 +70,6 @@ object ExcelWriterConfig {
     timestamp_format = "dd-mm-yyyy hh:mm:ss",
     template_xlsx = null,
     poi_based_auto_size_columns = false,
-    poi_streaming_row_access_window_size = None
+    poi_streaming_row_access_window_size = None,
   )
 }

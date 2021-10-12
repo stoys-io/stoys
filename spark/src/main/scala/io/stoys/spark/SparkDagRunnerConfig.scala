@@ -21,5 +21,5 @@ case class SparkDagRunnerConfig(
     // Cache every edge in the dag to avoid computing the same dataset many times.
     disable_caching: Boolean,
     // Debug will force evaluation of dag nodes one by one.
-    debug: Boolean
+    debug: Boolean,
 )

@@ -45,7 +45,7 @@ case class DpConfig(
      *
      * Ignored if infer_types_from_strings is disabled.
      */
-    type_inference_config: DpTypeInferenceConfig
+    type_inference_config: DpTypeInferenceConfig,
 )
 
 object DpConfig {
@@ -55,6 +55,6 @@ object DpConfig {
     pmf_buckets = 100,
     time_zone_id = Some("UTC"),
     infer_types_from_strings = false,
-    type_inference_config = DpTypeInferenceConfig.default
+    type_inference_config = DpTypeInferenceConfig.default,
   )
 }

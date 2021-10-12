@@ -14,7 +14,7 @@ private[dq] object DqFile {
   case class FileInput(
       df: DataFrame,
       rules: Seq[DqRule],
-      metadata: Map[String, String]
+      metadata: Map[String, String],
   )
 
   def openFileInputPath(sparkSession: SparkSession, inputPath: String): FileInput = {
@@ -52,7 +52,7 @@ private[dq] object DqFile {
           "file_name" -> dfs.path(table.path).getName,
           "size" -> dfs.getContentSummary(table.path).getLength.toString,
           "modification_timestamp" -> Instant.ofEpochMilli(status.getModificationTime).toString,
-          "table_name" -> table.tableName
+          "table_name" -> table.tableName,
         )
         FileInput(df, Seq(recordNotCorruptedRule), metadata)
     }

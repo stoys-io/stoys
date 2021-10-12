@@ -20,19 +20,19 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, partitionCount:
       aggPerTable = DqAggPerTable(
         rows = 0L,
         violations = 0L,
-        maxRowIdPerPartition = if (isRowCountingEnabled) Array.fill(partitionCount)(-1L) else null
+        maxRowIdPerPartition = if (isRowCountingEnabled) Array.fill(partitionCount)(-1L) else null,
       ),
       aggPerColumn = Array.fill(columnCount)(
         DqAggPerColumn(
-          violations = 0L
-        )
+          violations = 0L,
+        ),
       ),
       aggPerRule = Array.fill(ruleCount)(
         DqAggPerRule(
           rowSample = if (isSamplingEnabled) zeroRowSample else null,
-          violations = 0L
-        )
-      )
+          violations = 0L,
+        ),
+      ),
     )
   }
 
@@ -41,7 +41,7 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, partitionCount:
       first = null,
       last = null,
       hashed = Array.fill(config.max_rows_per_rule)(null),
-      maxHash = Long.MaxValue
+      maxHash = Long.MaxValue,
     )
   }
 
@@ -108,11 +108,11 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, partitionCount:
           mergeRowCount(agg1.aggPerTable.maxRowIdPerPartition, agg2.aggPerTable.maxRowIdPerPartition)
         } else {
           null
-        }
+        },
       ),
       aggPerColumn = 0.until(columnCount).toArray.map { ci =>
         DqAggPerColumn(
-          violations = agg1.aggPerColumn(ci).violations + agg2.aggPerColumn(ci).violations
+          violations = agg1.aggPerColumn(ci).violations + agg2.aggPerColumn(ci).violations,
         )
       },
       aggPerRule = 0.until(ruleCount).toArray.map { ri =>
@@ -122,9 +122,9 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, partitionCount:
           } else {
             null
           },
-          violations = agg1.aggPerRule(ri).violations + agg2.aggPerRule(ri).violations
+          violations = agg1.aggPerRule(ri).violations + agg2.aggPerRule(ri).violations,
         )
-      }
+      },
     )
   }
 
@@ -135,7 +135,7 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, partitionCount:
       first = rowSample12.map(_.first).filter(_ != null).sortBy(_.rowId).headOption.orNull,
       last = rowSample12.map(_.last).filter(_ != null).sortBy(_.rowId).lastOption.orNull,
       hashed = hashed.take(config.max_rows_per_rule).toArray,
-      maxHash = hashed.headOption.map(_.ruleHashes(ri)).getOrElse(Long.MaxValue)
+      maxHash = hashed.headOption.map(_.ruleHashes(ri)).getOrElse(Long.MaxValue),
     )
   }
 
@@ -160,7 +160,7 @@ private[dq] class DqAggregator(columnCount: Int, ruleCount: Int, partitionCount:
       rowViolations = agg.aggPerTable.violations,
       columnViolations = agg.aggPerColumn.map(_.violations),
       ruleViolations = agg.aggPerRule.map(_.violations),
-      rowSample = finalRowSample
+      rowSample = finalRowSample,
     )
   }
 
@@ -206,35 +206,35 @@ private[dq] object DqAggregator {
   case class DqAggInputRow(
       rowId: Long,
       row: Array[String],
-      ruleHashes: Array[Long]
+      ruleHashes: Array[Long],
   )
 
   case class DqAggPerTable(
       var rows: Long,
       var violations: Long,
-      var maxRowIdPerPartition: Array[Long]
+      var maxRowIdPerPartition: Array[Long],
   )
 
   case class DqAggRowSample(
       var first: DqAggInputRow,
       var last: DqAggInputRow,
       var hashed: Array[DqAggInputRow],
-      var maxHash: Long
+      var maxHash: Long,
   )
 
   case class DqAggPerRule(
       var rowSample: DqAggRowSample,
-      var violations: Long
+      var violations: Long,
   )
 
   case class DqAggPerColumn(
-      var violations: Long
+      var violations: Long,
   )
 
   case class DqAgg(
       aggPerTable: DqAggPerTable,
       aggPerColumn: Array[DqAggPerColumn],
-      aggPerRule: Array[DqAggPerRule]
+      aggPerRule: Array[DqAggPerRule],
   )
 
   case class DqAggOutputRow(
@@ -242,6 +242,6 @@ private[dq] object DqAggregator {
       rowViolations: Long,
       columnViolations: Array[Long],
       ruleViolations: Array[Long],
-      rowSample: Array[DqAggInputRow]
+      rowSample: Array[DqAggInputRow],
   )
 }

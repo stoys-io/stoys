@@ -6,7 +6,7 @@ case class DqJoinInfo(
     left_key_column_names: Seq[String],
     right_key_column_names: Seq[String],
     join_type: String,
-    join_condition: String
+    join_condition: String,
 )
 
 case class DqJoinStatistics(
@@ -20,12 +20,12 @@ case class DqJoinStatistics(
     left: Long,
     right: Long,
     full: Long,
-    cross: Long
+    cross: Long,
 )
 
 case class DqJoinResult(
     key: String,
     dq_join_info: DqJoinInfo,
     dq_join_statistics: DqJoinStatistics,
-    dq_result: DqResult
+    dq_result: DqResult,
 )

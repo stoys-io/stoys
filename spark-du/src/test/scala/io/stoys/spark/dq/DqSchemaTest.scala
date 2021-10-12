@@ -17,7 +17,7 @@ class DqSchemaTest extends SparkTestBase {
       field("a", """{"type":"array","elementType":"integer","containsNull":true}"""),
       field("s", "\"string\"", nullable = false, enumValues = Seq("foo", "bar", "baz"), regexp = "(foo|bar|baz)"),
       field("d", "\"date\"", format = "MM/dd/yyyy"),
-      field("missing", "\"string\"")
+      field("missing", "\"string\""),
     )
     val primaryKeyFieldNames = Seq("i", "s")
 
@@ -32,7 +32,7 @@ class DqSchemaTest extends SparkTestBase {
       DqRule("s__not_null", "s IS NOT NULL", None, Seq.empty),
       DqRule("s__enum_values", "s IS NULL OR (CAST(s AS STRING) IN ('foo', 'bar', 'baz'))", None, Seq.empty),
       DqRule("s__regexp", "s IS NULL OR (CAST(s AS STRING) RLIKE '(foo|bar|baz)')", None, Seq.empty),
-      DqRule("d__type", "d IS NULL OR (TO_DATE(d, 'MM/dd/yyyy') IS NOT NULL)", None, Seq.empty)
+      DqRule("d__type", "d IS NULL OR (TO_DATE(d, 'MM/dd/yyyy') IS NOT NULL)", None, Seq.empty),
     )
     val rules = generateSchemaRules(existingSchema, expectedFields, primaryKeyFieldNames, DqConfig.default)
     assert(rules === expectedRules)
@@ -43,7 +43,7 @@ class DqSchemaTest extends SparkTestBase {
     val expectedFields = Seq(
       field("space s", "\"integer\""),
       field("symbols  (*)_42", "\"integer\""),
-      field("mixed_CASE", "\"integer\"")
+      field("mixed_CASE", "\"integer\""),
     )
     val primaryKeyFieldNames = Seq("space s", "symbols  (*)_42")
 
@@ -52,7 +52,7 @@ class DqSchemaTest extends SparkTestBase {
       rule("__primary_key_unique", "(COUNT(*) OVER (PARTITION BY `space s`, `symbols  (*)_42`)) = 1"),
       rule("space s__type", "`space s` IS NULL OR (CAST(`space s` AS INT) IS NOT NULL)"),
       rule("symbols  (*)_42__type", "`symbols  (*)_42` IS NULL OR (CAST(`symbols  (*)_42` AS INT) IS NOT NULL)"),
-      rule("mixed_CASE__type", "mixed_CASE IS NULL OR (CAST(mixed_CASE AS INT) IS NOT NULL)")
+      rule("mixed_CASE__type", "mixed_CASE IS NULL OR (CAST(mixed_CASE AS INT) IS NOT NULL)"),
     )
     val rules = generateSchemaRules(existingSchema, expectedFields, primaryKeyFieldNames, DqConfig.default)
     assert(rules === expectedRules)
@@ -66,7 +66,7 @@ class DqSchemaTest extends SparkTestBase {
     val config = DqConfig.default.copy(fail_on_extra_columns = true)
     val rules = generateSchemaRules(existingSchema, Seq.empty, Seq.empty, config)
     val expectedRules = Seq(
-      rule("__no_extra_fields", "false", "Extra fields: b, i, s, a, d, extra")
+      rule("__no_extra_fields", "false", "Extra fields: b, i, s, a, d, extra"),
     )
     assert(rules === expectedRules)
   }

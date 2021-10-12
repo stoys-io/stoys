@@ -139,7 +139,7 @@ class ReshapeTest extends SparkTestBase {
     val defaultSchema = ScalaReflection.schemaFor[TemporalRecord].dataType
     val targetSchema = StructType(Seq(
       StructField("date", DateType, metadata = Metadata.fromJson("""{"format": "MM/dd/yyyy"}""")),
-      StructField("timestamp", TimestampType, metadata = Metadata.fromJson("""{"format": "MM/dd/yyyy HH:mm"}"""))
+      StructField("timestamp", TimestampType, metadata = Metadata.fromJson("""{"format": "MM/dd/yyyy HH:mm"}""")),
     ))
     val reshapedToDefaultSchema = reshapeToDF(df, defaultSchema).as[TemporalRecord]
     assert(reshapedToDefaultSchema.collect() === Seq(TemporalRecord(null, null)))
@@ -153,7 +153,7 @@ class ReshapeTest extends SparkTestBase {
     val defaultSchema = ScalaReflection.schemaFor[EnumerationRecord].dataType
     val fooBarBazMetadata = Metadata.fromJson("""{"enum_values": ["foo", "bar", "baz"]}""")
     val targetSchema = StructType(Seq(
-      StructField("enumeration", IntegerType, metadata = fooBarBazMetadata)
+      StructField("enumeration", IntegerType, metadata = fooBarBazMetadata),
     ))
     val reshapedToDefaultSchema = reshapeToDF(df, defaultSchema).as[EnumerationRecord]
     assert(reshapedToDefaultSchema.collect() === Seq(EnumerationRecord(null)))
@@ -171,7 +171,7 @@ class ReshapeTest extends SparkTestBase {
     val reshapeConfig = Arbitrary.empty[ReshapeConfig].copy(
       conflict_resolution = ReshapeConflictResolution.ERROR,
       field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_DEFAULT,
-      sort_order = ReshapeSortOrder.SOURCE
+      sort_order = ReshapeSortOrder.SOURCE,
     )
     assert(reshapeConfig === ReshapeConfig.spark)
 

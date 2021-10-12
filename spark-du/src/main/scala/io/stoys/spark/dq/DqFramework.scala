@@ -17,12 +17,12 @@ private[dq] object DqFramework {
       all: Seq[String],
       existing: Seq[String],
       existingIndexes: Seq[Int],
-      missing: Seq[String]
+      missing: Seq[String],
   )
 
   case class RuleInfo(
       rule: DqRule,
-      columnNamesInfo: ColumnNamesInfo
+      columnNamesInfo: ColumnNamesInfo,
   )
 
   private def getColumnNamesInfo(columnNames: Seq[String], referencedColumnNames: Seq[String]): ColumnNamesInfo = {
@@ -77,7 +77,7 @@ private[dq] object DqFramework {
   case class WideDqDfInfo(
       wideDqDf: DataFrame,
       columnNames: Seq[String],
-      ruleInfo: Seq[RuleInfo]
+      ruleInfo: Seq[RuleInfo],
   )
 
   def computeWideDqDfInfo[T](ds: Dataset[T], rulesWithinDs: Seq[DqRule], rules: Seq[DqRule]): WideDqDfInfo = {
@@ -114,7 +114,7 @@ private[dq] object DqFramework {
       monotonically_increasing_id().as("rowId"),
 //      struct(wideDqDfInfo.columnNames.map(col): _*).as("row"),
       array(wideDqDfInfo.columnNames.map(cn => col(cn).cast(StringType)): _*).as("row"),
-      array(ruleHashesExprs: _*).as("ruleHashes")
+      array(ruleHashesExprs: _*).as("ruleHashes"),
     )
     val existingReferencedColumnIndexes = wideDqDfInfo.ruleInfo.map(_.columnNamesInfo.existingIndexes)
     val columnCount = wideDqDfInfo.columnNames.size
@@ -134,7 +134,7 @@ private[dq] object DqFramework {
       val statistics = DqStatistics(
         table = DqTableStatistic(aggOutputRow.rows, aggOutputRow.rowViolations),
         column = columnNames.zip(columnViolations).map(nv => DqColumnStatistics(nv._1, nv._2)),
-        rule = ruleNames.zip(aggOutputRow.ruleViolations).map(nv => DqRuleStatistics(nv._1, nv._2))
+        rule = ruleNames.zip(aggOutputRow.ruleViolations).map(nv => DqRuleStatistics(nv._1, nv._2)),
       )
       val rowSample = aggOutputRow.rowSample.map { row =>
         DqRowSample(row.row.toSeq, row.ruleHashes.toSeq.zip(ruleNames).filter(_._1 >= 0).map(_._2))
@@ -163,7 +163,7 @@ private[dq] object DqFramework {
     val stackExpr = stack(lit(stackExprs.size) +: stackExprs.flatten)
     val stackedDf = wideDqDfInfo.wideDqDf.select(
       primaryKeyExpr.as("primary_key"),
-      stackExpr.as(Seq("result", "column_names", "values", "rule_name", "rule_expression"))
+      stackExpr.as(Seq("result", "column_names", "values", "rule_name", "rule_expression")),
     )
     val filteredDf = stackedDf.where(not(col("result"))).drop("result")
     filteredDf.as[DqViolationPerRow]

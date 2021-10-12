@@ -3,12 +3,12 @@ package io.stoys.spark.dp
 case class DpPmfBucket(
     low: Double,
     high: Double,
-    count: Long
+    count: Long,
 )
 
 case class DpItem(
     item: String,
-    count: Long
+    count: Long,
 )
 
 case class DpColumn(
@@ -29,15 +29,15 @@ case class DpColumn(
     mean: Option[Double],
     pmf: Seq[DpPmfBucket],
     items: Seq[DpItem],
-    extras: Map[String, String]
+    extras: Map[String, String],
     // TODO: percentiles, stddev?
 )
 
 case class DpTable(
-    rows: Long
+    rows: Long,
 )
 
 case class DpResult(
     table: DpTable,
-    columns: Seq[DpColumn]
+    columns: Seq[DpColumn],
 )

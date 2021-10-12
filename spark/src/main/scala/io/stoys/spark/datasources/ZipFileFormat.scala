@@ -38,7 +38,7 @@ object ZipFileFormat {
   private[datasources] case class ZipOptions(
       method: Option[Int],
       level: Option[Int],
-      fileName: Option[String]
+      fileName: Option[String],
   )
 
   private[datasources] def parseZipOptions(options: Map[String, String]): ZipOptions = {

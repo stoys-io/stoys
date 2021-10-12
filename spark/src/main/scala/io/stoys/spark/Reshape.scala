@@ -258,7 +258,7 @@ object Reshape {
   private case class FieldMapping(
       normalizedName: String,
       sourceFields: List[StructField],
-      targetFields: List[StructField]
+      targetFields: List[StructField],
   )
 
   private def getIndexBasedFieldMapping(sourceStruct: StructType, targetStruct: StructType,

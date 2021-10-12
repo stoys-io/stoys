@@ -29,7 +29,7 @@ class SparkDagRunnerTest extends SparkTestBase {
       s"spark_dag_runner_config__compute_collections__0=pack",
       s"spark_dag_runner_config__shared_output_path=$sharedOutputDir",
       s"spark_io_config__input_paths__0=$inputDir?sos-listing_strategy=tables",
-      s"spark_io_config__output_path=$outputDir"
+      s"spark_io_config__output_path=$outputDir",
     )
     val insightArgs = Array(
       "pack_insight_params__add_multiplier=1",

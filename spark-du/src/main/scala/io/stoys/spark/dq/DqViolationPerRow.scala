@@ -5,5 +5,5 @@ case class DqViolationPerRow(
     column_names: Seq[String],
     values: Seq[String],
     rule_name: String,
-    rule_expression: String
+    rule_expression: String,
 )

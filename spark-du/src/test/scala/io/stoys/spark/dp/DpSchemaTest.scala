@@ -14,7 +14,7 @@ class DpSchemaTest extends SparkTestBase {
       StructField("i", StringType, nullable = true),
       StructField("e", StringType, nullable = false),
       StructField("dt", DateType),
-      StructField("u", DateType)
+      StructField("u", DateType),
     )
     val sourceSchema = StructType(sourceFields)
     val dpResult = DpResult(
@@ -23,8 +23,8 @@ class DpSchemaTest extends SparkTestBase {
         emptyDpColumn.copy(name = "i", data_type_json = "\"integer\"", nullable = false),
         emptyDpColumn.copy(
           name = "e", data_type_json = "\"string\"", nullable = true, enum_values = Seq("foo", "bar", "baz")),
-        emptyDpColumn.copy(name = "dt", data_type_json = "\"date\"", nullable = false, format = "yyyy 🐧 MM?dd")
-      )
+        emptyDpColumn.copy(name = "dt", data_type_json = "\"date\"", nullable = false, format = "yyyy 🐧 MM?dd"),
+      ),
     )
     val fooBarBazMetadata = Metadata.fromJson("""{"enum_values": ["foo", "bar", "baz"]}""")
     val dateMetadata = Metadata.fromJson("""{"format": "yyyy 🐧 MM?dd"}""")
@@ -32,7 +32,7 @@ class DpSchemaTest extends SparkTestBase {
       StructField("i", IntegerType, nullable = false),
       StructField("e", StringType, nullable = true, metadata = fooBarBazMetadata),
       StructField("dt", DateType, nullable = false, metadata = dateMetadata),
-      StructField("u", DateType)
+      StructField("u", DateType),
     )
 
     assert(DpSchema.toSchema(dpResult).json === StructType(expectedFields.filterNot(_.name.startsWith("u"))).json)

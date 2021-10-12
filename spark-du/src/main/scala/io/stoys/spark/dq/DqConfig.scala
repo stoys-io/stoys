@@ -23,7 +23,7 @@ case class DqConfig(
      *
      * Extra columns are silently ignored if this disabled.
      */
-    fail_on_extra_columns: Boolean
+    fail_on_extra_columns: Boolean,
 )
 
 object DqConfig {
@@ -31,6 +31,6 @@ object DqConfig {
     sample_rows = true,
     max_rows_per_rule = 20,
     max_rows = 1000,
-    fail_on_extra_columns = false
+    fail_on_extra_columns = false,
   )
 }

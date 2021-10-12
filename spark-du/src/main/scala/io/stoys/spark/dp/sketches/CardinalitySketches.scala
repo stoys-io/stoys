@@ -31,7 +31,7 @@ private[dp] class DummyCardinalitySketch extends CardinalitySketch {
 
 private[dp] class DataSketchesCpcSketch private(
     private var valid: Boolean,
-    private var sketch: CpcSketch
+    private var sketch: CpcSketch,
 ) extends CardinalitySketch {
 
   override def update(value: Any): Unit = {

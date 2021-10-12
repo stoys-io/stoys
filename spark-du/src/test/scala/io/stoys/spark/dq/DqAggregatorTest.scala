@@ -13,7 +13,7 @@ class DqAggregatorTest extends SparkTestBase {
       DqAggInputRow(1, Array("1", "foo", "extra"), Array(-1, 12, -1)),
       DqAggInputRow(2, Array("2", "bar", "extra"), Array(-1, -1, -1)),
       DqAggInputRow(3, Array("3", "invalid", "extra"), Array(-1, 32, 33)),
-      DqAggInputRow(4, Array("4", null, "extra"), Array(-1, -1, 43))
+      DqAggInputRow(4, Array("4", null, "extra"), Array(-1, -1, 43)),
     )
     val inputRowsDs = inputRows.toDS()
     val columnCount = inputRows.headOption.map(_.row.length).getOrElse(0)
@@ -26,7 +26,7 @@ class DqAggregatorTest extends SparkTestBase {
       rowViolations = 3,
       columnViolations = Array(2, 2, 0),
       ruleViolations = Array(0, 2, 2),
-      rowSample = inputRows.filter(_.ruleHashes.exists(_ != -1)).toArray
+      rowSample = inputRows.filter(_.ruleHashes.exists(_ != -1)).toArray,
     )
 
     val aggregator = new DqAggregator(columnCount, ruleCount, partitionCount,

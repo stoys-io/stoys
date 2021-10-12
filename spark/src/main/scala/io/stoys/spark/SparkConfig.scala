@@ -7,5 +7,5 @@ case class SparkConfig(
     app_name: String,
     master: String,
     // spark_options are options for SparkSession.Builder
-    spark_options: Map[String, String]
+    spark_options: Map[String, String],
 )

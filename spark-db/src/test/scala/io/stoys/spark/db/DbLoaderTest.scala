@@ -18,7 +18,8 @@ class DbLoaderTest extends SparkTestBase {
     Item(1, 11, "name1", 100, "note1", Some("optionalNote1"), "longNameField1", "customTypeField1",
       Date.valueOf("2001-01-01"), Seq("repeatedField11", "repeatedField12"), SubItem("nestedField1")),
     Item(2, 22, "name2", 200, "note2", Some("optionalNote2"), "longNameField2", "customTypeField2",
-      Date.valueOf("2001-01-02"), Seq("repeatedField12", "repeatedField22"), SubItem("nestedField2")))
+      Date.valueOf("2001-01-02"), Seq("repeatedField12", "repeatedField22"), SubItem("nestedField2")),
+  )
   private val caseClassName = classOf[Item].getName
   private val tableName = s"${classOf[Item].getSimpleName.toLowerCase}__latest"
 
@@ -40,7 +41,7 @@ class DbLoaderTest extends SparkTestBase {
       s"db_loader_config__case_class_names__0=$caseClassName",
       s"db_loader_config__jdbc_url=$jdbcUrl",
       s"db_loader_config__after_load_script=after_load_script.sql",
-      s"db_loader_config__executed_sql_output_file=$tmpDir/executed_sql.sql"
+      s"db_loader_config__executed_sql_output_file=$tmpDir/executed_sql.sql",
     )
     DbLoader.main(scala.Array("--environments=dbloader") ++ args)
 
@@ -124,7 +125,7 @@ object DbLoaderTest {
       customTypeField: String,
       date: Date,
       repeatedField: Seq[String],
-      nestedField: SubItem
+      nestedField: SubItem,
   )
 
   // Spark JdbcUtils throw exception when H2 (correctly) returns java.sql.Types.OTHER as column type for json.

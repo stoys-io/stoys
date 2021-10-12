@@ -35,7 +35,7 @@ private[dp] case class AnyProfiler(
     var typeProfiler: TypeProfiler[Any],
     var cardinalitySketch: CardinalitySketch,
     var frequencySketch: FrequencySketch[Any],
-    var quantileSketch: QuantileSketch
+    var quantileSketch: QuantileSketch,
 ) extends TypeProfiler[Any] {
 
   override def update(value: Any): Double = {
@@ -97,7 +97,7 @@ private[dp] case class AnyProfiler(
         mean = None,
         pmf = Option(quantileSketch).map(_.getPmfBuckets).getOrElse(Seq.empty),
         items = items,
-        extras = getExactExtras ++ getQuantileExtras
+        extras = getExactExtras ++ getQuantileExtras,
       )
       val profile = typeProfiler.profile(Some(baseProfile), config)
       val exactPmfHack = isExact.flatMap(_ => profile.flatMap(getExactPmfHack))
@@ -192,7 +192,7 @@ private[dp] object AnyProfiler {
       typeProfiler = getTypeProfiler(field.dataType, config),
       cardinalitySketch = null,
       frequencySketch = null,
-      quantileSketch = null
+      quantileSketch = null,
     )
     field.dataType match {
       case _: ArrayType | _: MapType | _: StructType => baseProfiler
@@ -201,7 +201,7 @@ private[dp] object AnyProfiler {
           dataType = field.dataType,
           cardinalitySketch = CardinalitySketch.create(config),
           frequencySketch = FrequencySketch.create(config),
-          quantileSketch = QuantileSketch.create(config)
+          quantileSketch = QuantileSketch.create(config),
         )
     }
   }
@@ -212,7 +212,7 @@ private[dp] class StringProfiler(
     var min: String,
     var max: String,
     var maxLength: Int,
-    val maxItemLength: Int
+    val maxItemLength: Int,
 ) extends TypeProfiler[String] {
 
   def updateString(value: String): Unit = {
@@ -264,7 +264,7 @@ private[dp] class StringProfiler(
             min = Option(min),
             max = Option(max),
             count_empty = Some(countEmpty),
-            max_length = Some(maxLength)
+            max_length = Some(maxLength),
           )
       }
     }
@@ -278,7 +278,7 @@ private[dp] object StringProfiler {
       min = null,
       max = null,
       maxLength = 0,
-      maxItemLength = config.max_item_length
+      maxItemLength = config.max_item_length,
     )
   }
 }
@@ -288,7 +288,7 @@ private[dp] class IntegralProfiler(
     var min: Long,
     var max: Long,
     var sum: Long,
-    val zoneId: ZoneId
+    val zoneId: ZoneId,
 ) extends TypeProfiler[Long] {
 
   def updateLong(value: Long): Double = {
@@ -343,7 +343,7 @@ private[dp] class IntegralProfiler(
             mean = Some(math.round(sum.toDouble / countNonNulls.toDouble).toDouble),
             count_zeros = Some(countZero),
             max_length = Some((maxLengthInBits + 7) / 8),
-            extras = profile.extras ++ integralExtras
+            extras = profile.extras ++ integralExtras,
           )
       }
     }
@@ -356,7 +356,7 @@ private[dp] class IntegralProfiler(
       min = min.toDouble,
       max = max.toDouble,
       sum = sum.toDouble,
-      requiresDoublePrecision = maxLengthInBits >= 24
+      requiresDoublePrecision = maxLengthInBits >= 24,
     )
   }
 
@@ -374,7 +374,7 @@ private[dp] object IntegralProfiler {
       min = Long.MaxValue,
       max = Long.MinValue,
       sum = 0L,
-      zoneId = ZoneId.of(config.time_zone_id.getOrElse(Dp.DEFAULT_ZONE_ID))
+      zoneId = ZoneId.of(config.time_zone_id.getOrElse(Dp.DEFAULT_ZONE_ID)),
     )
   }
 }
@@ -385,7 +385,7 @@ private[dp] class FractionalProfiler(
     var min: Double,
     var max: Double,
     var sum: Double,
-    var requiresDoublePrecision: Boolean
+    var requiresDoublePrecision: Boolean,
 ) extends TypeProfiler[Double] {
 
   def updateDouble(value: Double): Double = {
@@ -449,7 +449,7 @@ private[dp] class FractionalProfiler(
             mean = Some(sum / (countNonNulls - countNaN)),
             count_empty = Some(countNaN),
             count_zeros = Some(countZero),
-            max_length = maxLength
+            max_length = maxLength,
           )
       }
     }
@@ -464,7 +464,7 @@ private[dp] object FractionalProfiler {
       min = Double.MaxValue,
       max = Double.MinValue,
       sum = 0.0,
-      requiresDoublePrecision = dataType == DoubleType
+      requiresDoublePrecision = dataType == DoubleType,
     )
   }
 }
@@ -473,7 +473,7 @@ private[dp] class IterableProfiler(
     typeName: String,
     var countEmpty: Long,
     var minLength: Int,
-    var maxLength: Int
+    var maxLength: Int,
 ) extends TypeProfiler[IterableOnce[_]] {
 
   def updateIterable(value: IterableOnce[_]): Unit = {
@@ -514,7 +514,7 @@ private[dp] class IterableProfiler(
           profile.copy(
             data_type = typeName,
             count_empty = Some(countEmpty),
-            max_length = Some(maxLength)
+            max_length = Some(maxLength),
           )
       }
     }
@@ -527,7 +527,7 @@ private[dp] object IterableProfiler {
       typeName = typeName,
       countEmpty = 0L,
       minLength = 0,
-      maxLength = 0
+      maxLength = 0,
     )
   }
 }

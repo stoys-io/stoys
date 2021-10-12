@@ -42,5 +42,5 @@ case class DbLoaderConfig(
     // The unique key constrains are generated per column if @Column(unique=true) is present.
     disableConstrainCreation: Boolean,
     // Write executed sql statements from DbLoader (not from Spark!) to a file.
-    executedSqlOutputFile: Option[String]
+    executedSqlOutputFile: Option[String],
 )

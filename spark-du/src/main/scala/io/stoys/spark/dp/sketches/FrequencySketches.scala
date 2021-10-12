@@ -31,7 +31,7 @@ private[dp] class DummyFrequencySketch[T] extends FrequencySketch[T] {
 
 private[dp] class DataSketchesItemsSketch[T] private(
     private var sketch: ItemsSketch[T],
-    private val items: Int
+    private val items: Int,
 ) extends FrequencySketch[T] {
 
   override def update(value: T): Unit = {

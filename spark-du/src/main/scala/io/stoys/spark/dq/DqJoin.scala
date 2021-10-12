@@ -38,7 +38,7 @@ class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Datase
       left_key_column_names = joinKeyColumnNames.left,
       right_key_column_names = joinKeyColumnNames.right,
       join_type = joinType.toString,
-      join_condition = joinCondition.expr.sql
+      join_condition = joinCondition.expr.sql,
     )
   }
 
@@ -62,7 +62,7 @@ class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Datase
       lit(key).as("key"),
       struct(dqJoinInfo("*")).as("dq_join_info"),
       struct(dqJoinStatistics("*")).as("dq_join_statistics"),
-      struct(dqResult("*")).as("dq_result")
+      struct(dqResult("*")).as("dq_result"),
     )
     dqJoinResult.as[DqJoinResult]
   }
@@ -71,14 +71,14 @@ class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Datase
 object DqJoin {
   private case class JoinKeyColumnNames(
       left: Seq[String],
-      right: Seq[String]
+      right: Seq[String],
   )
 
   private case class JoinKeyCounts(
       key: Seq[String],
       key_contains_null: Boolean,
       left_rows: Long,
-      right_rows: Long
+      right_rows: Long,
   )
 
   private case class JoinTypeCounts(
@@ -89,7 +89,7 @@ object DqJoin {
       inner: Long,
       left: Long,
       right: Long,
-      full: Long
+      full: Long,
   )
 
   def equiJoin[L: TypeTag, R: TypeTag](leftDs: Dataset[L], rightDs: Dataset[R],
@@ -128,7 +128,7 @@ object DqJoin {
       array(keyComponents: _*).as("key"),
       keyComponentsNull.reduce(_ || _).as("key_contains_null"),
       coalesce(left("__rows__"), lit(0)).as("left_rows"),
-      coalesce(right("__rows__"), lit(0)).as("right_rows")
+      coalesce(right("__rows__"), lit(0)).as("right_rows"),
     ).as[JoinKeyCounts]
   }
 
@@ -139,7 +139,7 @@ object DqJoin {
       (col("left_rows") * col("right_rows")).as("inner"),
       (col("left_rows") * greatest(lit(1), col("right_rows"))).as("left"),
       (greatest(lit(1), col("left_rows")) * col("right_rows")).as("right"),
-      (greatest(lit(1), col("left_rows")) * greatest(lit(1), col("right_rows"))).as("full")
+      (greatest(lit(1), col("left_rows")) * greatest(lit(1), col("right_rows"))).as("full"),
     ).as[JoinTypeCounts]
   }
 
@@ -156,7 +156,7 @@ object DqJoin {
       sum(col("left")).as("left"),
       sum(col("right")).as("right"),
       sum(col("full")).as("full"),
-      (sum(col("left_rows")) * sum(col("right_rows"))).as("cross")
+      (sum(col("left_rows")) * sum(col("right_rows"))).as("cross"),
     ).as[DqJoinStatistics]
   }
 

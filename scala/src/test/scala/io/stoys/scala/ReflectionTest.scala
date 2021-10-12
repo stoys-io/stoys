@@ -188,7 +188,7 @@ object ReflectionTest {
       s: String,
       @TestAnnotation
       i: Int,
-      nested: NestedRecord
+      nested: NestedRecord,
   )
 
   case class NestedRecord(d: Double)

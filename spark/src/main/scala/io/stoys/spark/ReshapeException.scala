@@ -2,7 +2,7 @@ package io.stoys.spark
 
 case class ReshapeError(
     path: String,
-    msg: String
+    msg: String,
 )
 
 class ReshapeException(val errors: Seq[ReshapeError])

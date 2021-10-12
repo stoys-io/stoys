@@ -32,7 +32,7 @@ private[dp] class DummyQuantileSketch extends QuantileSketch {
 
 private[dp] class DataSketchesKllSketch private(
     private val sketch: KllFloatsSketch,
-    private val pmfBuckets: Int
+    private val pmfBuckets: Int,
 ) extends QuantileSketch {
 
   override def update(value: Double): Unit = {
@@ -84,7 +84,7 @@ private[dp] object DataSketchesKllSketch {
 
 private[dp] class DataSketchesReqSketch private(
     private val sketch: ReqSketch,
-    private val pmfBuckets: Int
+    private val pmfBuckets: Int,
 ) extends QuantileSketch {
 
   override def update(value: Double): Unit = {

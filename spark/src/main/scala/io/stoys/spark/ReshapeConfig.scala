@@ -74,7 +74,7 @@ case class ReshapeConfig(
     /**
      * Should we use custom timestamp format string?
      */
-    timestamp_format: Option[String]
+    timestamp_format: Option[String],
 )
 
 object ReshapeConfig {
@@ -92,27 +92,27 @@ object ReshapeConfig {
     field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_DEFAULT,
     sort_order = ReshapeSortOrder.SOURCE,
     date_format = None,
-    timestamp_format = None
+    timestamp_format = None,
   )
   val paranoid: ReshapeConfig = spark.copy(
     fail_on_extra_column = true,
-    fail_on_ignoring_nullability = true
+    fail_on_ignoring_nullability = true,
   )
   val default: ReshapeConfig = spark.copy(
     coerce_types = true,
     drop_extra_columns = true,
-    sort_order = ReshapeSortOrder.TARGET
+    sort_order = ReshapeSortOrder.TARGET,
   )
   val dangerous: ReshapeConfig = default.copy(
     conflict_resolution = ReshapeConflictResolution.LAST,
     fill_default_values = true,
     fill_missing_nulls = true,
-    field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_NORMALIZED
+    field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_NORMALIZED,
   )
   val notebook: ReshapeConfig = spark.copy(
     coerce_types = true,
     conflict_resolution = ReshapeConflictResolution.LAST,
     fill_missing_nulls = true,
-    field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_NORMALIZED
+    field_matching_strategy = ReshapeFieldMatchingStrategy.NAME_NORMALIZED,
   )
 }

@@ -63,6 +63,6 @@ object ConfigurationTest {
       map: Map[String, String],
       date: LocalDate,
       @JsonProperty(access = Access.WRITE_ONLY)
-      password: String
+      password: String,
   )
 }

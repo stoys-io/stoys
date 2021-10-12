@@ -14,7 +14,7 @@ class DqReflectionTest extends AnyFunSuite {
     val expectedFields = Seq(
       field("i", "\"integer\""),
       field("d", "\"date\"", format = "MM/dd/yyyy"),
-      field("e", "\"string\"", enumValues = Seq("foo", "bar", "baz"))
+      field("e", "\"string\"", enumValues = Seq("foo", "bar", "baz")),
     )
     assert(getDqFields[Record] === expectedFields)
   }
@@ -27,7 +27,7 @@ class DqReflectionTest extends AnyFunSuite {
       field("i__nullable", "\"integer\""),
       field("i__not_nullable", "\"integer\"", nullable = false),
       field("s__not_nullable", "\"string\"", nullable = false),
-      field("s_option__not_nullable", "\"string\"", nullable = false)
+      field("s_option__not_nullable", "\"string\"", nullable = false),
     )
     assert(getDqFields[NullableRecord] === expectedFields)
   }
@@ -35,7 +35,7 @@ class DqReflectionTest extends AnyFunSuite {
   test("getDqFields - CollectionRecord") {
     val expectedFields = Seq(
       field("i_seq", """{"type":"array","elementType":"integer","containsNull":false}"""),
-      field("s_map", """{"type":"map","keyType":"string","valueType":"string","valueContainsNull":true}""")
+      field("s_map", """{"type":"map","keyType":"string","valueType":"string","valueContainsNull":true}"""),
     )
     assert(getDqFields[CollectionRecord] === expectedFields)
   }
@@ -44,7 +44,7 @@ class DqReflectionTest extends AnyFunSuite {
     val expectedFields = Seq(
       field("s +", "\"string\""),
       field("s -", "\"string\""),
-      field("mixed_CASE", "\"string\"")
+      field("mixed_CASE", "\"string\""),
     )
     assert(getDqFields[PoorlyNamedRecord] === expectedFields)
   }
@@ -65,7 +65,7 @@ object DqReflectionTest {
       @DqField(enumValues = Array("foo", "bar", "baz"))
       e: String,
       @DqField(ignore = true)
-      ignored: String
+      ignored: String,
   )
 
   case class NullableRecord(
@@ -79,21 +79,21 @@ object DqReflectionTest {
       @DqField(nullable = false)
       s__not_nullable: String,
       @DqField(nullable = false)
-      s_option__not_nullable: Option[String]
+      s_option__not_nullable: Option[String],
   )
 
   case class CollectionRecord(
       i_seq: Seq[Int],
-      s_map: Map[String, String]
+      s_map: Map[String, String],
   )
 
   case class PoorlyNamedRecord(
       `s +`: String,
       `s -`: String,
-      mixed_CASE: String
+      mixed_CASE: String,
   )
 
   case class UnsupportedRecord(
-      unsupported: java.util.UUID
+      unsupported: java.util.UUID,
   )
 }

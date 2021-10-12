@@ -12,7 +12,7 @@ class DqJoinTest extends SparkTestBase {
     Order(2, "customer_2", "item_2", 22),
     Order(3, "customer_1", "item_2", 42),
     Order(4, "customer_missing", null, 42),
-    Order(5, null, "item_2", 42)
+    Order(5, null, "item_2", 42),
   )
   private val items = Seq(Item("item_1"), Item("item_2"), Item("item_3"), Item("item_3"))
   private lazy val orderDs = orders.toDS()
@@ -27,7 +27,7 @@ class DqJoinTest extends SparkTestBase {
       left_key_column_names = Seq("item_id"),
       right_key_column_names = Seq("id"),
       join_type = "LEFT",
-      join_condition = s"(${quoteIfNeeded("item_id")} <=> item__alias.${quoteIfNeeded("id")})"
+      join_condition = s"(${quoteIfNeeded("item_id")} <=> item__alias.${quoteIfNeeded("id")})",
     ))
   }
 
@@ -46,7 +46,7 @@ class DqJoinTest extends SparkTestBase {
     assert(dqResult.statistics.table === DqTableStatistic(4, 2))
     assert(dqResult.statistics.rule === Seq(
       DqRuleStatistics("right_key__missing", 1),
-      DqRuleStatistics("right_key__multiplying", 1)
+      DqRuleStatistics("right_key__multiplying", 1),
     ))
   }
 

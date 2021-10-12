@@ -15,7 +15,7 @@ class DqTest extends SparkTestBase {
     Record(1, "foo", "extra"),
     Record(2, "bar", "extra"),
     Record(3, "invalid", "extra"),
-    Record(4, null, "extra")
+    Record(4, null, "extra"),
   )
 
   private val recordsTableName = "record"
@@ -23,11 +23,11 @@ class DqTest extends SparkTestBase {
   test("fromDataset.*") {
     val rules = Seq(
       namedRule("id", "even", "id IS NOT NULL AND (id % 2 = 0)"),
-      namedRule("id", "equal", "id = missing")
+      namedRule("id", "equal", "id = missing"),
     )
     val fields = Seq(
       field("id", "\"integer\"", nullable = false),
-      field("missing", "\"string\"")
+      field("missing", "\"string\""),
     )
     val primaryKeyFieldNames = Seq("id", "missing_id")
 
@@ -48,7 +48,7 @@ class DqTest extends SparkTestBase {
       DqViolationPerRow(Seq("2", "__MISSING__"), Seq("id", "missing"), Seq("2", "__MISSING__"),
         "id__equal", "id = missing"),
       DqViolationPerRow(Seq("2", "__MISSING__"), Seq("missing", "missing_id"), Seq("__MISSING__", "__MISSING__"),
-        "__no_missing_fields", "false")
+        "__no_missing_fields", "false"),
     ))
 
     val failingRowsDs = dq.selectFailingRows()
@@ -80,26 +80,26 @@ class DqTest extends SparkTestBase {
       rules = Seq(
         DqRule("id__not_null", s"($id IS NOT NULL)", None, Seq("id")),
         DqRule("id__odd", s"(($id IS NOT NULL) AND (($id % 2) = 0))", None, Seq("id")),
-        DqRule("value__enum_value", s"($value IN ('foo', 'bar', 'baz'))", None, Seq("value"))
+        DqRule("value__enum_value", s"($value IN ('foo', 'bar', 'baz'))", None, Seq("value")),
       ),
-      DqStatistics(
+      statistics = DqStatistics(
         table = DqTableStatistic(4, 3),
         column = Seq(DqColumnStatistics("id", 2), DqColumnStatistics("value", 2), DqColumnStatistics("extra", 0)),
         rule = Seq(
           DqRuleStatistics("id__not_null", 0),
           DqRuleStatistics("id__odd", 2),
-          DqRuleStatistics("value__enum_value", 2)
-        )
+          DqRuleStatistics("value__enum_value", 2),
+        ),
       ),
       row_sample = Seq(
         DqRowSample(Seq("1", "foo", "extra"), Seq("id__odd")),
         DqRowSample(Seq("3", "invalid", "extra"), Seq("id__odd", "value__enum_value")),
-        DqRowSample(Seq("4", null, "extra"), Seq("value__enum_value"))
+        DqRowSample(Seq("4", null, "extra"), Seq("value__enum_value")),
       ),
-      Map(
+      metadata = Map(
         "dq_sql" -> dqSql,
-        "data_type_json" -> recordsDs.schema.json
-      )
+        "data_type_json" -> recordsDs.schema.json,
+      ),
     )
 
     val dqResult = Dq.fromDqSql(sparkSession, dqSql).computeDqResult().first()
@@ -164,7 +164,7 @@ class DqTest extends SparkTestBase {
       DqColumnStatistics("Foo -", 4),
       DqColumnStatistics("extra", 0),
       DqColumnStatistics("__corrupt_record__", 1),
-      DqColumnStatistics("__row_number__", 0)
+      DqColumnStatistics("__row_number__", 0),
     ))
     assert(dqResult.statistics.rule === Seq(
       DqRuleStatistics("__record_not_corrupted", 1),
@@ -172,13 +172,13 @@ class DqTest extends SparkTestBase {
       DqRuleStatistics("fOO +__type", 0),
       DqRuleStatistics("fOO +__not_null", 1),
       DqRuleStatistics("fOO -__type", 0),
-      DqRuleStatistics("fOO -__enum_values", 2)
+      DqRuleStatistics("fOO -__enum_values", 2),
     ))
     assert(dqResult.row_sample === Seq(
       DqRowSample(Seq(null, "bar", "baz", null, "1"), Seq("foo+-__same_length", "fOO +__not_null")),
       DqRowSample(Seq("foo", "meh", "baz", null, "2"), Seq("fOO -__enum_values")),
       DqRowSample(Seq("foo", "42", "baz", null, "4"), Seq("foo+-__same_length", "fOO -__enum_values")),
-      DqRowSample(Seq("invalid", null, null, "invalid", "5"), Seq("__record_not_corrupted", "foo+-__same_length"))
+      DqRowSample(Seq("invalid", null, null, "invalid", "5"), Seq("__record_not_corrupted", "foo+-__same_length")),
     ))
     assert(dqResult.metadata.keySet
         === Set("input_path", "path", "file_name", "size", "modification_timestamp", "table_name", "data_type_json"))
@@ -194,13 +194,13 @@ object DqTest {
   case class Record(
       id: Int,
       value: String,
-      extra: String
+      extra: String,
   )
 
   case class ComplexRecord(
       @DqField(nullable = false)
       `fOO +`: String,
       @DqField(enumValues = Array("foo", "bar", "baz"))
-      `fOO -`: String
+      `fOO -`: String,
   )
 }

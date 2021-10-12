@@ -104,7 +104,7 @@ object Configuration {
 
   case class ConfigurationConfig(
       environments: Seq[String],
-      args: Seq[String]
+      args: Seq[String],
   )
 
   def parseConfigurationConfig(args: Array[String]): ConfigurationConfig = {

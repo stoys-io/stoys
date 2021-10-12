@@ -62,7 +62,7 @@ class DqSqlTest extends SparkTestBase {
     val expectedRules = Seq(
       DqRule("id__not_null", s"($id IS NOT NULL)", None, Seq.empty),
       DqRule("id__odd", s"(($id IS NOT NULL) AND (($id % 2) = 0))", None, Seq.empty),
-      DqRule("value__enum_value", s"($value IN ('foo', 'bar', 'baz'))", Some("optional\ncomment"), Seq.empty)
+      DqRule("value__enum_value", s"($value IN ('foo', 'bar', 'baz'))", Some("optional\ncomment"), Seq.empty),
     )
     assert(parseDqSql(sparkSession, dqSql) === ParsedDqSql(expectedRules, Set.empty))
   }

@@ -26,11 +26,11 @@ object Covid19Dataset {
       total_confirmed: Int,
       total_deceased: Int,
       total_recovered: Int,
-      total_tested: Int
+      total_tested: Int,
   )
 
   case class Demographics(
       key: String,
-      population: Int
+      population: Int,
   )
 }

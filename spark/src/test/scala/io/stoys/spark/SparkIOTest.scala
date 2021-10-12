@@ -77,7 +77,7 @@ class SparkIOTest extends SparkTestBase {
     val badRecordConfig = emptySparkIOConfig.copy(
       input_paths = Seq(
         s"$tmpDir/different_record?sos-table_name=record&sos-reshape_config__field_matching_strategy=INDEX"),
-      input_reshape_config = ReshapeConfig.default
+      input_reshape_config = ReshapeConfig.default,
     )
     IO.using(new SparkIO(sparkSession, badRecordConfig)) { sparkIO =>
       assert(sparkIO.df(TableName[Record]).schema.fields === Array(StructField("foo", DoubleType)))

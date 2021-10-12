@@ -18,7 +18,7 @@ class FilePerRowFileFormatTest extends SparkTestBase {
       "foo" -> "foo",
       "dir0/dir00/bar.txt" -> "bar",
       "dir0/dir00/baz.txt" -> "baz",
-      "dir0/dir01/bar.txt" -> "bar"
+      "dir0/dir01/bar.txt" -> "bar",
     )
 
     val textFilesPath = s"$tmpDir/file_per_row.works/text"

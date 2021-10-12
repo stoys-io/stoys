@@ -10,7 +10,7 @@ case class SparkIOConfig(
     output_path: Option[String],
     write_format: Option[String],
     write_mode: Option[String],
-    write_options: Map[String, String]
+    write_options: Map[String, String],
 )
 
 object SparkIOConfig {
@@ -21,11 +21,11 @@ object SparkIOConfig {
     output_path = None,
     write_format = None,
     write_mode = None,
-    write_options = Map.empty
+    write_options = Map.empty,
   )
   val notebook: SparkIOConfig = default.copy(
     input_reshape_config = ReshapeConfig.notebook,
     register_input_tables = true,
-    write_mode = Some("overwrite")
+    write_mode = Some("overwrite"),
   )
 }

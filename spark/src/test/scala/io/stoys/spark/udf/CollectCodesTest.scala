@@ -1,7 +1,6 @@
 package io.stoys.spark.udf
 
 import io.stoys.spark.test.SparkTestBase
-import org.apache.spark.SparkException
 
 class CollectCodesTest extends SparkTestBase {
   import CollectCodesTest._

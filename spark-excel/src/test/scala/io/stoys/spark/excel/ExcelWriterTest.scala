@@ -51,11 +51,11 @@ class ExcelWriterTest extends SparkTestBase {
     val columnInfo = Seq(
       ColumnInfo("__rowid__", None),
       ColumnInfo("value", None, converter = Some(valueConverter)),
-      ColumnInfo("__extra_system_columns_are_ignored__", None)
+      ColumnInfo("__extra_system_columns_are_ignored__", None),
     )
     val tableData = Seq(
       Seq[Any](2L, 4200L, "foo"),
-      Seq[Any](1L, 42L, "bar")
+      Seq[Any](1L, 42L, "bar"),
     )
 
     val workbook = readTemplateWorkbook(ordersTemplateFileName)

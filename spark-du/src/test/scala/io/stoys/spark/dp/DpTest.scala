@@ -19,7 +19,7 @@ class DpTest extends SparkTestBase {
       TypedRecord(true, 2, "bar", -.0e1f, "2020-02-19", "2"),
       TypedRecord(false, 3, "foo", 42.0f, "2020-02-21", "3"),
       TypedRecord(true, 4, "", Float.NaN, "2020-02-20", "4"),
-      TypedRecord(null, 5, null, null, null, null)
+      TypedRecord(null, 5, null, null, null, null),
     )
 
     val config = DpConfig.default.copy(pmf_buckets = 4)
@@ -48,8 +48,8 @@ class DpTest extends SparkTestBase {
       items = Seq(DpItem("-0.0", 2L), DpItem("42.0", 1L), DpItem("NaN", 1L)),
       extras = Map(
         "is_exact" -> "true",
-        "quantiles" -> """{"0.05": "-0.0","0.25": "-0.0","0.5": "-0.0","0.75": "42.0","0.95": "42.0"}"""
-      )
+        "quantiles" -> """{"0.05": "-0.0","0.25": "-0.0","0.5": "-0.0","0.75": "42.0","0.95": "42.0"}""",
+      ),
     ))
     assert(fColumn.mean.get === 14.0 +- 0.001)
   }
@@ -60,19 +60,19 @@ class DpTest extends SparkTestBase {
       StringRecord("YES", "2", "bar", "-.0e1", "2020 🐧 02?19", Array("foo")),
       StringRecord(" no", "3", "foo", "42.0", "2020 🐧 02?21", Array("bar")),
       StringRecord("yes", "4", "", "NaN", "2020 🐧 02?20", Array("baz")),
-      StringRecord("", "5", null, null, "", null)
+      StringRecord("", "5", null, null, "", null),
     )
 
     val typeInferenceConfig = DpTypeInferenceConfig.default.copy(
       prefer_float = true,
       prefer_integer = true,
       prefer_not_nullable = true,
-      date_formats = DpTypeInferenceConfig.default.date_formats :+ "yyyy 🐧 MM?dd"
+      date_formats = DpTypeInferenceConfig.default.date_formats :+ "yyyy 🐧 MM?dd",
     )
     val config = DpConfig.default.copy(
       pmf_buckets = 2,
       infer_types_from_strings = true,
-      type_inference_config = typeInferenceConfig
+      type_inference_config = typeInferenceConfig,
     )
     val dp = Dp.fromDataset(stringRecords.toDS()).config(config)
     val dpResult = dp.computeDpResult().first()
@@ -82,7 +82,7 @@ class DpTest extends SparkTestBase {
       DpColumnSchemaSlice("s", "string", "\"string\"", nullable = true),
       DpColumnSchemaSlice("f", "float", "\"float\"", nullable = true),
       DpColumnSchemaSlice("dt", "date", "\"date\"", nullable = false).copy(format = Some("yyyy 🐧 MM?dd")),
-      DpColumnSchemaSlice("a", "array", null, nullable = true)
+      DpColumnSchemaSlice("a", "array", null, nullable = true),
     ))
     val bColumn = dpResult.columns.find(_.name == "b").get
     assert(bColumn.count_zeros === Some(2))
@@ -99,7 +99,7 @@ class DpTest extends SparkTestBase {
       CollectionRecord(Array(2, 3), Map("bar" -> 2), NestedRecord("bar")),
       CollectionRecord(Array.empty, Map("foo" -> 3, "bar" -> 3), NestedRecord("foo")),
       CollectionRecord(Array.empty, Map.empty, NestedRecord(null)),
-      CollectionRecord(null, null, null)
+      CollectionRecord(null, null, null),
     )
 
     val dp = Dp.fromDataset(collectionRecords.toDS())
@@ -114,7 +114,7 @@ class DpTest extends SparkTestBase {
       count = 5L,
       count_empty = 2L,
       count_nulls = 1L,
-      max_length = 2L
+      max_length = 2L,
     ))
     val mColumn = dpResult.columns.find(_.name == "m").get
     assert(mColumn === emptyDpColumn.copy(
@@ -124,7 +124,7 @@ class DpTest extends SparkTestBase {
       count = 5L,
       count_empty = 1L,
       count_nulls = 1L,
-      max_length = 2L
+      max_length = 2L,
     ))
     val nColumn = dpResult.columns.find(_.name == "n").get
     assert(nColumn === emptyDpColumn.copy(
@@ -132,7 +132,7 @@ class DpTest extends SparkTestBase {
       data_type = "struct",
       nullable = true,
       count = 5L,
-      count_nulls = 1L
+      count_nulls = 1L,
     ))
   }
 
@@ -170,7 +170,7 @@ object DpTest {
       data_type_json: String,
       nullable: Boolean,
       enum_values: Seq[String],
-      format: Option[String]
+      format: Option[String],
   )
 
   object DpColumnSchemaSlice {

@@ -38,7 +38,7 @@ private[dp] case object NullTypeInferenceProfiler extends TypeInferenceProfiler 
 }
 
 private[dp] case class IntegralTypeInferenceProfiler(
-    integralProfiler: IntegralProfiler
+    integralProfiler: IntegralProfiler,
 ) extends TypeInferenceProfiler {
 
   override def update(stringValue: String): Boolean = {
@@ -53,7 +53,7 @@ private[dp] case class IntegralTypeInferenceProfiler(
   override def merge(that: TypeInferenceProfiler): TypeInferenceProfiler = {
     that match {
       case that: IntegralTypeInferenceProfiler => IntegralTypeInferenceProfiler(
-        this.integralProfiler.merge(that.integralProfiler)
+        this.integralProfiler.merge(that.integralProfiler),
       )
       case that: FractionalTypeInferenceProfiler => this.toFractionalTypeInferenceProfiler.merge(that)
       case _ => null
@@ -84,7 +84,7 @@ private[dp] case class IntegralTypeInferenceProfiler(
 }
 
 private[dp] case class FractionalTypeInferenceProfiler(
-    fractionalProfiler: FractionalProfiler
+    fractionalProfiler: FractionalProfiler,
 ) extends TypeInferenceProfiler {
 
   override def update(stringValue: String): Boolean = {
@@ -101,7 +101,7 @@ private[dp] case class FractionalTypeInferenceProfiler(
     that match {
       case that: IntegralTypeInferenceProfiler => this.merge(that.toFractionalTypeInferenceProfiler)
       case that: FractionalTypeInferenceProfiler => FractionalTypeInferenceProfiler(
-        fractionalProfiler = this.fractionalProfiler.merge(that.fractionalProfiler)
+        fractionalProfiler = this.fractionalProfiler.merge(that.fractionalProfiler),
       )
       case _ => null
     }
@@ -123,7 +123,7 @@ private[dp] case class DateTimeTypeInferenceProfiler(
     integralProfiler: IntegralProfiler,
     dataType: DataType,
     format: String,
-    zoneIdName: String
+    zoneIdName: String,
 ) extends TypeInferenceProfiler {
 
   private val zoneId = ZoneId.of(zoneIdName)
@@ -158,7 +158,7 @@ private[dp] case class DateTimeTypeInferenceProfiler(
       min = p.min.map(reformatItem),
       max = p.max.map(reformatItem),
       items = p.items.map(i => i.copy(item = reformatItem(i.item))), // TODO: Should keep items as they are?
-      extras = p.extras ++ Map(TypeProfiler.ZONE_ID_EXTRAS_KEY -> zoneIdName)
+      extras = p.extras ++ Map(TypeProfiler.ZONE_ID_EXTRAS_KEY -> zoneIdName),
     ))
   }
 
@@ -176,7 +176,7 @@ private[dp] case class DateTimeTypeInferenceProfiler(
 private[dp] class TypeInferenceStringProfiler(
     var stringProfiler: StringProfiler,
     var typeInferenceProfiler: TypeInferenceProfiler,
-    val config: DpConfig
+    val config: DpConfig,
 ) extends TypeProfiler[String] {
 
   def updateString(stringValue: String): Unit = {
@@ -221,8 +221,8 @@ private[dp] class TypeInferenceStringProfiler(
             count_empty = Seq(typeEnumProfile.count_empty, stringProfile.count_empty).flatten.reduceOption(_ + _),
             count_unique = typeEnumProfile.count_unique.orElse(stringProfile.count_unique),
             max_length = typeEnumProfile.max_length.orElse(stringProfile.max_length),
-            items = if (typeEnumProfile.items.nonEmpty) typeEnumProfile.items else stringProfile.items
-          )
+            items = if (typeEnumProfile.items.nonEmpty) typeEnumProfile.items else stringProfile.items,
+          ),
         )
     }
     profile.map { profile =>
@@ -238,13 +238,13 @@ private[dp] object TypeInferenceStringProfiler {
     new TypeInferenceStringProfiler(
       stringProfiler = StringProfiler.zero(config),
       typeInferenceProfiler = NullTypeInferenceProfiler,
-      config
+      config,
     )
   }
 
   private case class EnumInfo(
       item: DpItem,
-      index: Int
+      index: Int,
   )
 
   def matchEnumValues(profile: DpColumn, config: DpConfig): Option[DpColumn] = {
@@ -278,8 +278,8 @@ private[dp] object TypeInferenceStringProfiler {
               min = Option(enumValues.values(enumIndexes.min)),
               max = Option(enumValues.values(enumIndexes.max)),
               mean = Option(sum.toDouble / count),
-              items = enumInfo.sortBy(_.index).map(_.item)
-            )
+              items = enumInfo.sortBy(_.index).map(_.item),
+            ),
           )
         } else {
           None

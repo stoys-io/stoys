@@ -12,7 +12,7 @@ import scala.util.matching.Regex
 private[dq] object DqSql {
   case class ParsedDqSql(
       rules: Seq[DqRule],
-      referencedTableNames: Set[String]
+      referencedTableNames: Set[String],
   )
 
   def parseReferencedColumnNames(sparkSession: SparkSession, expression: String): Seq[String] = {

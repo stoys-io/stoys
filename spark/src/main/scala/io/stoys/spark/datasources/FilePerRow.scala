@@ -6,18 +6,18 @@ import org.apache.spark.sql.types._
 
 case class BinaryFilePerRow(
     path: String,
-    content: Array[Byte]
+    content: Array[Byte],
 )
 
 case class TextFilePerRow(
     path: String,
-    content: String
+    content: String,
 )
 
 object FilePerRow {
   private[datasources] case class FieldIndexes(
       path: Int,
-      content: Int
+      content: Int,
   )
 
   private[datasources] def findFieldIndexesOption(schema: StructType): Option[FieldIndexes] = {

@@ -1,7 +1,7 @@
 package io.stoys.utils
 
-import org.apache.spark.sql.sources.DataSourceRegister
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.sources.DataSourceRegister
 
 import java.util.ServiceLoader
 import scala.jdk.CollectionConverters._
