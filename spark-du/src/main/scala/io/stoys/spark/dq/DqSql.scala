@@ -1,46 +1,37 @@
 package io.stoys.spark.dq
 
 import io.stoys.spark.SToysException
+import io.stoys.spark.SqlUtils._
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.analysis.{NamedRelation, UnresolvedAlias, UnresolvedStar}
+import org.apache.spark.sql.catalyst.analysis.{UnresolvedAlias, UnresolvedStar}
 import org.apache.spark.sql.catalyst.expressions.Alias
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.catalyst.trees.Origin
 
 import scala.util.matching.Regex
 
-private[dq] object DqSql {
-  case class ParsedDqSql(
+private object DqSql {
+  case class DqSqlInfo(
       rules: Seq[DqRule],
-      referencedTableNames: Set[String],
+      referenced_table_names: Seq[String],
   )
 
-  def parseReferencedColumnNames(sparkSession: SparkSession, expression: String): Seq[String] = {
-    sparkSession.sessionState.sqlParser.parseExpression(expression).references.map(_.name).toSeq
-  }
-
-  def parseDqSql(sparkSession: SparkSession, dqSql: String): ParsedDqSql = {
+  def parseDqSql(sparkSession: SparkSession, dqSql: String): DqSqlInfo = {
     val logicalPlan = sparkSession.sessionState.sqlParser.parsePlan(dqSql)
-    assertSafeLogicalPlan(logicalPlan)
-    val lastProject = findLastProject(logicalPlan)
-//    val primaryRelationshipName = lastProject.toSeq.flatMap(getReferencedRelationshipNames).headOption
-    val rules = lastProject.map(lp => extractRules(dqSql, lp)).getOrElse(Seq.empty)
-    val referencedRelationshipNames = getReferencedRelationshipNames(logicalPlan)
-    ParsedDqSql(rules, referencedRelationshipNames.toSet)
-  }
-
-  private def assertSafeLogicalPlan(logicalPlan: LogicalPlan): Unit = {
-    logicalPlan.collectWithSubqueries {
-      case c: Command => fail(c.origin, s"Unsupported logical plan ${c.getClass.getName}:\n$c")
-      case s: ParsedStatement => fail(s.origin, s"Unsupported logical plan ${s.getClass.getName}:\n$s")
+    assertQueryLogicalPlan(logicalPlan)
+    findTopLevelProject(logicalPlan) match {
+      case None =>
+        throw new SToysException(s"Select statement required (SELECT ... FROM ...)! Not:\n$dqSql")
+      case Some(project) =>
+        val rules = extractRules(dqSql, project)
+        val referencedRelationshipNames = getReferencedRelationshipNames(logicalPlan)
+        DqSqlInfo(rules, referencedRelationshipNames)
     }
   }
 
-  private def findLastProject(logicalPlan: LogicalPlan): Option[Project] = {
-    val projects = logicalPlan.collect {
+  private def findTopLevelProject(logicalPlan: LogicalPlan): Option[Project] = {
+    logicalPlan.collectFirst {
       case p: Project => p
     }
-    projects.lastOption
   }
 
   private def extractRules(dqSql: String, project: Project): Seq[DqRule] = {
@@ -54,27 +45,6 @@ private[dq] object DqSql {
       case (ua: UnresolvedAlias, _) => fail(ua.origin, s"Dq rule needs logical name (like 'rule AS rule_name'):\n$ua")
       case (ne, _) => fail(ne.origin, s"Unsupported expression type ${ne.getClass.getName}:\n$ne")
     }
-  }
-
-  private def getReferencedRelationshipNames(logicalPlan: LogicalPlan): Seq[String] = {
-    // TODO: collect does not work over With.innerChild
-    val namedRelationNames = logicalPlan.collect {
-      case nr: NamedRelation => nr.name
-    }
-    val subqueryAliases = logicalPlan.collect {
-      case sa: SubqueryAlias => sa.alias
-    }
-    namedRelationNames.filterNot(subqueryAliases.toSet)
-
-    // TODO: fix this function for spark 2.4.x and remove this hack
-    Seq.empty
-  }
-
-  @inline
-  private def fail(origin: Origin, message: String): Nothing = {
-    val lineFragment = origin.line.map(_.toString).getOrElse("")
-    val columnFragment = origin.startPosition.map(_.toString).getOrElse("")
-    throw new SToysException(s"Error at line $lineFragment, column $columnFragment: $message")
   }
 
   private class SqlCommentsExtractor(sql: String) {

@@ -1,6 +1,6 @@
 package io.stoys.spark.dq
 
-import io.stoys.spark.SToysException
+import io.stoys.spark.{SToysException, SqlUtils}
 import org.apache.spark.sql.catalyst.expressions.Stack
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{BooleanType, StringType, StructType}
@@ -47,7 +47,8 @@ private[dq] object DqFramework {
   def getRuleInfo(sparkSession: SparkSession, columnNames: Seq[String], rules: Seq[DqRule]): Seq[RuleInfo] = {
     rules.map { rule =>
       val explicitRawNames = Option(rule.referenced_column_names).getOrElse(Seq.empty)
-      val parsedRawNames = DqSql.parseReferencedColumnNames(sparkSession, rule.expression)
+      val expression = sparkSession.sessionState.sqlParser.parseExpression(rule.expression)
+      val parsedRawNames = SqlUtils.getReferencedColumnNames(expression)
       val rawNames = explicitRawNames ++ parsedRawNames
       // TODO: Solve table aliases correctly. (field name normalization)
       val correctedRawNames = rawNames.map(_.replace("`", "").split('.').last)

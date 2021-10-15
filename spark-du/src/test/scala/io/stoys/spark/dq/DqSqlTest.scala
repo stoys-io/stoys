@@ -8,62 +8,53 @@ class DqSqlTest extends SparkTestBase {
   import DqRules._
   import DqSql._
 
-  test("parseReferencedColumnNames") {
-    assert(parseReferencedColumnNames(sparkSession, "foo IS NOT NULL") === Seq("foo"))
-    assert(parseReferencedColumnNames(sparkSession, "foo = bar") === Seq("foo", "bar"))
-    assert(parseReferencedColumnNames(sparkSession, "foo IN ('bar') AND foo RLIKE '.*baz.*'") === Seq("foo"))
-    assert(parseReferencedColumnNames(sparkSession, "table.foo IS NOT NULL") === Seq("table.foo"))
-  }
-
   test("parseDqSql - fails") {
     def im(dqSql: String, regex: String)(implicit pos: source.Position): SToysException = {
       interceptMessage[SToysException](parseDqSql(sparkSession, dqSql), regex)
     }
 
-    val dqSql = "SELECT *, id IS NOT NULL AS id__not_null FROM table"
-    val expectedRule = namedRule("id", "not_null", s"(${quoteIfNeeded("id")} IS NOT NULL)")
-    assert(parseDqSql(sparkSession, dqSql) === ParsedDqSql(Seq(expectedRule), Set.empty))
-    val noStarDqSql = "SELECT id IS NOT NULL AS id__not_null FROM table"
+    sparkSession.sql("SELECT '1' AS k, 42.0 AS v, 'foo' AS e").createOrReplaceTempView("table")
+
+    val dqSql = "SELECT *, k IS NOT NULL AS k__not_null FROM table"
+    val expectedRule = namedRule("k", "not_null", s"(${quoteIfNeeded("k")} IS NOT NULL)")
+    assert(parseDqSql(sparkSession, dqSql) === DqSqlInfo(Seq(expectedRule), Seq("table")))
+    val noStarDqSql = "SELECT k IS NOT NULL AS k__not_null FROM table"
     im(noStarDqSql, "dq sql has to be '*'")
-    val tableStarDqSql = "SELECT table.*, id IS NOT NULL AS id__not_null FROM table"
-    assert(parseDqSql(sparkSession, tableStarDqSql) === ParsedDqSql(Seq(expectedRule), Set.empty))
-    val unnamedRuleDqSql = "SELECT *, id IS NOT NULL FROM table"
+    val tableStarDqSql = "SELECT table.*, k IS NOT NULL AS k__not_null FROM table"
+    assert(parseDqSql(sparkSession, tableStarDqSql) === DqSqlInfo(Seq(expectedRule), Seq("table")))
+    val unnamedRuleDqSql = "SELECT *, k IS NOT NULL FROM table"
     im(unnamedRuleDqSql, "needs logical name")
 
     val ddlStatement = "DROP TABLE table"
     im(ddlStatement, "Unsupported logical plan")
-    val dmlStatement = "INSERT INTO table VALUES ('foo')"
-    im(dmlStatement, "Unsupported logical plan")
-    val auxiliaryStatement = "SHOW TABLES"
-    im(auxiliaryStatement, "Unsupported logical plan")
-    val explainStatement = "EXPLAIN SELECT 'foo'"
-    im(explainStatement, "Unsupported logical plan")
   }
 
   test("parseDqSql - complex") {
+    sparkSession.sql("SELECT '1' AS k, 42.0 AS v, 'foo' AS e").createOrReplaceTempView("table")
+    sparkSession.sql("SELECT '1' AS id, 'desc' AS description").createOrReplaceTempView("lookup")
+
     val dqSql =
       s"""
-         |WITH table AS (
-         |  SELECT * FROM table_a AS a JOIN table_b ON a.id = table_b.id
+         |WITH tmp AS (
+         |  SELECT * FROM table JOIN lookup ON table.id = lookup.id
          |)
          |SELECT
          |  *,
-         |  id IS NOT NULL AS id__not_null,
-         |  id IS NOT NULL AND (id % 2 = 0) AS id__odd,
+         |  k IS NOT NULL AS k__not_null,
+         |  k IS NOT NULL AND (k % 2 = 0) AS k__odd,
          |  -- optional
          |  -- comment
-         |  value IN ('foo', 'bar', 'baz') AS value__enum_value
-         |FROM
-         |  table
+         |  e IN ('foo', 'bar', 'baz') AS e__enum_value
+         |FROM tmp
          |""".stripMargin.trim
 
-    val id = quoteIfNeeded("id")
-    val value = quoteIfNeeded("value")
+    val k = quoteIfNeeded("k")
+    val e = quoteIfNeeded("e")
     val expectedRules = Seq(
-      DqRule("id__not_null", s"($id IS NOT NULL)", None, Seq.empty),
-      DqRule("id__odd", s"(($id IS NOT NULL) AND (($id % 2) = 0))", None, Seq.empty),
-      DqRule("value__enum_value", s"($value IN ('foo', 'bar', 'baz'))", Some("optional\ncomment"), Seq.empty),
+      DqRule("k__not_null", s"($k IS NOT NULL)", None, Seq.empty),
+      DqRule("k__odd", s"(($k IS NOT NULL) AND (($k % 2) = 0))", None, Seq.empty),
+      DqRule("e__enum_value", s"($e IN ('foo', 'bar', 'baz'))", Some("optional\ncomment"), Seq.empty),
     )
-    assert(parseDqSql(sparkSession, dqSql) === ParsedDqSql(expectedRules, Set.empty))
+    assert(parseDqSql(sparkSession, dqSql) === DqSqlInfo(expectedRules, Seq("lookup", "table")))
   }
 }

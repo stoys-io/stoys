@@ -89,7 +89,7 @@ object Dq {
 
   def fromDqSql(sparkSession: SparkSession, dqSql: String): Dq[Row] = {
     val parsedDqSql = DqSql.parseDqSql(sparkSession, dqSql)
-    val missingReferencedTableNames = parsedDqSql.referencedTableNames.filterNot(sparkSession.catalog.tableExists)
+    val missingReferencedTableNames = parsedDqSql.referenced_table_names.filterNot(sparkSession.catalog.tableExists)
     if (missingReferencedTableNames.nonEmpty) {
       throw new SToysException(s"Dq sql reference missing tables: ${missingReferencedTableNames.toList}")
     }
