@@ -3,6 +3,7 @@ package io.stoys.spark.dq
 import io.stoys.scala.Jackson
 import io.stoys.spark.TableName
 import org.apache.commons.codec.digest.DigestUtils
+import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.aggregate.CountIf
 import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.functions._
@@ -14,8 +15,8 @@ import scala.reflect.runtime.universe.TypeTag
 class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Dataset[R], joinCondition: Column) {
   import DqJoin._
 
-  private val joinKeyColumnNames = getJoinKeyColumnNames(leftDs, rightDs, joinCondition)
-  private val joinKeyCountsDs = computeJoinKeyCounts(leftDs, rightDs, joinCondition, joinKeyColumnNames)
+  private val joinKeyAttributes = getJoinKeyAttributes(leftDs, rightDs, joinCondition)
+  private val joinKeyCountsDs = computeJoinKeyCounts(leftDs, rightDs, joinCondition, joinKeyAttributes)
   private val joinTypeCountsDs = computeJoinTypeCounts(joinKeyCountsDs)
 
   private var metadata: Map[String, String] = Map.empty
@@ -35,8 +36,8 @@ class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Datase
     DqJoinInfo(
       left_table_name = TableName.of(leftDs).fullTableName(),
       right_table_name = TableName.of(rightDs).fullTableName(),
-      left_key_column_names = joinKeyColumnNames.left,
-      right_key_column_names = joinKeyColumnNames.right,
+      left_key_column_names = joinKeyAttributes.left.map(_.name),
+      right_key_column_names = joinKeyAttributes.right.map(_.name),
       join_type = joinType.toString,
       join_condition = joinCondition.expr.sql,
     )
@@ -69,9 +70,9 @@ class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Datase
 }
 
 object DqJoin {
-  private case class JoinKeyColumnNames(
-      left: Seq[String],
-      right: Seq[String],
+  private case class JoinKeyAttributes(
+      left: Seq[Attribute],
+      right: Seq[Attribute],
   )
 
   private case class JoinKeyCounts(
@@ -105,25 +106,25 @@ object DqJoin {
     new DqJoin(leftDs, rightDs, joinCondition)
   }
 
-  private def getJoinKeyColumnNames(
-      leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Column): JoinKeyColumnNames = {
+  private def getJoinKeyAttributes(
+      leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Column): JoinKeyAttributes = {
     val joinedDs = leftDs.join(rightDs, joinCondition, joinType = "FULL")
     val joinAnalyzed = joinedDs.queryExecution.analyzed.asInstanceOf[Join]
     val joinConditionAttributes = joinAnalyzed.condition.get.references.toSet
-    val leftKeyColumnNames = joinAnalyzed.left.output.filter(joinConditionAttributes.contains).map(_.name)
-    val rightKeyColumnNames = joinAnalyzed.right.output.filter(joinConditionAttributes.contains).map(_.name)
-    JoinKeyColumnNames(leftKeyColumnNames, rightKeyColumnNames)
+    val leftKeyAttributes = joinAnalyzed.left.output.filter(joinConditionAttributes.contains)
+    val rightKeyAttributes = joinAnalyzed.right.output.filter(joinConditionAttributes.contains)
+    JoinKeyAttributes(leftKeyAttributes, rightKeyAttributes)
   }
 
   private def computeJoinKeyCounts(leftDs: Dataset[_], rightDs: Dataset[_], joinCondition: Column,
-      joinKeyColumnNames: JoinKeyColumnNames): Dataset[JoinKeyCounts] = {
+      joinKeyAttributes: JoinKeyAttributes): Dataset[JoinKeyCounts] = {
     import leftDs.sparkSession.implicits._
-    val leftKeys = joinKeyColumnNames.left
-    val rightKeys = joinKeyColumnNames.right
-    val left = leftDs.groupBy(leftKeys.map(leftDs.apply): _*).agg(count(lit(1)).as("__rows__"))
-    val right = rightDs.groupBy(rightKeys.map(rightDs.apply): _*).agg(count(lit(1)).as("__rows__"))
-    val keyComponents = leftKeys.zip(rightKeys).map(lr => coalesce(leftDs(lr._1), rightDs(lr._2), lit("__NULL__")))
-    val keyComponentsNull = leftKeys.zip(rightKeys).map(lr => isnull(leftDs(lr._1)) && isnull(rightDs(lr._2)))
+    val leftKeyColumns = joinKeyAttributes.left.map(a => new Column(a))
+    val rightKeyColumns = joinKeyAttributes.right.map(a => new Column(a))
+    val left = leftDs.groupBy(leftKeyColumns: _*).agg(count(lit(1)).as("__rows__"))
+    val right = rightDs.groupBy(rightKeyColumns: _*).agg(count(lit(1)).as("__rows__"))
+    val keyComponents = leftKeyColumns.zip(rightKeyColumns).map(lr => coalesce(lr._1, lr._2, lit("__NULL__")))
+    val keyComponentsNull = leftKeyColumns.zip(rightKeyColumns).map(lr => isnull(lr._1) && isnull(lr._2))
     left.join(right, joinCondition, joinType = "FULL").select(
       array(keyComponents: _*).as("key"),
       keyComponentsNull.reduce(_ || _).as("key_contains_null"),
