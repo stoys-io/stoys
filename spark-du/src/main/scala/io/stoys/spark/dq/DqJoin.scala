@@ -19,8 +19,14 @@ class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Datase
   private val joinKeyCountsDs = computeJoinKeyCounts(leftDs, rightDs, joinCondition, joinKeyAttributes)
   private val joinTypeCountsDs = computeJoinTypeCounts(joinKeyCountsDs)
 
+  private var config: DqConfig = DqConfig.default
   private var metadata: Map[String, String] = Map.empty
   private var joinType: DqJoinType = DqJoinType.UNDEFINED
+
+  def config(config: DqConfig): DqJoin[L, R] = {
+    this.config = config
+    this
+  }
 
   def metadata(metadata: Map[String, String]): DqJoin[L, R] = {
     this.metadata = metadata
@@ -49,7 +55,7 @@ class DqJoin[L: TypeTag, R: TypeTag] private(leftDs: Dataset[L], rightDs: Datase
 
   def computeDqResult(): Dataset[DqResult] = {
     val rules = generateJoinTypeCountsDqRules(joinType)
-    Dq.fromDataset(joinTypeCountsDs).rules(rules).metadata(metadata).computeDqResult()
+    Dq.fromDataset(joinTypeCountsDs).config(config).rules(rules).metadata(metadata).computeDqResult()
   }
 
   def computeDqJoinResult(): Dataset[DqJoinResult] = {
