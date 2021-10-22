@@ -29,8 +29,9 @@ private object DqSql {
   }
 
   private def findTopLevelProject(logicalPlan: LogicalPlan): Option[Project] = {
-    logicalPlan.collectFirst {
-      case p: Project => p
+    logicalPlan match {
+      case p: Project => Some(p)
+      case lp => lp.children.flatMap(findTopLevelProject).headOption
     }
   }
 

@@ -36,7 +36,7 @@ class DqSqlTest extends SparkTestBase {
     val dqSql =
       s"""
          |WITH tmp AS (
-         |  SELECT * FROM table JOIN lookup ON table.id = lookup.id
+         |  SELECT * FROM table JOIN lookup ON table.k = lookup.id
          |)
          |SELECT
          |  *,
